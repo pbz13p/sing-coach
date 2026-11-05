@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>练歌小老师</title>
+<style>
+  :root{--bg:#faf6ef;--card:#fff;--ink:#2a2420;--sub:#6b625a;--line:#e8e0d4;--acc:#b8432f;--acc2:#2f6f6a;
+    --good:#2e9e5b;--mid:#e0a020;--bad:#d2452f;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:19px/1.6 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%}
+  .wrap{max-width:640px;margin:0 auto;padding:18px 14px 60px}
+  h1{font-size:30px;margin:6px 0 2px;letter-spacing:1px}
+  .lead{color:var(--sub);margin:0 0 16px;font-size:17px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 1px 3px rgba(60,40,20,.05)}
+  h2{font-size:22px;margin:0 0 10px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:64px;border:0;border-radius:16px;font-size:22px;font-weight:600;cursor:pointer;margin:10px 0;font-family:inherit;color:#fff;background:var(--acc)}
+  .btn.alt{background:var(--acc2)}
+  .btn.ghost{background:#f1ebe2;color:var(--ink)}
+  .btn:disabled{opacity:.5}
+  .btn.small{min-height:48px;font-size:18px;width:auto;padding:0 18px;margin:0}
+  .tips{margin:8px 0 0;padding-left:1.2em;color:var(--sub);font-size:17px}
+  input[type=text]{width:100%;font-size:19px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-family:inherit;background:#fffdf9}
+  label.l{display:block;font-size:17px;color:var(--sub);margin:12px 0 6px}
+  .hide{display:none!important}
+  .bar.thin{height:8px;margin:8px 0}
+  .refline{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:20px}
+  .row2{display:flex;gap:10px}.row2 .btn{flex:1}
+  .msg{background:#fff4e5;border:1px solid #f3d6a8;border-radius:12px;padding:12px 14px;font-size:17px;margin-top:10px}
+  .rec{font-size:44px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;color:var(--acc)}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--acc);animation:bl 1s infinite;margin-right:8px;vertical-align:middle}
+  @keyframes bl{50%{opacity:.2}}
+  .bar{height:14px;background:#efe7db;border-radius:8px;overflow:hidden;margin:14px 0 4px}
+  .bar>i{display:block;height:100%;width:0;background:var(--acc2);transition:width .2s}
+  .scoreRow{display:flex;align-items:center;gap:18px}
+  .ring{flex:none;width:118px;height:118px;border-radius:50%;display:grid;place-items:center;position:relative}
+  .ring b{font-size:42px;line-height:1}
+  .ring small{display:block;font-size:14px;color:var(--sub);text-align:center}
+  .verdict{font-size:21px;font-weight:600}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .tile{background:#f7f1e8;border-radius:12px;padding:10px 6px;text-align:center}
+  .tile b{display:block;font-size:24px}
+  .tile span{font-size:14px;color:var(--sub)}
+  canvas{width:100%;height:300px;display:block;border-radius:12px;background:#fffdf9;border:1px solid var(--line);touch-action:pan-y}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:15px;color:var(--sub);margin:8px 0}
+  .legend i{display:inline-block;width:18px;height:8px;border-radius:4px;margin-right:5px;vertical-align:middle}
+  .ctrl{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .ctrl input[type=range]{flex:1;height:40px}
+  .spot{border-top:1px solid var(--line);padding:14px 0}
+  .spot:first-of-type{border-top:0;padding-top:4px}
+  .spot .hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .tag{font-weight:700;font-size:20px}
+  .spot .hd{flex-wrap:wrap}
+  .tag em{font-style:normal;background:#f7e3dc;color:var(--acc);border-radius:8px;padding:2px 10px;margin-left:6px;font-size:18px}
+  .spot p{margin:6px 0 0}
+  .tip{border-left:5px solid var(--acc2);padding:4px 0 4px 12px;margin:14px 0}
+  .tip b{font-size:20px}
+  .tip p{margin:4px 0}
+  .how{background:#eef5f3;border-radius:10px;padding:8px 12px;font-size:17px}
+  .ai{white-space:pre-wrap;font-size:19px}
+  .ai strong{color:var(--acc)}
+  .note{font-size:15px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎤 练歌小老师</h1>
+  <p class="lead">放原唱、跟着唱，唱完马上告诉您哪个音准、哪个不准、怎么练。</p>
+
+  <div id="stepIn">
+  <div class="card">
+    <h2>① 原唱（可选）</h2>
+    <div id="refNone">
+      <div class="note">放一首原唱进来，就能跟原唱一个音一个音地比。只要选一次，下次打开还在。</div>
+      <button class="btn ghost" id="btnRef">🎵 选原唱歌曲</button>
+    </div>
+    <div id="refHas" class="hide">
+      <div class="refline"><b id="refName"></b><span id="refState" class="note"></span></div>
+      <div class="bar thin"><i id="refProg"></i></div>
+      <div class="row2"><button class="btn small ghost" id="btnRefChange">换一首</button><button class="btn small ghost" id="btnRefOff">不用原唱</button></div>
+    </div>
+    <input type="file" id="refFile" accept="audio/*,video/*" class="hide">
+  </div>
+
+  <div class="card">
+    <h2>② 开始唱</h2>
+    <div id="earTip" class="msg hide" style="margin:0 0 6px">🎧 <b>请戴上耳机</b>。点“开始唱”后，原唱在耳机里放，您跟着唱就行，唱完点停止。</div>
+    <button class="btn" id="btnRec">🎙️ 开始唱</button>
+    <button class="btn alt" id="btnFile">📂 选手机里录好的歌</button>
+    <input type="file" id="file" accept="audio/*,video/*" class="hide">
+    <div id="micMsg" class="msg hide">麦克风没打开。请在弹出的提示里点<b>“允许”</b>；如果没弹出，在浏览器设置里允许这个网站用麦克风。也可以先用手机录音机录好，再点绿色按钮选文件。</div>
+    <label class="l" for="song">歌名（可以不填）</label>
+    <input type="text" id="song" placeholder="比如：我和我的祖国">
+    <ul class="tips">
+      <li>找个安静的地方，手机离嘴大约一臂远</li>
+      <li>没选原唱的话，最好<b>清唱</b>（不放伴奏）</li>
+      <li>唱 30 秒到 5 分钟都可以</li>
+    </ul>
+  </div>
+  </div>
+
+  <!-- 录音中 -->
+  <div class="card hide" id="stepRec">
+    <h2><span class="dot"></span>正在录音…</h2>
+    <div class="rec" id="recT">0:00</div>
+    <canvas id="live" style="height:170px"></canvas>
+    <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
+    <button class="btn" id="btnStop">⏹ 唱完了，停止</button>
+  </div>
+
+  <!-- 分析中 -->
+  <div class="card hide" id="stepBusy">
+    <h2>正在认真听您唱…</h2>
+    <div class="bar"><i id="prog"></i></div>
+    <div class="note" id="busyTxt">一首歌大约要几秒钟</div>
+  </div>
+
+  <div id="err" class="msg hide"></div>
+
+  <!-- 结果 -->
+  <div id="result" class="hide">
+    <div class="card">
+      <div class="scoreRow">
+        <div class="ring" id="ring"><div><b id="score">0</b><small>总分</small></div></div>
+        <div><div class="verdict" id="verdict"></div><div class="note" id="keyLine"></div></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><b id="tAcc">-</b><span>唱准的音</span></div>
+        <div class="tile"><b id="tStab">-</b><span id="tStabL">长音稳不稳</span></div>
+        <div class="tile"><b id="tTrend">-</b><span id="tTrendL">整体偏向</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎼 音高图</h2>
+      <div class="note">横线是简谱音，彩色条是您唱的音。条在线上 = 唱准了。点图上任何地方，就从那儿播放。</div>
+      <div class="legend"><span><i style="background:var(--good)"></i>准</span><span><i style="background:var(--mid)"></i>差一点</span><span><i style="background:var(--bad)"></i>不准</span><span><i style="background:#b9b0a5;height:3px"></i>您的声音</span><span id="lgRef"><i style="background:#4a7fc1;height:3px"></i>原唱</span></div>
+      <canvas id="cv"></canvas>
+      <div class="ctrl">
+        <button class="btn small ghost" id="prev">◀</button>
+        <input type="range" id="pos" min="0" max="100" value="0" step="0.1">
+        <button class="btn small ghost" id="next">▶</button>
+      </div>
+      <button class="btn alt" id="btnPlay">▶ 听我唱的</button>
+      <audio id="aud" preload="auto" class="hide"></audio>
+    </div>
+
+    <div class="card">
+      <h2>🔍 最需要改的几处</h2>
+      <div id="spots"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 主要问题和练法</h2>
+      <div id="tipsBox"></div>
+    </div>
+
+    <div class="card" id="aiCard">
+      <h2>👨‍🏫 请老师详细点评</h2>
+      <div class="note">让 AI 老师根据上面的结果，用大白话给您讲讲，再给一个每天的练习计划。</div>
+      <button class="btn" id="btnAI">请老师点评</button>
+      <div class="ai" id="aiOut"></div>
+    </div>
+
+    <button class="btn ghost" id="again">🔁 再唱一遍</button>
+    <p class="note">说明：选了原唱，就跟原唱比；没选原唱，就按您自己唱的调判断（看音和音之间准不准）。戴耳机跟着原唱唱，还能比节奏快慢。机器听也会有误差，有疑问就点“▶ 原唱”和“▶ 我唱的”对比听一听。</p>
+  </div>
+</div>
+
+<script>
+// ===== 练歌小老师 · 分析核心 =====
+const SC = (() => {
+  const PC_NAMES = ["C", "♭D", "D", "♭E", "E", "F", "♯F", "G", "♭A", "A", "♭B", "B"];
+  const JP = { 0: "1", 1: "♯1", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♯4", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
+  const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+  const KMAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const KMIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const median = a => { if (!a.length) return NaN; const s = Float64Array.from(a).sort(); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const pct = (a, p) => { if (!a.length) return NaN; const s = Float64Array.from(a).sort(); return s[Math.min(s.length - 1, Math.max(0, Math.floor(p * (s.length - 1))))]; };
+  const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
+  const std = a => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(mean(a.map(v => (v - m) ** 2))); };
+  const mod12 = v => ((v % 12) + 12) % 12;
+  const noteName = m => { const r = Math.round(m); return PC_NAMES[mod12(r)] + (Math.floor(r / 12) - 1); };
+
+  // ---------- 1. 音高追踪 (YIN) ----------
+  async function trackPitch(x, sr, onProgress) {
+    const hop = Math.round(sr * 0.012), W = 400;
+    const tauMin = Math.floor(sr / 900), tauMax = Math.ceil(sr / 70);
+    const n = Math.max(0, Math.floor((x.length - W - tauMax - 2) / hop));
+    const f0 = new Float32Array(n), rms = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0; const o = i * hop;
+      for (let j = 0; j < W; j++) s += x[o + j] * x[o + j];
+      rms[i] = Math.sqrt(s / W);
+    }
+    const rs = Array.from(rms);
+    const peak = pct(rs, 0.98), floor = pct(rs, 0.1);
+    const gate = Math.max(floor * 2.5, peak * 0.05, 1e-4);
+    const d = new Float64Array(tauMax + 2), cm = new Float64Array(tauMax + 2);
+    for (let i = 0; i < n; i++) {
+      if (i % 400 === 0) { onProgress && onProgress(i / n); await tick(); }
+      if (rms[i] < gate) continue;
+      const o = i * hop;
+      for (let tau = 1; tau <= tauMax + 1; tau++) {
+        let s = 0;
+        for (let j = 0; j < W; j++) { const df = x[o + j] - x[o + j + tau]; s += df * df; }
+        d[tau] = s;
+      }
+      let run = 0; cm[0] = 1;
+      for (let tau = 1; tau <= tauMax + 1; tau++) { run += d[tau]; cm[tau] = run > 0 ? d[tau] * tau / run : 1; }
+      let t = -1;
+      for (let tau = tauMin; tau <= tauMax; tau++) {
+        if (cm[tau] < 0.15) { while (tau + 1 <= tauMax && cm[tau + 1] < cm[tau]) tau++; t = tau; break; }
+      }
+      if (t < 0) {
+        let best = tauMin;
+        for (let tau = tauMin; tau <= tauMax; tau++) if (cm[tau] < cm[best]) best = tau;
+        if (cm[best] < 0.3) t = best;
+      }
+      if (t < 0) continue;
+      const a = cm[t - 1], b = cm[t], c = cm[t + 1];
+      const den = a - 2 * b + c;
+      const shift = den !== 0 ? Math.max(-1, Math.min(1, (a - c) / (2 * den))) : 0;
+      f0[i] = sr / (t + shift);
+    }
+    onProgress && onProgress(1);
+    return { f0, rms, hop: hop / sr };
+  }
+
+  // ---------- 2. 清理音高曲线 ----------
+  function cleanMidi(f0) {
+    const n = f0.length, m = new Float64Array(n).fill(NaN);
+    for (let i = 0; i < n; i++) if (f0[i] > 0) m[i] = 69 + 12 * Math.log2(f0[i] / 440);
+    // 八度纠错
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < n; i++) {
+        if (isNaN(m[i])) continue;
+        const nb = [];
+        for (let k = Math.max(0, i - 25); k <= Math.min(n - 1, i + 25); k++) if (!isNaN(m[k])) nb.push(m[k]);
+        const ref = median(nb), df = m[i] - ref;
+        if (df > 9) m[i] -= 12; else if (df < -9) m[i] += 12;
+      }
+    }
+    // 5 点中值滤波
+    const out = new Float64Array(n).fill(NaN);
+    for (let i = 0; i < n; i++) {
+      if (isNaN(m[i])) continue;
+      const nb = [];
+      for (let k = i - 2; k <= i + 2; k++) if (k >= 0 && k < n && !isNaN(m[k])) nb.push(m[k]);
+      out[i] = median(nb);
+    }
+    // 去掉过短的发声段 (<60ms)
+    let i = 0;
+    while (i < n) {
+      if (isNaN(out[i])) { i++; continue; }
+      let j = i; while (j < n && !isNaN(out[j])) j++;
+      if (j - i < 5) for (let k = i; k < j; k++) out[k] = NaN;
+      i = j;
+    }
+    return out;
+  }
+
+  // ---------- 3. 局部基准（无伴奏时按自己的调判断） ----------
+  function localOffset(m, rms, hopS) {
+    const n = m.length, C = new Float64Array(n + 1), S = new Float64Array(n + 1), Wt = new Float64Array(n + 1);
+    for (let i = 0; i < n; i++) {
+      let c = 0, s = 0, w = 0;
+      if (!isNaN(m[i]) && i > 0 && !isNaN(m[i - 1]) && Math.abs(m[i] - m[i - 1]) < 0.12) {
+        const fr = m[i] - Math.round(m[i]);
+        w = rms[i]; c = w * Math.cos(2 * Math.PI * fr); s = w * Math.sin(2 * Math.PI * fr);
+      }
+      C[i + 1] = C[i] + c; S[i + 1] = S[i] + s; Wt[i + 1] = Wt[i] + w;
+    }
+    const gAng = Math.atan2(S[n], C[n]) / (2 * Math.PI);
+    const half = Math.round(6 / hopS);
+    const raw = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const a = Math.max(0, i - half), b = Math.min(n, i + half);
+      const cc = C[b] - C[a], ss = S[b] - S[a], ww = Wt[b] - Wt[a];
+      raw[i] = (ww > 0 && Math.hypot(cc, ss) > 0.15 * ww) ? Math.atan2(ss, cc) / (2 * Math.PI) : gAng;
+    }
+    // 展开（允许越唱越低超过半个半音）
+    const off = new Float64Array(n); off[0] = raw[0];
+    for (let i = 1; i < n; i++) {
+      let v = raw[i];
+      while (v - off[i - 1] > 0.5) v -= 1;
+      while (v - off[i - 1] < -0.5) v += 1;
+      off[i] = v;
+    }
+    return { off, global: gAng };
+  }
+
+  // ---------- 4. 切分音符 ----------
+  function segment(p, hopS) {
+    const n = p.length, notes = [];
+    let cur = null, cand = null, candN = 0, candStart = 0, gap = 0;
+    const close = () => { if (cur && (cur.end - cur.start + 1) * hopS >= 0.14) notes.push(cur); cur = null; cand = null; candN = 0; };
+    for (let i = 0; i < n; i++) {
+      if (isNaN(p[i])) { gap++; if (gap > 3) close(); continue; }
+      gap = 0;
+      const q = Math.round(p[i]);
+      if (!cur) { cur = { q, start: i, end: i }; continue; }
+      if (q === cur.q) { cur.end = i; candN = 0; cand = null; continue; }
+      if (q === cand) candN++; else { cand = q; candN = 1; candStart = i; }
+      if (candN >= 4) { cur.end = candStart - 1; const nq = cand; close(); cur = { q: nq, start: candStart, end: i }; }
+    }
+    close();
+    return notes;
+  }
+
+  function detectKey(notes, hopS) {
+    const h = new Array(12).fill(0);
+    notes.forEach(nt => h[mod12(nt.q)] += (nt.end - nt.start + 1) * hopS);
+    const corr = (prof, rot) => {
+      const a = h, b = prof.map((_, k) => prof[mod12(k - rot)]);
+      const ma = mean(a), mb = mean(b);
+      let num = 0, da = 0, db = 0;
+      for (let k = 0; k < 12; k++) { num += (a[k] - ma) * (b[k] - mb); da += (a[k] - ma) ** 2; db += (b[k] - mb) ** 2; }
+      return num / Math.sqrt(da * db || 1);
+    };
+    let best = { r: -2 };
+    for (let t = 0; t < 12; t++) {
+      const r1 = corr(KMAJ, t); if (r1 > best.r) best = { r: r1, tonic: t, minor: false };
+      const r2 = corr(KMIN, t); if (r2 > best.r) best = { r: r2, tonic: t, minor: true };
+    }
+    best.majorTonic = best.minor ? mod12(best.tonic + 3) : best.tonic;
+    return best;
+  }
+
+  // ---------- 5. 主分析 ----------
+  async function analyze(x, sr, onProgress) {
+    const tr = await trackPitch(x, sr, onProgress);
+    const hopS = tr.hop, n = tr.f0.length;
+    const m = cleanMidi(tr.f0);
+    const { off, global } = localOffset(m, tr.rms, hopS);
+    const p = new Float64Array(n);
+    for (let i = 0; i < n; i++) p[i] = m[i] - off[i];
+    let voicedN = 0; for (let i = 0; i < n; i++) if (!isNaN(m[i])) voicedN++;
+    if (voicedN * hopS < 4) return { error: "short", voicedSec: voicedN * hopS };
+
+    const raw = segment(p, hopS);
+    if (raw.length < 5) return { error: "few" };
+    const key = detectKey(raw, hopS);
+    const qMed = median(raw.map(r => r.q));
+    let refTonic = Math.floor(qMed); while (mod12(refTonic) !== key.majorTonic) refTonic--;
+    if (qMed - refTonic > 8) refTonic += 12; // 让中音区包住大部分音
+
+    const owner = new Int32Array(n).fill(-1);
+    raw.forEach((r, k) => { for (let i = r.start; i <= r.end; i++) owner[i] = k; });
+    const notes = raw.map((r, k) => {
+      const frames = []; for (let i = r.start; i <= r.end; i++) if (!isNaN(p[i])) frames.push(i);
+      const L = frames.length, dur = (r.end - r.start + 1) * hopS;
+      const aN = Math.min(7, Math.floor(L * 0.2)), tN = Math.min(7, Math.floor(L * 0.2));
+      const mid = frames.slice(aN, L - tN).map(i => p[i]);
+      const center = median(mid.length >= 3 ? mid : frames.map(i => p[i]));
+      const q = Math.round(center), dev = (center - q) * 100;
+      const cents = mid.map(v => (v - center) * 100);
+      // 去趋势后看抖动
+      let slope = 0;
+      if (cents.length > 4) {
+        const xs = cents.map((_, k) => k * hopS), mx = mean(xs), my = mean(cents);
+        let nu = 0, de = 0; xs.forEach((xv, k) => { nu += (xv - mx) * (cents[k] - my); de += (xv - mx) ** 2; });
+        slope = de ? nu / de : 0;
+      }
+      const det = cents.map((c, k) => c - slope * (k * hopS - (cents.length - 1) * hopS / 2));
+      const sd = std(det);
+      let zc = 0; for (let k = 1; k < det.length; k++) if ((det[k] > 0) !== (det[k - 1] > 0)) zc++;
+      const midDur = cents.length * hopS;
+      const rate = midDur > 0 ? zc / 2 / midDur : 0;
+      const vibrato = midDur > 0.4 && rate >= 4 && rate <= 8 && sd >= 12 && sd <= 70;
+      const atk = frames.slice(0, aN).map(i => p[i]), tl = frames.slice(L - tN).map(i => p[i]);
+      // 起音前、收尾后不属于任何音符的滑音帧
+      const pre = []; for (let i = r.start - 1; i >= Math.max(0, r.start - 12); i--) { if (isNaN(p[i]) || owner[i] >= 0) break; pre.push(p[i]); }
+      const post = []; for (let i = r.end + 1; i <= Math.min(n - 1, r.end + 14); i++) { if (isNaN(p[i]) || owner[i] >= 0) break; post.push(p[i]); }
+      const prev = k > 0 && raw[k - 1].end >= r.start - 15 ? raw[k - 1].q : null;
+      const next = k < raw.length - 1 && raw[k + 1].start <= r.end + 15 ? raw[k + 1].q : null;
+      const atkAll = pre.concat(atk), tlAll = tl.concat(post);
+      const scoop = dur > 0.25 && atkAll.length >= 3 && Math.min(...atkAll) < center - 0.6 && (prev === null || prev >= center - 0.5) ;
+      const tailDrop = dur > 0.25 && tlAll.length >= 3 && Math.min(...tlAll.slice(-6)) < center - 0.6 && (next === null || next >= center - 0.5);
+      const drift = dur > 0.7 ? slope * midDur : 0;
+      const rel = mod12(q - key.majorTonic);
+      const octave = Math.floor((q - refTonic) / 12);
+      const absMidi = center + off[r.start + (r.end - r.start >> 1)];
+      return {
+        t0: r.start * hopS, t1: (r.end + 1) * hopS, dur, q, center, dev, sd, vibrato, scoop, tailDrop, drift,
+        rel, octave, jp: JP[rel], inScale: MAJOR.includes(rel), absMidi,
+        rms: mean(frames.map(i => tr.rms[i])),
+      };
+    });
+
+    const res = { globalOff: global, hopS, duration: n * hopS, m, p, off, notes, refTonic, key, keyName: "1=" + PC_NAMES[key.majorTonic], keyConf: key.r, voicedN, mode: "self" };
+    summarize(res);
+    return res;
+  }
+
+  function summarize(res) {
+    const { notes, hopS, n0 } = res;
+    const m = res.m, off = res.off, n = m.length, voicedN = res.voicedN, key = res.key;
+    // 乐句
+    const phrases = [];
+    let ph = null;
+    notes.forEach(nt => {
+      if (!ph || nt.t0 - ph.t1 > 0.35) { ph = { t0: nt.t0, t1: nt.t1, notes: [nt] }; phrases.push(ph); }
+      else { ph.t1 = nt.t1; ph.notes.push(nt); }
+    });
+    phrases.forEach(f => {
+      const last = f.notes[f.notes.length - 1];
+      const medR = median(f.notes.map(z => z.rms));
+      f.dur = f.t1 - f.t0;
+      f.weakEnd = f.dur > 2 && f.notes.length >= 3 && (last.tailDrop || last.dev < -28) && last.rms < medR * 0.7;
+      f.flatEnd = last.dur > 0.3 && (last.tailDrop || last.dev < -28);
+    });
+
+    // 统计
+    const totDur = notes.reduce((s, z) => s + z.dur, 0);
+    const good = notes.filter(z => !z.wrong && Math.abs(z.dev) <= 25).reduce((s, z) => s + z.dur, 0);
+    const okish = notes.filter(z => !z.wrong && Math.abs(z.dev) <= 40).reduce((s, z) => s + z.dur, 0);
+    const accuracy = good / totDur;
+    const wMean = (arr, f) => { const w = arr.reduce((s, z) => s + z.dur, 0); return w ? arr.reduce((s, z) => s + f(z) * z.dur, 0) / w : 0; };
+    const meanDev = wMean(notes, z => z.dev);
+    const meanAbs = wMean(notes, z => Math.abs(z.dev));
+    const absList = notes.map(z => z.absMidi);
+    const hiCut = pct(absList, 0.75), loCut = pct(absList, 0.25);
+    const hiNotes = notes.filter(z => z.absMidi >= hiCut), loNotes = notes.filter(z => z.absMidi <= loCut);
+    const hiDev = wMean(hiNotes, z => z.dev), loDev = wMean(loNotes, z => z.dev);
+    const longN = notes.filter(z => z.dur > 0.25);
+    const scoopRate = longN.length ? longN.filter(z => z.scoop).length / longN.length : 0;
+    const sustain = notes.filter(z => z.dur > 0.45 && !z.vibrato);
+    const unstable = sustain.filter(z => z.sd > 22);
+    const unstableRate = sustain.length ? unstable.length / sustain.length : 0;
+    const vibratoRate = notes.filter(z => z.dur > 0.45).length ? notes.filter(z => z.vibrato).length / notes.filter(z => z.dur > 0.45).length : 0;
+    const driftNotes = notes.filter(z => z.dur > 0.7 && Math.abs(z.drift) > 30);
+    const multiPh = phrases.filter(f => f.dur > 2 && f.notes.length >= 3);
+    const flatEndRate = multiPh.length ? multiPh.filter(f => f.flatEnd).length / multiPh.length : 0;
+    const weakEndRate = multiPh.length ? multiPh.filter(f => f.weakEnd).length / multiPh.length : 0;
+    // 整体越唱越高/低
+    const vIdx = []; for (let i = 0; i < n; i++) if (!isNaN(m[i])) vIdx.push(i);
+    const k15 = Math.floor(vIdx.length * 0.15);
+    const offStart = median(vIdx.slice(0, k15).map(i => off[i]));
+    const offEnd = median(vIdx.slice(-k15).map(i => off[i]));
+    const songDrift = (offEnd - offStart) * 100;
+    const outKey = res.mode === "self" ? notes.filter(z => !z.inScale && z.dur > 0.3) : [];
+    const rmsDb = notes.map(z => 20 * Math.log10(z.rms + 1e-9));
+    const dynRange = pct(rmsDb, 0.9) - pct(rmsDb, 0.1);
+
+    // 问题点
+    notes.forEach(z => {
+      const iss = [];
+      if (z.wrong) iss.push("错音");
+      else if (Math.abs(z.dev) > 25) iss.push(z.dev > 0 ? "高" : "低");
+      if (res.mode === "self" && !z.inScale && z.dur > 0.3) iss.push("调外");
+      if (z.lag !== undefined && z.dur > 0.2) { if (z.lag > 0.28) iss.push("慢"); else if (z.lag < -0.28) iss.push("快"); }
+      if (z.scoop) iss.push("勾");
+      if (z.tailDrop) iss.push("尾掉");
+      if (z.dur > 0.45 && !z.vibrato && z.sd > 22) iss.push("抖");
+      if (Math.abs(z.drift) > 30) iss.push(z.drift < 0 ? "长音往下" : "长音往上");
+      z.issues = iss;
+      z.sev = (Math.max(0, Math.abs(z.dev) - 20) + (iss.includes("调外") ? 35 : 0) + (z.wrong ? 60 : 0) + (iss.includes("慢") || iss.includes("快") ? 18 : 0) + (z.scoop ? 15 : 0) + (z.tailDrop ? 15 : 0) + (iss.includes("抖") ? 15 : 0)) * Math.min(1.5, z.dur + 0.3);
+    });
+    const ranked = notes.filter(z => z.sev > 8).sort((a, b) => b.sev - a.sev);
+    const spots = [];
+    for (const z of ranked) {
+      const rhythmOnly = z.issues.every(x => x === "慢" || x === "快");
+      if (spots.some(s => Math.abs(s.t0 - z.t0) < 0.9 || (rhythmOnly && s.issues.some(x => x === "慢" || x === "快") && Math.abs(s.t0 - z.t0) < 4))) continue;
+      spots.push(z); if (spots.length >= 6) break;
+    }
+    // 拖拍/抢拍：指向这一段开始的那个音
+    for (let q = 0; q < spots.length; q++) {
+      const z = spots[q]; if (!z.issues.every(x => x === "慢" || x === "快")) continue;
+      const tag = z.issues[0]; let k = notes.indexOf(z);
+      while (k > 0 && notes[k - 1].issues.includes(tag) && z.t0 - notes[k - 1].t0 < 4 && notes[k].t0 - notes[k - 1].t1 < 1.5) k--;
+      if (!spots.includes(notes[k])) spots[q] = notes[k];
+    }
+    spots.sort((a, b) => a.t0 - b.t0);
+
+    const stabScore = 1 - Math.min(1, unstableRate * 1.2);
+    const score = Math.round(100 * (0.6 * accuracy + 0.15 * (okish / totDur) + 0.15 * stabScore + 0.1 * (1 - flatEndRate)));
+
+    res.phrases = phrases; res.spots = spots;
+    res.stats = {
+        score, accuracy, okRate: okish / totDur, meanDev, meanAbs, hiDev, loDev,
+        hiCutName: noteName(hiCut), range: [noteName(pct(absList, 0.05)), noteName(pct(absList, 0.95))],
+        scoopRate, unstableRate, vibratoRate, driftNoteCount: driftNotes.length,
+        flatEndRate, weakEndRate, songDrift, outKeyCount: outKey.length,
+        noteCount: notes.length, phraseCount: phrases.length, dynRange,
+        voicedSec: voicedN * hopS, tuningVsA440: (res.globalOff || 0) * 100,
+        wrongCount: notes.filter(z => z.wrong).length, refCover: notes.filter(z => z.refDev !== undefined).length / Math.max(1, notes.length),
+        lateCount: notes.filter(z => z.issues.includes("慢")).length, earlyCount: notes.filter(z => z.issues.includes("快")).length,
+        keyShift: res.keyShift || 0,
+      };
+  }
+
+
+  // ================= 原唱：提取人声旋律 =================
+  function fft(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const a = i + k, b = a + len / 2;
+          const xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+          const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+        }
+      }
+    }
+  }
+  // L、R 是 16k 采样的左右声道（单声道时 R=null）
+  async function extractMelody(L, R, sr, onProgress) {
+    const N = 2048, hop = Math.round(sr * 0.02), nb = N / 2;
+    const win = new Float64Array(N); for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    const frames = Math.max(0, Math.floor((L.length - N) / hop));
+    const cands = []; for (let mm = 55; mm <= 86; mm += 0.1) cands.push(mm);
+    const binOf = mm => 440 * Math.pow(2, (mm - 69) / 12) * N / sr;
+    const cb = cands.map(binOf);
+    const midi = new Float64Array(frames).fill(NaN), sal = new Float64Array(frames);
+    const re = new Float64Array(N), im = new Float64Array(N), re2 = new Float64Array(N), im2 = new Float64Array(N), E = new Float64Array(nb);
+    const maxBin = Math.floor(5000 * N / sr);
+    for (let f = 0; f < frames; f++) {
+      if (f % 300 === 0) { onProgress && onProgress(f / frames); await tick(); }
+      const o = f * hop;
+      for (let i = 0; i < N; i++) {
+        const l = L[o + i], r = R ? R[o + i] : l;
+        re[i] = (l + r) * 0.5 * win[i]; im[i] = 0; re2[i] = (l - r) * 0.5 * win[i]; im2[i] = 0;
+      }
+      fft(re, im); if (R) fft(re2, im2);
+      let tot = 0;
+      for (let k = 0; k < nb; k++) {
+        const mg = Math.hypot(re[k], im[k]), sd = R ? Math.hypot(re2[k], im2[k]) : 0;
+        E[k] = Math.sqrt(Math.max(0, mg - 0.9 * sd)); tot += E[k];
+      }
+      if (tot < 1e-6) continue;
+      let best = -1, bs = 0;
+      for (let c = 0; c < cb.length; c++) {
+        let s = 0, w = 1;
+        for (let h = 1; h <= 10; h++) {
+          const bn = cb[c] * h; if (bn >= maxBin) break;
+          const k = Math.round(bn);
+          s += w * Math.max(E[k - 1] || 0, E[k], E[k + 1] || 0); w *= 0.84;
+        }
+        if (s > bs) { bs = s; best = c; }
+      }
+      midi[f] = cands[best]; sal[f] = bs;
+    }
+    onProgress && onProgress(1);
+    // 有没有人声：显著度阈值
+    const sv = Array.from(sal).filter(v => v > 0);
+    const thr = 0.35 * pct(sv, 0.9);
+    for (let f = 0; f < frames; f++) if (!(sal[f] > thr)) midi[f] = NaN;
+    // 中值平滑（圈内）
+    const out = new Float64Array(frames).fill(NaN);
+    for (let f = 0; f < frames; f++) {
+      if (isNaN(midi[f])) continue;
+      const nbh = []; for (let k = f - 2; k <= f + 2; k++) if (k >= 0 && k < frames && !isNaN(midi[k])) nbh.push(midi[k]);
+      out[f] = median(nbh);
+    }
+    return { hopS: hop / sr, midi: out, duration: L.length / sr };
+  }
+
+  // ================= 跟原唱比 =================
+  const wrap12 = d => { let v = ((d % 12) + 12) % 12; if (v >= 6) v -= 12; return v; };
+  // mode: "sync" = 跟着原唱一起唱（时间基本对齐）；"free" = 自己清唱的录音
+  function compareWithRef(res, ref, mode) {
+    const H = ref.hopS;
+    const Nd = Math.floor(res.duration / H);
+    const dad = new Float64Array(Nd);
+    for (let j = 0; j < Nd; j++) { const i = Math.round(j * H / res.hopS); dad[j] = i < res.m.length ? res.m[i] : NaN; }
+    const rf = ref.midi, Nr = rf.length;
+    // 1) 调：音级直方图对一下（sync 模式默认同调）
+    let k = 0;
+    if (mode === "free") {
+      const hd = new Array(12).fill(0), hr = new Array(12).fill(0);
+      dad.forEach(v => { if (!isNaN(v)) hd[mod12(Math.round(v))]++; });
+      rf.forEach(v => { if (!isNaN(v)) hr[mod12(Math.round(v))]++; });
+      let bc = -1e9;
+      for (let s = 0; s < 12; s++) { let c = 0; for (let q = 0; q < 12; q++) c += hd[mod12(q + s)] * hr[q]; if (c > bc) { bc = c; k = s; } }
+      if (k > 6) k -= 12;
+    }
+    const cost = (dv, rv) => isNaN(dv) ? 0.3 : isNaN(rv) ? 1.5 : Math.min(Math.abs(wrap12(dv - rv - k)), 3);
+    const map = new Int32Array(Nd).fill(-1);
+    let L0 = 0;
+    if (mode === "sync") {
+      // 2a) 找整体延迟（蓝牙耳机等）
+      let bestS = -1;
+      for (let lag = -50; lag <= 50; lag++) {
+        let hit = 0, cnt = 0;
+        for (let j = 0; j < Nd; j += 2) { const i = j - lag; if (i < 0 || i >= Nr || isNaN(dad[j]) || isNaN(rf[i])) continue; cnt++; if (Math.abs(wrap12(dad[j] - rf[i])) < 0.6) hit++; }
+        const sc = cnt > 50 ? hit / cnt : 0; if (sc > bestS) { bestS = sc; L0 = lag; }
+      }
+      // 2b) 窄带 DTW（±0.3 秒）
+      const w = 28, Wd = 2 * w + 1, D = new Float64Array(Nd * Wd).fill(Infinity), B = new Int8Array(Nd * Wd);
+      const at = (j, d) => j * Wd + d + w;
+      for (let j = 0; j < Nd; j++) for (let d = -w; d <= w; d++) {
+        const i = j - L0 + d; if (i < 0 || i >= Nr) continue;
+        const c = cost(dad[j], rf[i]) + Math.abs(d) * 0.01;
+        if (j === 0) { D[at(j, d)] = c; continue; }
+        // 前驱: (j-1,i-1) -> d 不变；(j-1,i) -> d-1... i=j-L0+d，(j-1,i) 的 d' = d+1；(j,i-1) 的 d' = d-1
+        let bv = D[at(j - 1, d)], bk = 0;
+        if (d + 1 <= w && D[at(j - 1, d + 1)] + 0.4 < bv) { bv = D[at(j - 1, d + 1)] + 0.4; bk = 1; }
+        if (d - 1 >= -w && D[at(j, d - 1)] + 0.4 < bv) { bv = D[at(j, d - 1)] + 0.4; bk = 2; }
+        D[at(j, d)] = bv + c; B[at(j, d)] = bk;
+      }
+      let j = Nd - 1, d = 0, bv = Infinity;
+      for (; j >= 0; j--) { for (let dd = -w; dd <= w; dd++) if (D[at(j, dd)] < bv) { bv = D[at(j, dd)]; d = dd; } if (isFinite(bv)) break; }
+      while (j >= 0 && isFinite(bv)) {
+        if (map[j] < 0) map[j] = j - L0 + d;
+        const bk = B[at(j, d)];
+        if (bk === 0) j--; else if (bk === 1) { j--; d++; } else d--;
+        if (j < 0 || d < -w || d > w) break;
+      }
+    } else {
+      // 2c) 自由清唱：100ms 网格上做子序列 DTW
+      const S = 5, nd = Math.floor(Nd / S), nr = Math.floor(Nr / S);
+      const ds = Float64Array.from({ length: nd }, (_, a) => { const v = []; for (let q = 0; q < S; q++) if (!isNaN(dad[a * S + q])) v.push(dad[a * S + q]); return v.length >= 2 ? median(v) : NaN; });
+      const rs = Float64Array.from({ length: nr }, (_, a) => { const v = []; for (let q = 0; q < S; q++) if (!isNaN(rf[a * S + q])) v.push(rf[a * S + q]); return v.length >= 2 ? median(v) : NaN; });
+      const D = new Float32Array(nd * nr), B = new Int8Array(nd * nr);
+      for (let a = 0; a < nd; a++) for (let b = 0; b < nr; b++) {
+        const c = cost(ds[a], rs[b]), idx = a * nr + b;
+        if (a === 0) { D[idx] = c; continue; }
+        let bv = b > 0 ? D[idx - nr - 1] : Infinity, bk = 0;
+        if (D[idx - nr] + 0.6 < bv) { bv = D[idx - nr] + 0.6; bk = 1; }
+        if (b > 0 && D[idx - 1] + 0.6 < bv) { bv = D[idx - 1] + 0.6; bk = 2; }
+        D[idx] = bv + c; B[idx] = bk;
+      }
+      let a = nd - 1, b = 0, bv = Infinity;
+      for (let q = 0; q < nr; q++) if (D[a * nr + q] < bv) { bv = D[a * nr + q]; b = q; }
+      const pairs = [];
+      while (a >= 0 && b >= 0) { pairs.push([a, b]); if (a === 0) break; const bk = B[a * nr + b]; if (bk === 0) { a--; b--; } else if (bk === 1) a--; else b--; }
+      const mp = new Float64Array(nd).fill(-1); pairs.forEach(([x, y]) => { if (mp[x] < 0) mp[x] = y; });
+      for (let j = 0; j < Nd; j++) { const x = Math.min(nd - 1, Math.floor(j / S)); if (mp[x] >= 0) map[j] = Math.min(Nr - 1, Math.round(mp[x] * S + (j % S))); }
+    }
+    // 3) 每个音和原唱比
+    let allDev = [];
+    res.notes.forEach(z => {
+      const j0 = Math.ceil(z.t0 / H), j1 = Math.floor(z.t1 / H), L = j1 - j0 + 1;
+      const a = j0 + Math.floor(L * 0.2), b = j1 - Math.floor(L * 0.2);
+      const diffs = [];
+      let rv = 0;
+      for (let j = a; j <= b; j++) { if (j < 0 || j >= Nd) continue; const i = map[j]; if (i < 0 || isNaN(dad[j])) continue; if (!isNaN(rf[i])) { rv++; diffs.push(wrap12(dad[j] - rf[i] - k)); } }
+      if (diffs.length >= 3 && rv >= 0.4 * Math.max(1, b - a + 1)) { const md = median(diffs); const stable = diffs.filter(v => Math.abs(v - md) < 0.5).length / diffs.length; if (stable >= 0.6) { z.refRaw = md; allDev.push([z.refRaw, z.dur]); } }
+      if (mode === "sync" && j0 < Nd && map[j0] >= 0) z.lagRaw = (j0 - map[j0] - L0) * H;
+    });
+    // 清唱：允许整体起调不一样
+    let fine = 0;
+    if (mode === "free" && allDev.length) { const near = allDev.filter(x => Math.abs(x[0]) < 0.6).map(x => x[0]); fine = near.length ? median(near) : 0; }
+    res.notes.forEach(z => {
+      z.selfDev = z.selfDev ?? z.dev;
+      if (z.refRaw === undefined) { delete z.refDev; z.wrong = false; return; }
+      const dv = z.refRaw - fine;
+      z.refDev = dv * 100;
+      z.wrong = Math.abs(dv) > 0.7 && z.dur > 0.18;
+      z.dev = z.wrong ? z.selfDev : dv * 100;
+      const refP = z.center - dv;
+      const rq = Math.round(refP);
+      z.refJp = (Math.floor((rq - res.refTonic) / 12) < 0 ? "低音" : Math.floor((rq - res.refTonic) / 12) > 0 ? "高音" : "") + JP[mod12(rq - res.key.majorTonic)];
+      if (z.lagRaw !== undefined) z.lag = z.lagRaw;
+    });
+    // 节奏：只看整句的平均快慢，单个音的抖动不算
+    if (mode === "sync") {
+      res.notes.forEach(z => { if (z.lag !== undefined) { const nb = res.notes.filter(y => y.lag !== undefined && Math.abs(y.t0 - z.t0) < 1.5).map(y => y.lag); z.lag = median(nb); } });
+    }
+    res.mode = mode; res.keyShift = k + fine; res.latency = L0 * H; res.refMap = map; res.refHop = H; res.ref = ref;
+    summarize(res);
+    return res;
+  }
+
+  function jpLabel(z) {
+    const o = z.octave;
+    return (o < 0 ? "低音" : o > 0 ? "高音" : "") + z.jp;
+  }
+  const fmtT = s => { s = Math.max(0, s); const mm = Math.floor(s / 60), ss = Math.floor(s % 60); return mm + ":" + String(ss).padStart(2, "0"); };
+
+  return { analyze, summarize, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+})();
+
+
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const show = (id, on = true) => $(id).classList.toggle("hide", !on);
+let actx = null, R = null, audioURL = null, viewStart = 0, VIEW = 10, stopAt = null, raf = 0;
+const getCtx = () => { if (!actx) { const C = window.AudioContext || window.webkitAudioContext; actx = new C(); } return actx; };
+
+function err(t) { $("err").innerHTML = t; show("err", !!t); }
+
+// ---------- 输入 ----------
+$("btnFile").onclick = () => { getCtx(); $("file").click(); };
+$("file").onchange = e => { const f = e.target.files[0]; if (f) handleBlob(f); e.target.value = ""; };
+
+let recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
+$("btnRec").onclick = async () => {
+  err(""); show("micMsg", false);
+  const c = getCtx();
+  try {
+    if (c.state === "suspended") await c.resume();
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) { show("micMsg"); return; }
+  chunks = []; live = []; liveBuf = [];
+  recMode = "self"; refSrc = null; let startAt = 0;
+  if (REF.name) {
+    $("btnRec").textContent = "原唱准备中…";
+    await REF.ready; refUI();
+    if (REF.ab) {
+      refSrc = c.createBufferSource(); refSrc.buffer = REF.ab;
+      const gn = c.createGain(); gn.gain.value = 0.9; refSrc.connect(gn); gn.connect(c.destination);
+      startAt = c.currentTime + 0.4; refSrc.start(startAt); recMode = "sync";
+      refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1500); };
+    }
+  }
+  srcNode = c.createMediaStreamSource(stream);
+  proc = c.createScriptProcessor(4096, 1, 1);
+  const mute = c.createGain(); mute.gain.value = 0;
+  srcNode.connect(proc); proc.connect(mute); mute.connect(c.destination);
+  const ratio = Math.max(1, Math.round(c.sampleRate / 16000));
+  proc.onaudioprocess = ev => {
+    if (ev.playbackTime + ev.inputBuffer.duration <= startAt) return;
+    let d = ev.inputBuffer.getChannelData(0);
+    if (ev.playbackTime < startAt) d = d.subarray(Math.floor((startAt - ev.playbackTime) * c.sampleRate));
+    chunks.push(new Float32Array(d));
+    for (let i = 0; i + ratio <= d.length; i += ratio) { let a = 0; for (let k = 0; k < ratio; k++) a += d[i + k]; liveBuf.push(a / ratio); }
+    if (liveBuf.length > 4000) liveBuf.splice(0, liveBuf.length - 4000);
+    livePitch(c.sampleRate / ratio);
+  };
+  recStart = Date.now();
+  show("stepIn", false); show("stepRec");
+  recTimer = setInterval(() => { const s = (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
+};
+function yinOne(x, sr) {
+  const W = 400, tMin = Math.floor(sr / 900), tMax = Math.ceil(sr / 70);
+  if (x.length < W + tMax + 2) return 0;
+  const o = x.length - W - tMax - 2, cm = new Float64Array(tMax + 2); let run = 0;
+  for (let tau = 1; tau <= tMax + 1; tau++) { let s = 0; for (let j = 0; j < W; j++) { const df = x[o + j] - x[o + j + tau]; s += df * df; } run += s; cm[tau] = run ? s * tau / run : 1; }
+  for (let tau = tMin; tau <= tMax; tau++) if (cm[tau] < 0.15) { while (tau < tMax && cm[tau + 1] < cm[tau]) tau++; return sr / tau; }
+  return 0;
+}
+function livePitch(sr) {
+  const n = liveBuf.length; if (n < 800) return;
+  let e = 0; for (let i = n - 400; i < n; i++) e += liveBuf[i] * liveBuf[i];
+  const rms = Math.sqrt(e / 400);
+  const f = rms > 0.008 ? yinOne(liveBuf, sr) : 0;
+  const t = (Date.now() - recStart) / 1000;
+  live.push({ t, m: f > 0 ? 69 + 12 * Math.log2(f / 440) : NaN, rms });
+  while (live.length && live[0].t < t - 8) live.shift();
+  $("volTxt").textContent = rms < 0.008 ? "没听到声音，大点声或离近一点" : rms < 0.03 ? "声音有点小，可以再近一点" : rms > 0.6 ? "声音太大了，离远一点" : "声音大小正好 👍 " + (f > 0 ? "现在唱的是 " + SC.noteName(69 + 12 * Math.log2(f / 440)) : "");
+  drawLive(t);
+}
+function drawLive(now) {
+  const cvL = $("live"), dpr = window.devicePixelRatio || 1, W = cvL.clientWidth, H = cvL.clientHeight;
+  cvL.width = W * dpr; cvL.height = H * dpr; const g = cvL.getContext("2d"); g.scale(dpr, dpr);
+  const ms = live.filter(p => !isNaN(p.m)).map(p => p.m);
+  let mid = ms.length ? ms.slice().sort((a, b) => a - b)[ms.length >> 1] : 60;
+  const lo = mid - 9, hi = mid + 9, X = t => (t - (now - 8)) / 8 * W, Y = m => H - (m - lo) / (hi - lo) * H;
+  g.strokeStyle = "#efe7db"; g.lineWidth = 1;
+  for (let m = Math.ceil(lo); m <= hi; m++) { g.beginPath(); g.moveTo(0, Y(m)); g.lineTo(W, Y(m)); g.stroke(); }
+  g.strokeStyle = "#2f6f6a"; g.lineWidth = 4; g.lineCap = "round"; g.beginPath(); let pen = false;
+  live.forEach(p => { if (isNaN(p.m)) { pen = false; return; } const x = X(p.t), y = Y(p.m); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; });
+  g.stroke();
+}
+$("btnStop").onclick = () => {
+  show("stepRec", false); clearInterval(recTimer);
+  if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
+  try { proc.disconnect(); srcNode.disconnect(); } catch (e) {}
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  const len = chunks.reduce((a, c) => a + c.length, 0), raw = new Float32Array(len);
+  let o = 0; chunks.forEach(c => { raw.set(c, o); o += c.length; }); chunks = [];
+  handlePCM(raw, getCtx().sampleRate, recMode);
+};
+function wavBlob(x, sr) {
+  const n = x.length, b = new DataView(new ArrayBuffer(44 + n * 2));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) b.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); b.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true);
+  b.setUint32(24, sr, true); b.setUint32(28, sr * 2, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); w(36, "data"); b.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) b.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x[i])) * 32000, true);
+  return new Blob([b], { type: "audio/wav" });
+}
+
+// ---------- 解码 + 降采样到 16k ----------
+function decode(buf) {
+  const c = getCtx();
+  return new Promise((res, rej) => { const p = c.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); });
+}
+function resample16k(d, len, sr) {
+  const OUT = 16000; if (sr === OUT) return d.slice(0, len);
+  const ratio = sr / OUT, fc = 0.45 / ratio, T = 16, h = [];
+  for (let j = -T; j <= T; j++) { const s = j === 0 ? 2 * fc : Math.sin(2 * Math.PI * fc * j) / (Math.PI * j); h.push(s * (0.54 + 0.46 * Math.cos(Math.PI * j / T))); }
+  const hs = h.reduce((a, b) => a + b, 0);
+  const filt = i => { let s = 0; for (let j = -T; j <= T; j++) { const k = i + j; if (k >= 0 && k < len) s += d[k] * h[j + T]; } return s / hs; };
+  const n = Math.floor(len / ratio), out = new Float32Array(n);
+  for (let k = 0; k < n; k++) { const x = k * ratio, i = Math.floor(x), f = x - i; out[k] = filt(i) * (1 - f) + filt(i + 1) * f; }
+  return out;
+}
+function normalize(x) { let pk = 0; for (let i = 0; i < x.length; i++) pk = Math.max(pk, Math.abs(x[i])); if (pk > 0) for (let i = 0; i < x.length; i++) x[i] /= pk; return x; }
+function toMono16k(ab, maxSec) {
+  const sr = ab.sampleRate, len = Math.min(ab.length, Math.floor(maxSec * sr));
+  let mono;
+  if (ab.numberOfChannels === 1) mono = ab.getChannelData(0);
+  else { mono = new Float32Array(len); for (let c = 0; c < ab.numberOfChannels; c++) { const d = ab.getChannelData(c); for (let i = 0; i < len; i++) mono[i] += d[i] / ab.numberOfChannels; } }
+  return normalize(resample16k(mono, len, sr));
+}
+
+// ---------- 原唱 ----------
+const REF = { ab: null, melody: null, name: "", ready: null };
+const DB = {
+  open() { return new Promise((res, rej) => { try { const r = indexedDB.open("singcoach", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); },
+  async put(k, v) { try { const db = await this.open(); await new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) {} },
+  async get(k) { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (e) { return null; } },
+  async del(k) { try { const db = await this.open(); db.transaction("kv", "readwrite").objectStore("kv").delete(k); } catch (e) {} },
+};
+function refUI() {
+  const has = !!REF.name;
+  show("refNone", !has); show("refHas", has); show("earTip", has);
+  $("btnRec").textContent = has ? "🎙️ 开始唱（放原唱）" : "🎙️ 开始唱";
+  $("refName").textContent = has ? "🎵 " + REF.name : "";
+}
+async function loadRef(blob, name, save) {
+  REF.name = name.replace(/\.[^.]+$/, ""); REF.melody = null; REF.ab = null; refUI();
+  if (!$("song").value) $("song").value = REF.name;
+  $("refState").textContent = "准备中…"; $("refProg").style.width = "3%"; show("refProg", true); $("refProg").parentElement.classList.remove("hide");
+  REF.ready = (async () => {
+    try {
+      const ab = await decode(await blob.arrayBuffer());
+      REF.ab = ab;
+      if (save) DB.put("ref", { blob, name });
+      const len = Math.min(ab.length, Math.floor(400 * ab.sampleRate));
+      const L = resample16k(ab.getChannelData(0), len, ab.sampleRate);
+      const Rr = ab.numberOfChannels > 1 ? resample16k(ab.getChannelData(1), len, ab.sampleRate) : null;
+      REF.melody = await SC.extractMelody(L, Rr, 16000, p => $("refProg").style.width = (5 + p * 95) + "%");
+      $("refState").textContent = "✔ 准备好了 · " + SC.fmtT(ab.duration); $("refProg").parentElement.classList.add("hide");
+      return true;
+    } catch (e) {
+      REF.name = ""; refUI(); err("这首原唱打不开 😅，换一个文件试试（mp3、m4a 都可以）。"); return false;
+    }
+  })();
+  return REF.ready;
+}
+$("btnRef").onclick = $("btnRefChange").onclick = () => { getCtx(); $("refFile").click(); };
+$("refFile").onchange = e => { const f = e.target.files[0]; if (f) loadRef(f, f.name, true); e.target.value = ""; };
+$("btnRefOff").onclick = () => { REF.name = ""; REF.ab = null; REF.melody = null; REF.ready = null; DB.del("ref"); refUI(); };
+DB.get("ref").then(v => { if (v && v.blob) loadRef(v.blob, v.name, false); });
+
+async function handleBlob(blob) {
+  err(""); show("stepIn", false); show("result", false); show("stepBusy");
+  $("prog").style.width = "3%"; $("busyTxt").textContent = "正在打开录音…";
+  try {
+    const buf = await blob.arrayBuffer();
+    let ab;
+    try { ab = await decode(buf); }
+    catch (e) { throw new Error("decode"); }
+    await runAnalysis(ab, blob, "free");
+  } catch (e) { fail(e); }
+}
+function handlePCM(raw, sr, mode) {
+  const ab = { sampleRate: sr, length: raw.length, duration: raw.length / sr, numberOfChannels: 1, getChannelData: () => raw };
+  err(""); show("result", false); show("stepBusy"); $("prog").style.width = "3%";
+  runAnalysis(ab, null, mode).catch(fail);
+}
+async function runAnalysis(ab, blob, mode) {
+    const tooLong = ab.duration > 360;
+    $("busyTxt").textContent = tooLong ? "歌比较长，先分析前 6 分钟…" : "正在一个音一个音地听…";
+    await new Promise(r => setTimeout(r, 30));
+    const x = toMono16k(ab, 360);
+    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; });
+    if (res.error) throw new Error(res.error);
+    if (REF.name && REF.ready) {
+      $("busyTxt").textContent = "正在跟原唱对比…";
+      await REF.ready;
+      if (REF.melody) { await new Promise(r => setTimeout(r, 30)); SC.compareWithRef(res, REF.melody, mode === "sync" ? "sync" : "free"); }
+    }
+    R = res;
+    if (audioURL) URL.revokeObjectURL(audioURL);
+    audioURL = URL.createObjectURL(blob || wavBlob(x, 16000));
+    $("aud").src = audioURL;
+    render();
+}
+function fail(e) {
+    show("stepBusy", false); show("stepIn");
+    const m = e.message;
+    err(m === "decode" ? "这个文件打不开 😅。可以换个方式录：用手机<b>录像</b>，或者苹果“语音备忘录”、安卓“录音机”录成 m4a，再选文件。"
+      : m === "short" || m === "few" ? "没听到足够的歌声。请离手机近一点、唱长一点（至少 20～30 秒），最好清唱再试一次。"
+      : "出了点问题：" + m);
+}
+
+// ---------- 文字说明 ----------
+const howMuch = c => { const a = Math.abs(c); return a < 35 ? "一点点" : a < 55 ? "比较明显" : "挺多"; };
+function spotText(z) {
+  const parts = [];
+  const nm = "「" + SC.jpLabel(z) + "」";
+  const vs = z.refDev !== undefined ? "比原唱" : "";
+  if (z.wrong) parts.push(`原唱这里是「${z.refJp}」，您唱成了${nm}，<b>唱错音了</b>。`);
+  else if (z.issues.includes("调外")) parts.push(`这个音听着像${nm}，可这首歌的调里一般没有它，<b>可能唱错音了</b>。（要是歌谱上本来就这么写，就没问题。）`);
+  else if (z.issues.includes("高")) parts.push(`${nm}${vs}唱<b>高了${howMuch(z.dev)}</b>。`);
+  else if (z.issues.includes("低")) parts.push(`${nm}${vs}唱<b>低了${howMuch(z.dev)}</b>。`);
+  const rhythmOnly = z.issues.length && z.issues.every(x => x === "慢" || x === "快");
+  if (!parts.length) parts.push(rhythmOnly ? `从${nm}这里开始，` : `${nm}这个音：`);
+  if (z.scoop) parts.push("开口是从下面<b>滑上去</b>的，像“勾”上去，听着不干脆。");
+  if (z.tailDrop) parts.push("这个音最后<b>往下掉</b>了，像泄了气。");
+  if (z.issues.includes("抖")) parts.push("拖长的时候<b>声音在晃</b>，不够稳。");
+  if (z.issues.includes("长音往下")) parts.push("长音<b>越拖越低</b>。");
+  if (z.issues.includes("长音往上")) parts.push("长音<b>越拖越高</b>。");
+  if (z.issues.includes("慢")) parts.push(`${rhythmOnly ? "" : "这句"}比原唱<b>慢了约 ${z.lag.toFixed(1)} 秒</b>（拖拍了）。`);
+  if (z.issues.includes("快")) parts.push(`${rhythmOnly ? "" : "这句"}比原唱<b>快了约 ${(-z.lag).toFixed(1)} 秒</b>（抢拍了）。`);
+  if (parts.length === 1 && parts[0].endsWith("：")) parts.push("这里有点小问题。");
+  return parts.join("");
+}
+function issueTag(z) {
+  if (z.wrong) return "唱错音";
+  if (z.issues.includes("调外")) return "可能唱错";
+  if (z.issues.includes("高")) return "偏高";
+  if (z.issues.includes("低")) return "偏低";
+  if (z.scoop) return "往上勾";
+  if (z.tailDrop) return "尾音掉";
+  if (z.issues.includes("慢")) return "拖拍";
+  if (z.issues.includes("快")) return "抢拍";
+  return "不稳";
+}
+
+function buildTips(s) {
+  const T = [];
+  if (s.wrongCount >= 1) T.push(["有音唱得跟原唱不一样", `有 ${s.wrongCount} 个音和原唱不是同一个音（见上面“唱错音”）。这是最先要改的。`,
+    "点上面的<b>“▶ 原唱”</b>多听几遍这一句，跟着原唱<b>小声哼</b>，哼准了再大声唱。还可以对着简谱，把这句慢下来一个音一个音唱。"]);
+  if (s.lateCount + s.earlyCount >= 2) T.push([s.lateCount >= s.earlyCount ? "有几句比原唱慢（拖拍）" : "有几句比原唱快（抢拍）", "跟原唱比，有几句进来的时间不对。",
+    "听原唱时<b>用手轻轻打拍子</b>，先把拍子打稳再开口；换气要在句子之间提前换好，别等到该唱了才吸气。"]);
+  if (Math.abs(s.keyShift) >= 0.5) T.push(["起的调和原唱不一样", `您是按自己的调唱的，比原唱${s.keyShift > 0 ? "高" : "低"}了约 ${Math.round(Math.abs(s.keyShift))} 个音。`,
+    "这没关系，按自己舒服的调唱就好，软件评的是音和音之间准不准。想跟原唱一样，可以戴耳机点“开始唱”跟着唱。"]);
+  if (s.hiDev < -18 && s.hiDev < s.loDev - 8) T.push(["高音唱不上去（偏低）", `${s.hiCutName} 以上的高音，平均比该唱的低一些。高音一般不是嗓子不够，是气没托住、喉咙在挤。`,
+    "唱高音前先吸一口气沉到肚子（像闻花香），嘴巴<b>竖着张开</b>，想着声音往<b>头顶</b>走，不要往前喊。先用“u——”或“哼鸣”把这个高音慢慢唱准，再换回歌词。"]);
+  else if (s.meanDev < -14) T.push(["整体有点偏低", "大部分音都比该唱的稍低一点，听起来会有点“闷”、“暗”。",
+    "唱的时候眉毛微微抬起、嘴角带一点笑，心里想着“音往上一点”。每句开口前先在心里“听”到这个音再唱。"]);
+  else if (s.meanDev > 14) T.push(["整体有点偏高", "很多音比该唱的稍高一点，常见原因是太用力、太紧张。",
+    "放松肩膀和脖子，声音“轻一点、松一点”，不用使劲往上顶。"]);
+  if (s.songDrift < -30) T.push(["越唱越低（跑调）", `唱到后面，整个调比开头低了${-s.songDrift < 50 ? "小半个音" : "半个音还多"}——也就是唱着唱着，调慢慢沉下去了。`,
+    "这是清唱最常见的问题，多半是唱累了、气不够。练法：手机装个“钢琴”App，<b>每唱完一段就弹一下第一个音</b>对一对；平时多唱慢歌练气息。"]);
+  else if (s.songDrift > 30) T.push(["越唱越高", `唱到后面，整个调比开头高了${s.songDrift < 50 ? "小半个音" : "半个音还多"}，多半是越唱越兴奋、越用力。`,
+    "副歌高潮也要保持放松，中途用钢琴 App 对一下音。"]);
+  if (s.scoopRate > 0.2) T.push(["开口喜欢“往上勾”", `大约 ${Math.round(s.scoopRate * 100)}% 的音，是从下面滑上去才到位的。偶尔这么唱有味道，次数多了就像音没找准。`,
+    "开口前先在心里“听”到这个音，然后<b>直接落在音上</b>，像按钢琴键一样“一下就到”。可以先用“嗒、嗒”短促地唱旋律练习。"]);
+  if (s.flatEndRate > 0.3 || s.weakEndRate > 0.25) T.push(["句尾掉下来，气不够", "很多句子的最后一个字往下掉、声音变弱，这通常是气息不够、句尾“泄气”了。",
+    "每句开始前吸足气，<b>句尾的字要“托住”</b>，唱完再收。练法：每天“嘶——”地匀速吐气，看能坚持多少秒，慢慢练到 20 秒以上。"]);
+  if (s.unstableRate > 0.25) T.push(["长音不稳、在晃", `拖长的音里，约 ${Math.round(s.unstableRate * 100)}% 有晃动。`,
+    "练“长音”：选一个舒服的音，用“啊——”唱 8 拍，用手机录下来听，目标是像一条直线一样平。气息要均匀，别一开始就用完。"]);
+  if (s.outKeyCount >= 2) T.push(["有几个音可能唱错了", `有 ${s.outKeyCount} 个音不在这首歌的调里（见上面“可能唱错”）。`,
+    "对着简谱，把这几句<b>慢下来一个音一个音唱</b>，最好用钢琴 App 弹着旋律跟唱，唱熟了再恢复原速。"]);
+  if (!T.length) T.push(["音准很好，可以往“好听”练了", "音准、稳定性都没有明显问题，基础很扎实！",
+    s.dynRange < 6 ? "下一步练<b>感情和强弱</b>：现在声音大小变化比较少，试着主歌轻一点、副歌饱满一点，句子里重要的字稍微加重。" : "下一步可以练咬字更清楚、感情更投入，多听原唱怎么处理换气和强弱。"]);
+  return T.slice(0, 5);
+}
+
+// ---------- 渲染结果 ----------
+function render() {
+  const s = R.stats;
+  show("stepBusy", false); show("result");
+  $("score").textContent = s.score;
+  const col = s.score >= 85 ? "var(--good)" : s.score >= 70 ? "var(--mid)" : "var(--bad)";
+  $("ring").style.background = `conic-gradient(${col} ${s.score * 3.6}deg, #efe7db 0)`;
+  $("ring").firstElementChild.style.cssText = "background:#fff;width:94px;height:94px;border-radius:50%;display:grid;place-content:center";
+  $("verdict").textContent = s.score >= 85 ? "唱得很不错！👍" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
+  const withRef = R.mode !== "self";
+  $("keyLine").textContent = (withRef ? `已跟原唱《${REF.name}》对比 · ` : `听出来是 ${R.keyName} 调（大约） · `) + `唱了 ${SC.fmtT(R.duration)}，共 ${s.noteCount} 个音`;
+  $("tAcc").textContent = Math.round(s.accuracy * 100) + "%";
+  $("tStab").textContent = s.unstableRate < 0.15 ? "稳" : s.unstableRate < 0.35 ? "还行" : "晃";
+  if (withRef) {
+    $("tStabL").textContent = "唱错的音"; $("tStab").textContent = s.wrongCount + " 个";
+    $("tTrendL").textContent = R.mode === "sync" ? "节奏" : "比原唱";
+    $("tTrend").textContent = R.mode === "sync" ? (s.lateCount + s.earlyCount === 0 ? "跟得上" : s.lateCount >= s.earlyCount ? "有点慢" : "有点快") : (Math.abs(s.keyShift) < 0.5 ? "同一个调" : (s.keyShift > 0 ? "高" : "低") + Math.round(Math.abs(s.keyShift)) + "个音");
+  } else {
+    $("tStabL").textContent = "长音稳不稳"; $("tTrendL").textContent = "整体偏向";
+    $("tTrend").textContent = Math.abs(s.meanDev) < 10 ? "正好" : s.meanDev < 0 ? "偏低" : "偏高";
+  }
+  show("lgRef", withRef);
+
+  $("spots").innerHTML = R.spots.length ? R.spots.map((z, i) =>
+    `<div class="spot"><div class="tag">${SC.fmtT(z.t0)}<em>${issueTag(z)}</em></div><p>${spotText(z)}</p><div class="row2" style="margin-top:10px"><button class="btn small" data-i="${i}">▶ 我唱的</button>${(z.refDev !== undefined || z.wrong) && REF.ab ? `<button class="btn small alt" data-r="${i}">▶ 原唱</button>` : ""}</div></div>`).join("")
+    : "<p>没发现明显的问题，很棒！</p>";
+  $("spots").querySelectorAll("button[data-i]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.i]; playRange(z.t0 - 1.2, z.t1 + 0.8); });
+  $("spots").querySelectorAll("button[data-r]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.r]; playRef(z.t0 - 1.2, z.t1 + 0.8); });
+
+  $("tipsBox").innerHTML = buildTips(s).map(t => `<div class="tip"><b>${t[0]}</b><p>${t[1]}</p><div class="how">💡 怎么练：${t[2]}</div></div>`).join("");
+  $("aiOut").textContent = ""; $("btnAI").disabled = false; $("btnAI").textContent = "请老师点评";
+
+  $("pos").max = Math.max(0, R.duration - VIEW);
+  setView(Math.max(0, (R.notes[0] ? R.notes[0].t0 : 0) - 0.5));
+  window.scrollTo({ top: $("result").offsetTop - 10, behavior: "smooth" });
+}
+
+// ---------- 音高图 ----------
+const cv = $("cv");
+function setView(t) { viewStart = Math.max(0, Math.min(t, Math.max(0, R.duration - VIEW))); $("pos").value = viewStart; draw(); }
+$("pos").oninput = e => setView(+e.target.value);
+$("prev").onclick = () => setView(viewStart - VIEW * 0.8);
+$("next").onclick = () => setView(viewStart + VIEW * 0.8);
+window.addEventListener("resize", () => R && draw());
+
+function draw() {
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, W, H);
+  const L = 44, top = 10, bot = H - 24;
+  const vis = R.notes.filter(z => z.t1 > viewStart && z.t0 < viewStart + VIEW);
+  const qs = (vis.length ? vis : R.notes).map(z => z.center);
+  let lo = Math.floor(Math.min(...qs)) - 2, hi = Math.ceil(Math.max(...qs)) + 2;
+  if (hi - lo < 10) { const c = (hi + lo) / 2; lo = Math.floor(c - 5); hi = Math.ceil(c + 5); }
+  const X = t => L + (t - viewStart) / VIEW * (W - L - 6), Y = m => bot - (m - lo) / (hi - lo) * (bot - top);
+  // 简谱线
+  g.font = "600 15px -apple-system,PingFang SC,sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  for (let m = lo; m <= hi; m++) {
+    const rel = SC.mod12(m - R.key.majorTonic);
+    if (!SC.MAJOR.includes(rel)) continue;
+    const y = Y(m), oc = Math.floor((m - R.refTonic) / 12);
+    g.strokeStyle = rel === 0 ? "#d9cbb8" : "#eee6da"; g.lineWidth = rel === 0 ? 1.5 : 1;
+    g.beginPath(); g.moveTo(L, y); g.lineTo(W, y); g.stroke();
+    g.fillStyle = "#6b625a"; g.fillText(SC.JP[rel], 18, y);
+    for (let k = 0; k < Math.abs(oc); k++) { g.beginPath(); g.arc(18 + 0, oc > 0 ? y - 11 - k * 5 : y + 11 + k * 5, 1.8, 0, 7); g.fill(); }
+  }
+  // 时间
+  g.fillStyle = "#9a9087"; g.font = "13px sans-serif";
+  for (let t = Math.ceil(viewStart / 2) * 2; t <= viewStart + VIEW; t += 2) g.fillText(SC.fmtT(t), X(t), H - 10);
+  // 声音走向
+  const i0 = Math.max(0, Math.floor(viewStart / R.hopS)), i1 = Math.min(R.p.length, Math.ceil((viewStart + VIEW) / R.hopS));
+  g.strokeStyle = "#b9b0a5"; g.lineWidth = 1.5; g.beginPath(); let pen = false;
+  for (let i = i0; i < i1; i++) { const v = R.p[i]; if (isNaN(v)) { pen = false; continue; } const x = X(i * R.hopS), y = Y(v); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; }
+  g.stroke();
+  // 音符
+  g.lineCap = "round";
+  vis.forEach(z => {
+    const a = Math.abs(z.dev), bad = a > 40 || z.issues.includes("调外");
+    g.strokeStyle = bad ? "#d2452f" : a > 25 ? "#e0a020" : "#2e9e5b";
+    g.lineWidth = 7; g.beginPath(); g.moveTo(X(z.t0) + 3, Y(z.center)); g.lineTo(X(z.t1) - 3, Y(z.center)); g.stroke();
+    if (z.issues.length && (bad || a > 25 || z.scoop || z.tailDrop)) {
+      g.fillStyle = "#d2452f"; g.font = "bold 13px sans-serif";
+      g.fillText(z.dev > 25 ? "↑高" : z.dev < -25 ? "↓低" : z.scoop ? "勾" : z.tailDrop ? "掉" : "", (X(z.t0) + X(z.t1)) / 2, Y(z.center) - 13);
+    }
+  });
+  // 原唱旋律
+  if (R.mode !== "self" && R.refMap) {
+    const H = R.refHop; let last = NaN, lastV = NaN;
+    g.strokeStyle = "#4a7fc1"; g.lineWidth = 2.5; g.setLineDash([6, 4]); g.beginPath(); let pn = false;
+    for (let t = Math.max(0, viewStart); t < viewStart + VIEW; t += H) {
+      const j = Math.round(t / H), ri = R.refMap[j], i = Math.min(R.p.length - 1, Math.round(t / R.hopS));
+      if (!isNaN(R.p[i])) last = R.p[i];
+      const v0 = ri >= 0 ? R.ref.midi[ri] : NaN;
+      if (isNaN(v0) || isNaN(last)) { pn = false; continue; }
+      let v = v0 + R.keyShift - R.off[i]; v += 12 * Math.round((last - v) / 12);
+      const x = X(t), y = Y(v); if (pn && Math.abs(v - lastV) > 2.5) pn = false; pn ? g.lineTo(x, y) : g.moveTo(x, y); pn = true; lastV = v;
+    }
+    g.stroke(); g.setLineDash([]);
+  }
+  // 播放线
+  const ct = $("aud").currentTime;
+  if (!$("aud").paused && ct >= viewStart && ct <= viewStart + VIEW) { g.strokeStyle = "#b8432f"; g.lineWidth = 2; g.beginPath(); g.moveTo(X(ct), top); g.lineTo(X(ct), bot); g.stroke(); }
+}
+
+// ---------- 播放 ----------
+const aud = $("aud");
+function loop() {
+  if (aud.paused) { cancelAnimationFrame(raf); draw(); return; }
+  if (stopAt !== null && aud.currentTime >= stopAt) { aud.pause(); stopAt = null; }
+  const t = aud.currentTime;
+  if (t > viewStart + VIEW * 0.9 || t < viewStart) setView(t - VIEW * 0.15); else draw();
+  raf = requestAnimationFrame(loop);
+}
+function playFrom(t, end) {
+  try { aud.currentTime = Math.max(0, t); } catch (e) {}
+  stopAt = end ?? null;
+  const p = aud.play(); if (p && p.catch) p.catch(() => err("播放不了，请再点一次。"));
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+}
+let refPlay = null;
+function refTime(t) {
+  const H = R.refHop, j = Math.round(t / H);
+  for (let d = 0; d < 200; d++) { for (const q of [j + d, j - d]) if (q >= 0 && q < R.refMap.length && R.refMap[q] >= 0) return R.refMap[q] * H - (q - j) * H; }
+  return t;
+}
+function playRef(a, b) {
+  if (!REF.ab || !R.refMap) return;
+  aud.pause();
+  try { refPlay && refPlay.stop(); } catch (e) {}
+  const c = getCtx(); c.resume && c.resume();
+  const st = Math.max(0, refTime(Math.max(0, a)));
+  refPlay = c.createBufferSource(); refPlay.buffer = REF.ab; refPlay.connect(c.destination);
+  refPlay.start(0, st, Math.max(1, b - a));
+}
+function playRange(a, b) {
+  try { refPlay && refPlay.stop(); } catch (e) {} setView(a - 1); playFrom(a, b); $("cv").scrollIntoView({ behavior: "smooth", block: "center" }); }
+aud.onplay = () => $("btnPlay").textContent = "⏸ 暂停";
+aud.onpause = () => $("btnPlay").textContent = "▶ 听我唱的";
+$("btnPlay").onclick = () => aud.paused ? playFrom(aud.currentTime > 0 && aud.currentTime < R.duration - 0.5 ? aud.currentTime : viewStart) : aud.pause();
+cv.addEventListener("click", e => { if (!R) return; const r = cv.getBoundingClientRect(); const t = viewStart + (e.clientX - r.left - 44) / (r.width - 50) * VIEW; playFrom(t - 0.3); });
+
+$("again").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+// ---------- AI 老师 ----------
+let sample = null;
+show("aiCard", false);
+window.claude && claude.use && claude.use("sample").then(s => { sample = s; if (s) show("aiCard"); }).catch(() => {});
+
+function aiPrompt() {
+  const s = R.stats, r1 = v => Math.round(v);
+  const song = $("song").value.trim();
+  const spots = R.spots.map(z => `- ${SC.fmtT(z.t0)} 简谱「${SC.jpLabel(z)}」${z.wrong ? "（原唱是「" + z.refJp + "」）" : ""}：${issueTag(z)}；${z.lag !== undefined && Math.abs(z.lag) > 0.28 ? "比原唱" + (z.lag > 0 ? "慢" : "快") + Math.abs(z.lag).toFixed(1) + "秒；" : ""}偏差 ${r1(z.dev)} 音分；时长 ${z.dur.toFixed(1)} 秒${z.scoop ? "；起音往上勾" : ""}${z.tailDrop ? "；尾音往下掉" : ""}`).join("\n");
+  const tips = buildTips(s).map(t => "- " + t[0]).join("\n");
+  return `你是一位很有经验、很耐心的声乐老师，正在给一位练唱歌的中国长辈（可能是合唱团的，会看简谱）点评他刚唱的一段。下面是软件对他录音的客观检测数据。
+
+请你：
+1. 用大白话讲，像面对面聊天，不要用专业术语；非用不可的词（比如“气息”“共鸣”）要马上用生活里的比方解释。
+2. 判断要有专业水平：从数据里找出最根本的 1～2 个原因（比如很多问题其实都是气息不够造成的），不要只是罗列。
+3. 结构（每部分用【】做小标题）：
+【一句话总评】
+【唱得好的地方】1～2 点，具体
+【最要改的地方】最多 3 点，每点说清楚在第几秒、哪个简谱音、听起来是什么感觉、为什么会这样
+【每天 10 分钟练习法】3～4 个具体动作，写清楚做几遍、怎么判断练对了
+【鼓励一句】
+4. 全文 350～500 字，不要用 Markdown 符号（不要 # 或 *），段落之间空一行。
+5. 数据是机器测的，可能有误差；“调外音”可能是歌本身就有的变化音，说的时候留余地。如果没有原唱对照，就是按他自己唱的调判断，这种情况不要评价节奏；有原唱对照时可以讲节奏。
+
+检测数据：
+- 歌名：${song || "未填"}
+- 唱了 ${SC.fmtT(R.duration)}，识别出 ${s.noteCount} 个音、${s.phraseCount} 句；调大约 ${R.keyName}
+- 总分 ${s.score}/100；唱准（偏差≤25音分）的音占 ${r1(s.accuracy * 100)}%，基本准（≤40音分）占 ${r1(s.okRate * 100)}%
+- 平均偏差 ${r1(s.meanDev)} 音分（负数=偏低）；高音区（${s.hiCutName}以上）平均偏差 ${r1(s.hiDev)}，低音区 ${r1(s.loDev)}
+- 音域：${s.range[0]} 到 ${s.range[1]}
+- 从开头到结尾整体音高漂移 ${r1(s.songDrift)} 音分（负数=越唱越低）
+- 起音往上勾的比例 ${r1(s.scoopRate * 100)}%；长音不稳的比例 ${r1(s.unstableRate * 100)}%；有颤音的长音比例 ${r1(s.vibratoRate * 100)}%
+- 句尾往下掉的句子比例 ${r1(s.flatEndRate * 100)}%；句尾气弱的比例 ${r1(s.weakEndRate * 100)}%
+- 对比方式：${R.mode === "sync" ? "戴耳机跟着原唱一起唱，已和原唱逐音对比（音准和节奏都和原唱比）" : R.mode === "free" ? "自己清唱，已和原唱旋律对比（按他自己的起调，比音和音之间）；起调比原唱" + (s.keyShift >= 0 ? "高" : "低") + Math.abs(s.keyShift).toFixed(1) + "个半音" : "没有原唱，只按他自己的调判断"}
+- 和原唱唱的不是同一个音：${s.wrongCount} 个；拖拍的音 ${s.lateCount} 个，抢拍 ${s.earlyCount} 个
+- 可能唱错（不在调里）的音：${s.outKeyCount} 个
+- 声音强弱变化幅度 ${s.dynRange.toFixed(1)} 分贝
+- 软件已经提示的问题：
+${tips}
+- 最需要改的几处：
+${spots || "（无明显问题）"}
+(100 音分 = 1 个半音)`;
+}
+
+$("btnAI").onclick = async () => {
+  if (!sample || !R) return;
+  const b = $("btnAI"); b.disabled = true; b.textContent = "老师正在想…";
+  $("aiOut").textContent = "";
+  try {
+    const r = await sample(aiPrompt(), { modelTier: "default", onText: ({ text }) => { $("aiOut").textContent = text; } });
+    $("aiOut").textContent = r.text;
+    b.textContent = "再点评一次"; b.disabled = false;
+  } catch (e) {
+    b.disabled = false; b.textContent = "请老师点评";
+    if (e && e.code === "not_granted") { show("aiCard", false); return; }
+    $("aiOut").textContent = e && e.code === "rate_limited" ? "老师有点忙，请过一会儿再点。" : "这次没连上老师，请再试一次。";
+  }
+};
+})();
+</script>
+</body>
+</html>
