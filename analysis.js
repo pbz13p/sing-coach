@@ -163,13 +163,22 @@ const SC = (() => {
     const tr = await trackPitch(x, sr, onProgress);
     const hopS = tr.hop, n = tr.f0.length;
     const m = cleanMidi(tr.f0);
-    const { off, global } = localOffset(m, tr.rms, hopS);
+    // 颤音会让音高每帧都在晃，先平滑一个颤音周期（约 0.18 秒）再估整体偏移，避免被误判成“没有稳定音”
+    const mS = new Float64Array(n), hw = Math.max(1, Math.round(0.09 / hopS));
+    for (let i = 0; i < n; i++) {
+      if (isNaN(m[i])) { mS[i] = NaN; continue; }
+      let sum = 0, c = 0;
+      for (let j = Math.max(0, i - hw); j <= Math.min(n - 1, i + hw); j++) if (!isNaN(m[j]) && Math.abs(m[j] - m[i]) < 1.5) { sum += m[j]; c++; }
+      mS[i] = sum / c;
+    }
+    const { off, global } = localOffset(mS, tr.rms, hopS);
     const p = new Float64Array(n);
     for (let i = 0; i < n; i++) p[i] = m[i] - off[i];
     let voicedN = 0; for (let i = 0; i < n; i++) if (!isNaN(m[i])) voicedN++;
     if (voicedN * hopS < 4) return { error: "short", voicedSec: voicedN * hopS };
 
-    const raw = segment(p, hopS);
+    const pSeg = new Float64Array(n); for (let i = 0; i < n; i++) pSeg[i] = mS[i] - off[i];
+    const raw = segment(pSeg, hopS);
     if (raw.length < 5) return { error: "few" };
     const key = detectKey(raw, hopS);
     const qMed = median(raw.map(r => r.q));

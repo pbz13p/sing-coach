@@ -89,7 +89,7 @@
   label.l{display:block;font-size:15px;color:var(--mist);margin:20px 0 8px;letter-spacing:.06em}
   /* 唱歌这一屏：一屏放下，不用往下翻 */
   .wrap:has(#stepRec:not(.hide)){padding-top:max(14px,env(safe-area-inset-top))}
-  .wrap:has(#stepRec:not(.hide)) > h1,.wrap:has(#stepRec:not(.hide)) > .lead,.wrap:has(#stepRec:not(.hide)) > #btnHist{display:none}
+  .wrap:has(#stepRec:not(.hide)) > .top{display:none}
   #stepRec{margin-top:4px;padding:16px 16px 18px}
   #stepRec h2{font-size:22px;margin:0 0 10px;justify-content:center}
   #stepRec .linkBack{margin:0 0 6px}
@@ -110,7 +110,7 @@
   #stepRec .ytMsg:empty{display:none}
   @media (max-height:720px){#stepRec .orb{width:112px;height:112px}#stepRec h2{font-size:20px;margin-bottom:6px}#stepRec .seg button{padding:8px 4px}#stepRec .ytFrame{max-width:calc(26vh * 16 / 9)}}
   /* 开场页 */
-  .splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px calc(40px + env(safe-area-inset-bottom));text-align:center;
+  .splashX{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px calc(40px + env(safe-area-inset-bottom));text-align:center;
     background:radial-gradient(70% 45% at 50% 38%,rgba(216,191,143,.16),transparent 70%),radial-gradient(120% 80% at 50% 120%,#0a1220,transparent 60%),linear-gradient(180deg,#14233b,#0b1422);
     transition:opacity .6s ease,transform .6s ease}
   .splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
@@ -124,7 +124,7 @@
   .splash .sf{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom));font-size:13px;letter-spacing:.2em;color:rgba(154,166,184,.6)}
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-  @media (prefers-reduced-motion:reduce){.splash *,.splash{animation:none!important;transition:none!important}}
+  @media (prefers-reduced-motion:reduce){.splash *,.splashX{animation:none!important;transition:none!important}}
   .liveSay{text-align:center;font-size:22px;font-weight:600;min-height:32px;margin:4px 0 8px;color:var(--mist)}
   .liveSay.ok{color:#f3d892}.liveSay.off{color:#f0a860}
   .mpCard{display:grid;grid-template-columns:42px 1fr;align-items:start;column-gap:14px;margin:14px 0 4px;padding:14px 14px 14px 16px;border-radius:20px;
@@ -224,7 +224,13 @@
   .hItem{display:flex;align-items:center;border-top:1px solid var(--line)}
   .hMain{all:unset;box-sizing:border-box;flex:1;display:flex;align-items:center;gap:14px;padding:14px 2px;cursor:pointer;min-width:0}
   .hMain:focus-visible,.hDel:focus-visible{outline:2px solid var(--champ);border-radius:8px}
-  .hScore{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(216,191,143,.55);font:600 20px/1 var(--serif);color:var(--champ)}
+  .hScore{flex:none;min-width:44px;font:700 24px/1 var(--serif);color:var(--c,var(--champ));order:2;margin-left:auto}
+  .hMain{gap:12px}.hItem{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:16px;margin:0 0 10px;padding:4px 8px 4px 16px}
+  .hPlay{flex:none;order:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(216,191,143,.4);display:grid;place-items:center;color:var(--champ)}
+  .hPlay svg{width:18px;height:18px;fill:currentColor}
+  .weekCard{display:flex;justify-content:space-between;align-items:center;background:var(--ink2);border:1px solid rgba(216,191,143,.25);border-radius:20px;padding:16px 20px;margin:10px 0 14px}
+  .weekCard .wk{display:block;font-size:15px;color:var(--mist)}.weekCard .wt{display:block;font-size:20px;font-weight:500}
+  .hItem .hDel{font-size:13px;opacity:.7}
   .hTxt{display:flex;flex-direction:column;min-width:0}
   .hTxt .nm{font:600 18px/1.4 var(--serif);color:var(--pearl);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hTxt .by{font-size:14px;color:var(--mist)}
@@ -267,30 +273,71 @@
   .seg button:disabled{opacity:.35;cursor:default}
   .seg button:focus-visible{outline:2px solid var(--champ)}
   #segNote{text-align:center;margin:0 0 10px}
+
+  /* ===== 定稿设计 ===== */
+  .wrap{padding-top:max(44px,calc(env(safe-area-inset-top) + 20px))}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+  .top h1{text-align:left;font-size:44px;font-weight:700;letter-spacing:.1em;color:var(--champ)}
+  .top .lead{margin:6px 0 0;text-align:left;font:400 17px/1.4 -apple-system,"PingFang SC",sans-serif;letter-spacing:.02em;color:var(--mist)}
+  .top .lead::before,.top .lead::after{display:none}
+  .histBtn{all:unset;box-sizing:border-box;flex:none;width:52px;height:52px;border-radius:50%;border:1px solid rgba(216,191,143,.35);display:grid;place-items:center;color:var(--champ);cursor:pointer;margin:0}
+  .histBtn .ico{width:24px;height:24px}
+  .histBtn:focus-visible{outline:2px solid var(--champ);outline-offset:3px}
+  .lastCard{background:var(--ink2);border:1px solid rgba(216,191,143,.25);border-radius:24px;padding:20px;margin:0 0 26px}
+  .lastCard .lk{font-size:15px;color:var(--mist)}
+  .lastCard .lrow{display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 6px}
+  .lastCard .ln{font:600 26px/1.3 var(--serif)}
+  .lastCard .ls{font-size:18px;color:var(--good)}
+  .lastCard .btn{min-height:60px;margin:8px 0 0;font-size:20px;font-weight:700;letter-spacing:.04em}
+  h2.pick{font:500 19px/1.4 -apple-system,"PingFang SC",sans-serif;letter-spacing:0;margin:0 0 12px}
+  #songList .song{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:18px;margin:0 0 12px}
+  #songList .song>button{min-height:72px;padding:0 12px 0 20px}
+  #songList .song .nm{font:500 21px/1.3 -apple-system,"PingFang SC",sans-serif}
+  #songList .song .by{font-size:14px}
+  #songList .song .go{margin-left:auto;flex:none;width:48px;height:48px;border-radius:50%;border:1.5px solid var(--champ);color:var(--champ);display:grid;place-items:center;font:500 20px/1 var(--serif)}
+  details.more summary{font:400 16px/1.4 -apple-system,"PingFang SC",sans-serif;text-decoration:underline;text-underline-offset:4px;text-align:center;padding:18px 22px}
+  details.more summary::after{content:""}
+  details.more{background:none;border:0;box-shadow:none}
+  /* 唱的时候的提醒：一条醒目的药丸 */
+  .liveSay{min-height:56px;display:flex;align-items:center;justify-content:center;border-radius:32px;font-size:22px;font-weight:700;background:rgba(255,255,255,.04);border:1px solid var(--line);margin:6px 0 10px}
+  .liveSay.ok{background:rgba(127,209,174,.12);border-color:rgba(127,209,174,.45);color:var(--good)}
+  .liveSay.off{background:rgba(233,184,114,.14);border-color:rgba(233,184,114,.45);color:var(--mid)}
+  #stepRec #btnStop{min-height:64px;background:var(--bad);color:#0d1626;box-shadow:0 0 0 6px rgba(238,133,116,.18)}
+  /* 结果页 */
+  .scoreRow .verdict{font:700 26px/1.3 var(--serif)}
+  .card.sum{padding:22px 20px}
+  .ph{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04);padding:12px 14px 12px 18px;margin:0 0 10px}
+  .ph::before{left:0;top:12px;bottom:12px}
+  .ph .mini,.ph .teach{display:none}
+  .ph .phTip{margin:0 0 6px;font-size:19px;font-weight:600;color:var(--c)}
+  .ph .phTxt{margin:2px 0 6px;font-size:15px;color:var(--mist)}
+  .ph .phTxt b{color:var(--pearl)}
+  .ph .btn.small{min-height:44px;font-size:16px}
+  .actions .btn{margin:10px 0}
+  .actions .btn.main{min-height:62px;font-size:20px;font-weight:700}
+  .actions .btn.sec{min-height:54px;color:var(--champ);border-color:rgba(216,191,143,.45);background:none}
+  details.det>summary{cursor:pointer;list-style:none;text-align:center;padding:14px;color:var(--mist);font-size:16px;text-decoration:underline;text-underline-offset:4px}
+  details.det>summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
-<div class="splash" id="splash" role="dialog" aria-label="唱准了">
-  <img class="logo" src="/icon-512.png" alt="" width="148" height="148">
-  <div class="st">唱准了</div>
-  <p class="ss">你的练歌小老师</p>
-  <button class="btn gold go" id="splashGo">开始练歌</button>
-  <div class="sf">SINGOKAY.COM</div>
-</div>
 <div class="wrap">
-  <h1>唱准了</h1>
-  <p class="lead">你的练歌小老师</p>
-  <button class="btn small histBtn" id="btnHist"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4l3 2"/></svg>练唱记录</button>
-
-  <div id="stepIn">
-  <div class="card">
-    <h2>选一首歌，跟着伴奏唱</h2>
-    <div class="note" style="margin:-6px 0 4px">点歌名 → 戴上耳机 → 点“开始唱”。唱完马上打分。</div>
-    <div id="songList"></div>
+  <div class="top">
+    <div><h1>唱准了</h1><p class="lead">你的练歌小老师</p></div>
+    <button class="histBtn" id="btnHist" aria-label="练唱记录"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
   </div>
 
+  <div id="stepIn">
+  <div class="lastCard hide" id="lastCard">
+    <div class="lk">上次唱的</div>
+    <div class="lrow"><span class="ln" id="lastName"></span><span class="ls" id="lastScore"></span></div>
+    <button class="btn gold" id="lastGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>再唱一遍</button>
+  </div>
+  <h2 class="pick">选一首歌，点一下就开始</h2>
+  <div id="songList"></div>
+
   <details class="card more">
-    <summary>其他练法（清唱、自己的录音、原唱文件）</summary>
+    <summary>用我自己的伴奏 / 清唱 / 录好的歌</summary>
     <div class="moreBody">
       <h3>不放音乐，直接清唱</h3>
       <div class="orbWrap"><button class="orb" id="btnRec"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">清唱</span><span class="sx" id="recSub"></span></button></div>
@@ -358,18 +405,31 @@
 
   <!-- 结果 -->
   <div id="result" class="hide">
-    <div class="card">
+    <div class="card sum">
       <div class="scoreRow">
         <div class="ring" id="ring"><div><b id="score">0</b><small>总分</small></div></div>
         <div><div class="note" id="histTag" style="margin-bottom:4px"></div><div class="verdict" id="verdict"></div><div class="note" id="keyLine"></div></div>
       </div>
-      <div class="tiles">
+      <div class="tiles hide">
         <div class="tile"><b id="tAcc">-</b><span>唱准的音</span></div>
         <div class="tile"><b id="tStab">-</b><span id="tStabL">长音稳不稳</span></div>
         <div class="tile"><b id="tTrend">-</b><span id="tTrendL">整体偏向</span></div>
       </div>
     </div>
 
+    <div class="card">
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>每一句唱得怎么样</h2>
+      <div class="phSum" id="phSum"></div>
+      <div id="phList"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn gold main hide" id="btnWorst">听第 <span id="worstNo"></span> 句（最需要练）</button>
+      <button class="btn gold main" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
+      <button class="btn sec" id="btnHome">回到歌单</button>
+      <button class="btn sec hide" id="btnHist2">看全部练唱记录</button>
+    </div>
+    <details class="det" id="detMore"><summary>更多详情：音高图、练法、请老师点评</summary>
     <div class="card">
       <h2><svg class="ico" viewBox="0 0 24 24"><path d="M3 12h2l2-5 3 10 3-14 3 12 2-3h3"/></svg>音高图</h2>
       <div class="note">横线是简谱音，彩色条是您唱的音。条在线上 = 唱准了。点图上任何地方，就从那儿播放。</div>
@@ -390,15 +450,6 @@
     </div>
 
     <div class="card">
-      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>逐句点评</h2>
-      <div class="phSum" id="phSum"></div>
-      <div class="chips" id="phChips" role="tablist">
-        <button class="chip on" data-f="all">全部</button><button class="chip" data-f="bad">要多练</button><button class="chip" data-f="good">唱得好</button>
-      </div>
-      <div id="phList"></div>
-    </div>
-
-    <div class="card">
       <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>主要问题和练法</h2>
       <div id="tipsBox"></div>
     </div>
@@ -410,8 +461,7 @@
       <div class="ai" id="aiOut"></div>
     </div>
 
-    <button class="btn" id="btnHist2"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4l3 2"/></svg>看全部练唱记录</button>
-    <button class="btn" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
+    </details>
     <p class="foot">说明：选了原唱，就跟原唱比；没选原唱，就按您自己唱的调判断（看音和音之间准不准）。戴耳机跟着原唱唱，还能比节奏快慢。机器听也会有误差，有疑问就点“原唱”和“我唱的”对比听一听。</p>
   </div>
 </div>
@@ -420,8 +470,9 @@
 <div id="histSheet" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="histTitle">
   <div class="sheetBg" id="histBg"></div>
   <div class="sheetPanel">
-    <div class="sheetHd"><div><div class="sheetTitle" id="histTitle">练唱记录</div><div class="note">保存在这部手机上，点一条就能看结果、听录音</div></div>
+    <div class="sheetHd"><div><div class="sheetTitle" id="histTitle">练唱记录</div><div class="note">保存在这部手机上</div></div>
       <button class="btn small" id="histClose">关闭</button></div>
+    <div class="weekCard hide" id="weekCard"><span><span class="wk">这个星期</span><span class="wt" id="weekTxt"></span></span><svg class="ico" viewBox="0 0 24 24" style="width:34px;height:34px;color:var(--good)"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></div>
     <div id="histList"></div>
   </div>
 </div>
@@ -666,6 +717,21 @@ function drawLive(now) {
   if (liveCombo > 25) { g.textAlign = "right"; g.fillStyle = "#f3d892"; g.font = "700 15px " + sans; g.fillText(liveCombo > 80 ? "太准了！✨" : "唱准了！", W - 10, 6); g.textAlign = "left"; }
   if (!vs.length) { g.fillStyle = "rgba(255,255,255,.5)"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "14px " + sans; g.fillText("小球碰到金色条 = 唱准了", W / 2, H / 2 + 10); g.textAlign = "left"; }
 }
+// 唱歌时不让手机自动锁屏（iPhone 默认 30 秒就黑屏，会把录音打断）
+(function () {
+  let lock = null;
+  const want = () => !$("stepRec").classList.contains("hide");
+  async function sync() {
+    try {
+      if (want() && !document.hidden && !lock && navigator.wakeLock) {
+        lock = await navigator.wakeLock.request("screen");
+        lock.addEventListener("release", () => { lock = null; });
+      } else if (!want() && lock) { await lock.release(); lock = null; }
+    } catch (e) { lock = null; }
+  }
+  new MutationObserver(sync).observe($("stepRec"), { attributes: true, attributeFilter: ["class"] });
+  document.addEventListener("visibilitychange", sync);
+})();
 $("btnStop").onclick = () => {
   show("stepRec", false); clearInterval(recTimer);
   if (recSong) YT_.stop(); stageSong = null; ytPending = false;
@@ -759,7 +825,23 @@ function phraseInfo(f, idx) {
   const longs = ns.filter(z => z.dur > 0.6);
   if (longs.length && !shake.length && !tail.length) praise.push(longs.some(z => z.vibrato) ? "长音稳，颤音也自然" : "长音很稳");
   if (!scoop.length && ns.length >= 3) praise.push("开口干脆");
-  return { idx, f, ns, score, level, probs, praise, acc };
+  // 一句话大白话提示（对应设计稿里每句下面那行小字）
+  const mid = (f.t0 + f.t1) / 2, avg = a => a.length ? a.reduce((x, z) => x + z.dev, 0) / a.length : 0;
+  const h1 = avg(ns.filter(z => z.t0 < mid)), h2 = avg(ns.filter(z => z.t0 >= mid));
+  let tip;
+  if (level === "good") tip = tail.length || late.length ? "不错，句尾再托住一点" : "很准";
+  else if (wrong.length) tip = "有个音唱成别的了，先听原唱再唱";
+  else if (h2 < -25 && h2 < h1 - 15) tip = "后半句低了一点，往上提";
+  else if (h2 > 25 && h2 > h1 + 15) tip = "后半句高了一点，放松往下";
+  else if (low.length > high.length) tip = "低了一点，往上提";
+  else if (high.length > low.length) tip = "高了一点，放松往下";
+  else if (tail.length) tip = "句尾往下掉了，托住声音";
+  else if (late.length) tip = "比原唱慢了一点，快一点点";
+  else if (early.length) tip = "比原唱快了一点，稳住别抢";
+  else if (shake.length) tip = "长音有点晃，气息放稳";
+  else if (scoop.length) tip = "开口直接唱到音上，别从下面勾";
+  else tip = "再唱稳一点";
+  return { idx, f, ns, score, level, probs, praise, acc, tip };
 }
 const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; };
 function miniSvg(info) {
@@ -834,15 +916,14 @@ function drawPhList() {
     const canRef = R.refMap && REF.ab && REF.name === R.refName;
     return `<div class="ph lv-${x.level}" style="--c:${col}">
       <div class="phHd"><span class="phNo">第 ${x.idx + 1} 句</span><span class="phT">${SC.fmtT(x.f.t0)}</span><span class="phLv">${lbl} · ${x.score}</span></div>
+      <p class="phTip">${x.tip}</p>
       ${miniSvg(x)}${body}
       <div class="row2"><button class="btn small gold" data-ph="${x.idx}">听这一句</button>${canRef ? `<button class="btn small" data-phr="${x.idx}">原唱这一句</button>` : ""}</div></div>`;
   }).join("") : '<p class="note">这一栏没有句子。</p>';
   $("phList").querySelectorAll("[data-ph]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.ph).f; playRange(f.t0 - 0.3, f.t1 + 0.5); });
   $("phList").querySelectorAll("[data-phr]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.phr).f; playRef(f.t0 - 0.3, f.t1 + 0.5); });
 }
-$("phChips").querySelectorAll(".chip").forEach(c => c.onclick = () => {
-  phFilter = c.dataset.f; $("phChips").querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); drawPhList();
-});
+$("detMore").addEventListener("toggle", () => { if ($("detMore").open && R) draw(); });
 
 // ---------- 练唱记录 ----------
 const HIST_MAX = 60;
@@ -858,6 +939,7 @@ async function histSave(res, blob) {
     await DB.put("hist", list);
     drop.forEach(d => DB.del("h_" + d.id));
     res.histId = id;
+    renderLast();
   } catch (e) {}
 }
 function fmtDate(t) { const d = new Date(t); const p = n => String(n).padStart(2, "0"); return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -865,9 +947,13 @@ async function openHist() {
   aud.pause();
   const list = await histAll();
   $("histList").innerHTML = list.length ? list.map(h => `<div class="hItem" data-id="${h.id}">
-      <button class="hMain"><span class="hScore">${h.score}</span><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "未命名"}</span><span class="by">${fmtDate(h.t)} · 唱了 ${SC.fmtT(h.dur)}</span></span></button>
+      <button class="hMain"><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "未命名"}</span><span class="by">${fmtDate(h.t)}</span></span><span class="hScore" style="--c:${h.score >= 80 ? "var(--good)" : h.score >= 65 ? "var(--mid)" : "var(--bad)"}">${h.score}</span><span class="hPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
       <button class="hDel" aria-label="删除这条">删除</button></div>`).join("")
     : '<p class="note" style="padding:20px 0">还没有记录。唱完一首，会自动存在这里。</p>';
+  { const wk = list.filter(h => Date.now() - h.t < 7 * 864e5);
+    show("weekCard", wk.length > 0);
+    if (wk.length) { const d = wk.length > 1 ? wk[0].score - wk[wk.length - 1].score : 0;
+      $("weekTxt").textContent = `唱了 ${wk.length} 次` + (d > 0 ? `，进步了 ${d} 分` : wk.length > 1 && d < 0 ? "，再加把劲" : ""); } }
   $("histList").querySelectorAll(".hMain").forEach(b => b.onclick = () => loadHist(+b.parentElement.dataset.id));
   $("histList").querySelectorAll(".hDel").forEach(b => b.onclick = async () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "确定删？"; return; }
@@ -889,6 +975,17 @@ async function loadHist(id) {
   render(true);
 }
 $("btnHist").onclick = openHist;
+async function renderLast() {
+  try {
+    const l = await histAll(); const h = l[0];
+    const i = h ? SONGS.findIndex(x => x.t === h.song) : -1;
+    show("lastCard", i >= 0);
+    if (i < 0) return;
+    $("lastName").textContent = h.song; $("lastScore").textContent = h.score + " 分";
+    $("lastGo").onclick = () => openStage(i);
+  } catch (e) {}
+}
+renderLast();
 $("btnHist2").onclick = openHist;
 $("histClose").onclick = $("histBg").onclick = closeHist;
 
@@ -967,10 +1064,9 @@ let pendingSong = "";
   const chev = '<svg class="ico chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
   let html = "";
   ["易", "中", "难"].forEach(L => {
-    html += `<div class="lvHd">${lv[L]}</div>`;
     SONGS.forEach((s, i) => {
       if (s.lv !== L) return;
-      html += `<div class="song"><button data-i="${i}"><div><div class="nm">${s.t}</div><div class="by">${s.s} · ${s.w}</div></div>${chev}</button></div>`;
+      html += `<div class="song"><button data-i="${i}"><div><div class="nm">${s.t}</div><div class="by">${s.s}</div></div><span class="go">唱</span></button></div>`;
     });
   });
   $("songList").innerHTML = html;
@@ -1222,8 +1318,12 @@ function render(fromHist) {
   $("spots").querySelectorAll("button[data-i]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.i]; playRange(z.t0 - 1.2, z.t1 + 0.8); });
   $("spots").querySelectorAll("button[data-r]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.r]; playRef(z.t0 - 1.2, z.t1 + 0.8); });
 
-  phFilter = "all"; $("phChips").querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x.dataset.f === "all"));
+  phFilter = "all";
   renderPhrases();
+  { const w = PH.filter(x => x.level !== "good").sort((a, b) => a.score - b.score)[0];
+    show("btnWorst", !!w);
+    if (w) { $("worstNo").textContent = w.idx + 1; $("btnWorst").onclick = () => playRange(w.f.t0 - 0.3, w.f.t1 + 0.5); } }
+  $("detMore").open = false;
   $("tipsBox").innerHTML = buildTips(s).map(t => `<div class="tip"><b>${t[0]}</b><p>${t[1]}</p><div class="how">${t[2]}</div></div>`).join("");
   $("aiOut").textContent = ""; $("btnAI").disabled = false; $("btnAI").textContent = "请老师点评";
 
@@ -1337,7 +1437,7 @@ aud.onpause = () => $("btnPlay").lastChild.textContent = "听我唱的";
 $("btnPlay").onclick = () => aud.paused ? playFrom(aud.currentTime > 0 && aud.currentTime < R.duration - 0.5 ? aud.currentTime : viewStart) : aud.pause();
 cv.addEventListener("click", e => { if (!R) return; const r = cv.getBoundingClientRect(); const t = viewStart + (e.clientX - r.left - 44) / (r.width - 50) * VIEW; playFrom(t - 0.3); });
 
-$("again").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("btnHome").onclick = $("again").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
 // ---------- AI 老师 ----------
 let sample = null;
@@ -1397,16 +1497,6 @@ $("btnAI").onclick = async () => {
     $("aiOut").textContent = e && e.code === "rate_limited" ? "老师有点忙，请过一会儿再点。" : "这次没连上老师，请再试一次。";
   }
 };
-})();
-</script>
-<script>
-(function(){
-  var sp=document.getElementById('splash');
-  try{ if(sessionStorage.getItem('sc_in')==='1'){ sp.remove(); return; } }catch(e){}
-  document.getElementById('splashGo').addEventListener('click',function(){
-    try{ sessionStorage.setItem('sc_in','1'); }catch(e){}
-    sp.classList.add('out'); setTimeout(function(){ sp.remove(); },650);
-  });
 })();
 </script>
 </body>
