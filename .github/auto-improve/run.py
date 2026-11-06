@@ -141,6 +141,7 @@ def gh(*args):
 
 def post_report(body, changed):
     """有改动：开/更新一个 PR；开 PR 失败（仓库没开权限）就发到一个固定的 Issue 里。"""
+    body = "@pbz13p 新报告（手机 GitHub App 会提醒）\n\n" + body
     compare = f"https://github.com/{REPO}/compare/main...{BRANCH}"
     pr = gh("pr", "list", "--head", BRANCH, "--state", "open", "--json", "number", "--jq", ".[0].number").stdout.strip()
     if changed and not pr:
