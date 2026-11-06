@@ -255,6 +255,7 @@
       <div class="rec" id="recT">0:00</div>
       <canvas id="live" style="height:150px"></canvas>
       <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
+      <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">网上的伴奏读不出原唱的音，所以这里只画你唱的。想对着“原唱该唱的”线来唱，在首页「其他练法」里放一首原唱文件。</div>
       <button class="btn gold" id="btnStop"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>唱完了</button>
     </div>
   </div>
@@ -373,8 +374,8 @@ async function startRecording(opts) {
   if (opts.yt) {
     $("volTxt").textContent = "音乐一开始就自动录音。如果视频没动，点一下视频上的播放键。";
     try { if (YT_.player && YT_.player.getPlayerState() === 1) { ytPending = false; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; } } catch (e) {}
-  } else { stageSong = null; YT_.stop(); $("recTitle").textContent = "正在录音（清唱）"; }
-  stageUI(opts.yt ? "rec" : "plain");
+  } else { stageSong = null; YT_.stop(); $("recTitle").textContent = REF.name ? "跟着原唱唱" : "正在录音（清唱）"; }
+  stageUI(opts.yt ? "rec" : "plain"); show("liveNote", !!opts.yt);
   if (!opts.yt && REF.name) {
     $("recSub").textContent = "原唱准备中…";
     await REF.ready; refUI();
@@ -390,7 +391,10 @@ async function startRecording(opts) {
   const mute = c.createGain(); mute.gain.value = 0;
   srcNode.connect(proc); proc.connect(mute); mute.connect(c.destination);
   const ratio = Math.max(1, Math.round(c.sampleRate / 16000));
+  quietSince = 0; reacq = false; refStartAt = startAt; lastProc = Date.now();
+  c.onstatechange = () => { if (c.state !== "running" && !$("stepRec").classList.contains("hide")) c.resume().catch(() => {}); };
   proc.onaudioprocess = ev => {
+    lastProc = Date.now();
     if (ytPending) return;
     if (ev.playbackTime + ev.inputBuffer.duration <= startAt) return;
     let d = ev.inputBuffer.getChannelData(0);
@@ -402,7 +406,7 @@ async function startRecording(opts) {
   };
   if (!ytPending) recStart = Date.now();
   show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
+  recTimer = setInterval(() => { if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
   window.scrollTo({ top: 0, behavior: "smooth" });
   return true;
 }
@@ -414,28 +418,76 @@ function yinOne(x, sr) {
   for (let tau = tMin; tau <= tMax; tau++) if (cm[tau] < 0.15) { while (tau < tMax && cm[tau + 1] < cm[tau]) tau++; return sr / tau; }
   return 0;
 }
+let quietSince = 0, lastProc = 0, refStartAt = 0, reacq = false;
 function livePitch(sr) {
   const n = liveBuf.length; if (n < 800) return;
   let e = 0; for (let i = n - 400; i < n; i++) e += liveBuf[i] * liveBuf[i];
   const rms = Math.sqrt(e / 400);
-  const f = rms > 0.008 ? yinOne(liveBuf, sr) : 0;
+  const f = rms > 0.004 ? yinOne(liveBuf, sr) : 0;
   const t = (Date.now() - recStart) / 1000;
   live.push({ t, m: f > 0 ? 69 + 12 * Math.log2(f / 440) : NaN, rms });
   while (live.length && live[0].t < t - 8) live.shift();
-  $("volTxt").textContent = rms < 0.008 ? "没听到声音，大点声或离近一点" : rms < 0.03 ? "声音有点小，可以再近一点" : rms > 0.6 ? "声音太大了，离远一点" : "声音大小正好 👍 " + (f > 0 ? "现在唱的是 " + SC.noteName(69 + 12 * Math.log2(f / 440)) : "");
+  if (rms < 0.0008) { if (!quietSince) quietSince = Date.now(); if (Date.now() - quietSince > 2500 && !reacq && (recSong || recMode === "sync")) reacquireMic(); } else quietSince = 0;
+  $("volTxt").textContent = rms < 0.004 ? "唱起来，线就会出来" : rms > 0.6 ? "声音太大了，离远一点" : f > 0 ? "现在唱的是 " + SC.noteName(69 + 12 * Math.log2(f / 440)) : "在听…";
   drawLive(t);
+}
+// 苹果手机放视频时，有时会把麦克风“静音”。听不到声音就重新接一次麦克风。
+async function reacquireMic() {
+  reacq = true;
+  try {
+    const c = getCtx(); if (c.state !== "running") await c.resume();
+    const s2 = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    if ($("stepRec").classList.contains("hide")) { s2.getTracks().forEach(t => t.stop()); return; }
+    try { srcNode.disconnect(); } catch (e) {}
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = s2; srcNode = c.createMediaStreamSource(stream); srcNode.connect(proc);
+  } catch (e) {}
+  setTimeout(() => { reacq = false; quietSince = 0; }, 4000);
 }
 function drawLive(now) {
   const cvL = $("live"), dpr = window.devicePixelRatio || 1, W = cvL.clientWidth, H = cvL.clientHeight;
   cvL.width = W * dpr; cvL.height = H * dpr; const g = cvL.getContext("2d"); g.scale(dpr, dpr);
-  const ms = live.filter(p => !isNaN(p.m)).map(p => p.m);
-  let mid = ms.length ? ms.slice().sort((a, b) => a - b)[ms.length >> 1] : 60;
-  const lo = mid - 9, hi = mid + 9, X = t => (t - (now - 8)) / 8 * W, Y = m => H - (m - lo) / (hi - lo) * H;
-  g.strokeStyle = "rgba(255,255,255,.08)"; g.lineWidth = 1;
-  for (let m = Math.ceil(lo); m <= hi; m++) { g.beginPath(); g.moveTo(0, Y(m)); g.lineTo(W, Y(m)); g.stroke(); }
-  g.shadowBlur = 0; g.strokeStyle = "#d8bf8f"; g.lineWidth = 3; g.lineCap = "round"; g.beginPath(); let pen = false;
-  live.forEach(p => { if (isNaN(p.m)) { pen = false; return; } const x = X(p.t), y = Y(p.m); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; });
-  g.stroke();
+  const PAST = 6, FUT = recMode === "sync" ? 2 : 0, SPAN = PAST + FUT;
+  const X = t => (t - (now - PAST)) / SPAN * W;
+  const vs = live.filter(p => !isNaN(p.m));
+  // 他自己的“音准基准”（不同人的调稍有偏差，按他自己的来算）
+  let sx = 0, sy = 0; vs.forEach(p => { const a = 2 * Math.PI * (p.m - Math.round(p.m)); sx += Math.cos(a); sy += Math.sin(a); });
+  const off = vs.length > 10 ? Math.atan2(sy, sx) / (2 * Math.PI) : 0;
+  let mid = vs.length ? vs.map(p => p.m).sort((a, b) => a - b)[vs.length >> 1] : 60;
+  // 原唱应该唱的音（只有放了原唱文件时才有）
+  const tgt = [];
+  if (recMode === "sync" && REF.melody) {
+    const M = REF.melody, hs = M.hopS, rt = getCtx().currentTime - refStartAt;
+    const tm = []; for (let k = -Math.round(PAST / hs); k <= Math.round(FUT / hs); k++) { const i = Math.round(rt / hs) + k; const v = M.midi[i]; tm.push({ t: now + k * hs, m: i >= 0 && v > 0 ? v : NaN }); }
+    const tv = tm.filter(p => !isNaN(p.m)).map(p => p.m).sort((a, b) => a - b);
+    if (tv.length) { const tmid = tv[tv.length >> 1]; const sh = vs.length > 10 ? 12 * Math.round((mid - tmid) / 12) : 0; tm.forEach(p => { if (!isNaN(p.m)) p.m += sh; }); if (!vs.length) mid = tmid + sh; }
+    tgt.push(...tm);
+  }
+  const lo = mid - 7, hi = mid + 7, Y = m => H - (m - lo) / (hi - lo) * H;
+  g.strokeStyle = "rgba(255,255,255,.07)"; g.lineWidth = 1;
+  for (let m = Math.ceil(lo - off); m <= hi; m++) { const y = Y(m + off); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  if (FUT) { const xn = X(now); g.strokeStyle = "rgba(255,255,255,.25)"; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(xn, 0); g.lineTo(xn, H); g.stroke(); g.setLineDash([]); }
+  // 原唱：宽的半透明带子
+  if (tgt.length) {
+    g.strokeStyle = "rgba(160,190,255,.35)"; g.lineWidth = 10; g.lineCap = "round"; g.beginPath(); let pen = false;
+    let pm = NaN; tgt.forEach(p => { if (isNaN(p.m) || (!isNaN(pm) && Math.abs(p.m - pm) > 4)) { pen = false; pm = p.m; return; } pm = p.m; const x = X(p.t), y = Y(p.m); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; });
+    g.stroke();
+  }
+  // 他唱的：准就绿，偏就黄
+  g.lineWidth = 3.5; g.lineCap = "round";
+  for (let i = 1; i < live.length; i++) {
+    const a = live[i - 1], b = live[i]; if (isNaN(a.m) || isNaN(b.m)) continue;
+    let ok;
+    if (tgt.length) { const c0 = Math.round((b.t - tgt[0].t) / REF.melody.hopS); let any = false; ok = false; for (let k = c0 - 15; k <= c0 + 5; k++) { const tp = tgt[k]; if (!tp || isNaN(tp.m)) continue; any = true; if (Math.abs(SC.wrap12(b.m - tp.m)) < 0.5) { ok = true; break; } } if (!any) ok = null; }
+    else { const d = b.m - off; ok = Math.abs(d - Math.round(d)) < 0.25; }
+    g.strokeStyle = ok === null ? "#d8bf8f" : ok ? "#7fd8a4" : "#f0a860";
+    g.beginPath(); g.moveTo(X(a.t), Y(a.m)); g.lineTo(X(b.t), Y(b.m)); g.stroke();
+  }
+  g.font = "12px -apple-system,system-ui,sans-serif"; g.textBaseline = "top"; let lx = 8;
+  const tag = (col, txt) => { g.fillStyle = col; g.fillRect(lx, 9, 10, 4); lx += 14; g.fillStyle = "rgba(255,255,255,.75)"; g.fillText(txt, lx, 4); lx += g.measureText(txt).width + 12; };
+  if (tgt.length) tag("rgba(160,190,255,.7)", "原唱该唱的");
+  tag("#7fd8a4", tgt.length ? "你跟上了" : "唱准了"); tag("#f0a860", tgt.length ? "没跟上" : "有点偏");
+  if (!vs.length) { g.fillStyle = "rgba(255,255,255,.45)"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "14px -apple-system,system-ui,sans-serif"; g.fillText("一开口，这里就画出你唱的音高", W / 2, H / 2 + 6); g.textAlign = "left"; }
 }
 $("btnStop").onclick = () => {
   show("stepRec", false); clearInterval(recTimer);
