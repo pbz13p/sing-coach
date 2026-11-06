@@ -96,8 +96,25 @@ SYSTEM = """你是这个 App 的全职工程师兼产品经理，在无人看管
 - 最后的回复写一份给老板看的简短中文报告（5-10 行）：改了什么、对用户有什么好处、需要老板注意或决定什么。"""
 
 
+def boss_notes():
+    """读取老板在 GitHub 报告 Issue 下的留言（最近 15 条）。"""
+    try:
+        num = gh("issue", "list", "--state", "open", "--search", "in:title 自动改进 每日报告",
+                 "--json", "number", "--jq", ".[0].number").stdout.strip()
+        if not num:
+            return ""
+        out = gh("issue", "view", num, "--json", "comments", "--jq",
+                 '.comments[] | select(.author.login == "pbz13p") | "[" + .createdAt[:10] + "] " + .body').stdout.strip()
+        return "\n".join(out.splitlines()[-15:])
+    except Exception:
+        return ""
+
+
 async def run_agent(budget):
     goals = (BOT_DIR / "goals.md").read_text(encoding="utf-8")
+    notes = boss_notes()
+    if notes:
+        goals = ("【老板最新留言 —— 最优先处理，处理完在 LOG 里写明怎么处理的】\n" + notes + "\n\n" + goals)
     prompt = (
         f"今天是 {dt.date.today()}。这次运行的预算约 ${budget:.2f}，尽量用到八九成再收尾写报告。\n\n"
         f"这个 App 的目标和改进方向：\n{goals}\n\n"
