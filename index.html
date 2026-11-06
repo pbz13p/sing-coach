@@ -107,6 +107,8 @@
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   @media (prefers-reduced-motion:reduce){.splash *,.splash{animation:none!important;transition:none!important}}
+  .liveSay{text-align:center;font-size:22px;font-weight:600;min-height:32px;margin:4px 0 8px;color:var(--mist)}
+  .liveSay.ok{color:#f3d892}.liveSay.off{color:#f0a860}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -296,6 +298,7 @@
     </div>
     <div id="stageRec">
       <div class="rec" id="recT">0:00</div>
+      <div id="liveSay" class="liveSay"></div>
       <canvas id="live" style="height:230px"></canvas>
       <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
       <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">跟网上伴奏唱时，读不到原唱的音，唱完再看哪句准。想边唱边看“金色音符条”，在首页「其他练法」里放一首原唱文件。</div>
@@ -932,7 +935,7 @@ async function startRecording(opts) {
     $("recSub").textContent = "原唱准备中…";
     await REF.ready; refUI();
     if (REF.ab) {
-      refSrc = c.createBufferSource(); refSrc.buffer = REF.ab;
+      refSrc = c.createBufferSource(); refSrc.buffer = REF.kara || REF.ab;
       const gn = c.createGain(); gn.gain.value = 0.9; refSrc.connect(gn); gn.connect(c.destination);
       startAt = c.currentTime + 0.4; refSrc.start(startAt); recMode = "sync";
       refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1500); };
@@ -1021,6 +1024,7 @@ function drawLive(now) {
   const cur = live.length ? live[live.length - 1] : null;
   const notes = recMode === "sync" ? getRefNotes() : null;
   if (!notes || !notes.length) {
+    $("liveSay").textContent = "";
     // 没有原唱的音（比如网上伴奏）：不画看不懂的线，只告诉他“听到了没有、现在唱的是哪个音”
     const lv = cur ? Math.min(1, Math.sqrt(cur.rms) * 4) : 0;
     const cx = W / 2, cy = H / 2 - 4, r = Math.min(W, H) * 0.28;
@@ -1076,6 +1080,12 @@ function drawLive(now) {
     g.fillStyle = hitNow ? "#fff3cf" : "#f4efe6"; g.beginPath(); g.arc(nowX, y, 6.5, 0, 7); g.fill();
   }
   // 连续唱准 → 鼓励一下
+  { const el = $("liveSay"), sing = cur && !isNaN(cur.m) && cur.rms > 0.004, nx = notes.find(n => n.t0 > rt); let c = "", t;
+    if (nowNote && sing) { const d = cur.m - (nowNote.m + sh); if (hitNow) { c = "ok"; t = "✓ 唱准了"; } else { c = "off"; t = d > 0 ? "高了，往下一点 ↓" : "低了，往上一点 ↑"; } }
+    else if (nowNote) t = "该唱了，对准金色条";
+    else if (nx && nx.t0 - rt < 1.5) t = "准备，马上要唱了";
+    else t = notes[0] && rt < notes[0].t0 ? "前奏中，等一下" : "这里不用唱，歇一下";
+    el.className = "liveSay " + c; el.textContent = t; }
   if (hitNow) liveCombo++; else if (cur && cur.rms > 0.004) liveCombo = Math.max(0, liveCombo - 2);
   g.textBaseline = "top"; g.font = "600 13px " + sans;
   g.fillStyle = "rgba(244,239,230,.7)"; g.fillText("● 你的声音", 10, 8);
@@ -1334,7 +1344,15 @@ function toMono16k(ab, maxSec) {
 }
 
 // ---------- 原唱 ----------
-const REF = { ab: null, melody: null, name: "", ready: null };
+const REF = { ab: null, melody: null, kara: null, name: "", ready: null };
+// 去掉人声做伴奏：人声一般在正中间，左右相减就没了；低音也在中间，单独加回来。
+function karaoke(ab) {
+  const L = ab.getChannelData(0), R = ab.getChannelData(1), n = ab.length, sr = ab.sampleRate;
+  const out = getCtx().createBuffer(2, n, sr), o0 = out.getChannelData(0), o1 = out.getChannelData(1);
+  const a = Math.exp(-2 * Math.PI * 150 / sr); let lp = 0, lp2 = 0;
+  for (let i = 0; i < n; i++) { const m = (L[i] + R[i]) * 0.5; lp = (1 - a) * m + a * lp; lp2 = (1 - a) * lp + a * lp2; const sd = (L[i] - R[i]) * 0.5; o0[i] = sd + lp2; o1[i] = -sd + lp2; }
+  return out;
+}
 const DB = {
   open() { return new Promise((res, rej) => { try { const r = indexedDB.open("singcoach", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); },
   async put(k, v) { try { const db = await this.open(); await new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) {} },
@@ -1360,6 +1378,7 @@ async function loadRef(blob, name, save) {
       const L = resample16k(ab.getChannelData(0), len, ab.sampleRate);
       const Rr = ab.numberOfChannels > 1 ? resample16k(ab.getChannelData(1), len, ab.sampleRate) : null;
       REF.melody = await SC.extractMelody(L, Rr, 16000, p => $("refProg").style.width = (5 + p * 95) + "%");
+      REF.kara = ab.numberOfChannels > 1 ? karaoke(ab) : null;
       $("refState").textContent = "✔ 准备好了 · " + SC.fmtT(ab.duration); $("refProg").parentElement.classList.add("hide");
       return true;
     } catch (e) {
