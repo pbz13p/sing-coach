@@ -61,6 +61,8 @@
   .btn.gold{color:#1d160a;border:0;background:linear-gradient(180deg,#ecdcb6,#c9a86c);box-shadow:0 10px 24px -10px rgba(216,191,143,.55),inset 0 1px 0 rgba(255,255,255,.5)}
   .btn.alt{}
   .btn.ghost{background:transparent}
+  /* 结果页：只留一个金色主按钮；"再唱一遍"和每句的"听这一句"改成描边，不抢眼 */
+  #btnWorst:not(.hide) + #again,.phListen{background:transparent;color:var(--champ);border:1px solid rgba(216,191,143,.5);box-shadow:none}
   .btn:disabled{opacity:.45}
   .btn.small{min-height:48px;font-size:17px;width:auto;padding:0 20px;margin:0 0 4px}
   .btn .ico{width:20px;height:20px}
@@ -105,7 +107,13 @@
   #stepRec:has(#stageRec:not(.hide)) .ytFrame{max-width:none}
   #stepRec:has(#stageRec:not(.hide)):has(#recYt:not(.hide)) #live{height:clamp(96px,14vh,130px)!important}
   #stepRec #live{height:clamp(150px,26vh,230px)!important}
-  #stepRec .rec{font-size:40px}
+  /* 计时改成一行小字"● 正在听您唱 · 0:18"，把位置让给带歌词的视频 */
+  #stepRec .rec{font-weight:500;font-size:16px;line-height:1.4;font-family:inherit;color:var(--mist);letter-spacing:0;margin:2px 0 8px;display:flex;align-items:center;justify-content:center;gap:8px}
+  #stepRec .rec::before{content:"";width:8px;height:8px;border-radius:4px;background:var(--bad);animation:recPulse 1.4s ease-in-out infinite}
+  @keyframes recPulse{50%{opacity:.35}}
+  #stepRec #recDot{display:none!important}
+  #stepRec .liveSay:not(.ok):not(.off){color:var(--pearl);font-weight:600}
+  @media (prefers-reduced-motion:reduce){#stepRec .rec::before{animation:none}}
   #stepRec #btnStop{margin-top:10px}
   #stepRec .ytMsg:empty{display:none}
   @media (max-height:720px){#stepRec .orb{width:112px;height:112px}#stepRec h2{font-size:20px;margin-bottom:6px}#stepRec .seg button{padding:8px 4px}#stepRec .ytFrame{max-width:calc(26vh * 16 / 9)}}
@@ -359,7 +367,7 @@
       <input type="file" id="file" accept="audio/*,video/*" class="hide">
       <h3>用原唱文件，一个音一个音地比</h3>
       <div id="refNone">
-        <div class="note">手机里有这首歌的 mp3 / m4a 文件，就能跟原唱逐音比对。选一次，下次还在。</div>
+        <div class="note">手机里存了这首歌，就能跟原唱逐音比对。选一次，下次还在。</div>
         <button class="btn" id="btnRef"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>选原唱文件</button>
       </div>
       <div id="refHas" class="hide">
@@ -390,9 +398,9 @@
       <div class="orbWrap"><button class="orb" id="stageGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">开始唱</span></button></div>
       <div class="mpCard" id="mpCard">
         <div class="mpIco"><svg viewBox="0 0 24 24"><path d="M3 17V9M7 17V6M11 17v-5M15 17V8M19 17v-3"/></svg></div>
-        <div class="mpTx"><b id="mpTitle">有原唱 mp3？</b><span id="mpSub">放进来，唱的时候能看到每个音。</span>
+        <div class="mpTx"><b id="mpTitle">手机里有这首歌？</b><span id="mpSub">放进来，唱的时候能看到每个音。</span>
           <div class="mpBar hide" id="mpBarW"><i id="mpProg"></i></div></div>
-        <button class="btn small gold" id="btnMp3">放 mp3</button>
+        <button class="btn small gold" id="btnMp3">从手机选</button>
       </div>
     </div>
     <div id="stageRec">
@@ -400,7 +408,7 @@
       <div id="liveSay" class="liveSay"></div>
       <canvas id="live" style="height:230px"></canvas>
       <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
-      <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">这里看的是每个音有没有唱稳、站在音上，唱完会告诉你哪几处要练。想边唱边对着原唱的音，在这首歌里「放 mp3」。</div>
+      <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">这里看的是每个音有没有唱稳、站在音上，唱完会告诉你哪几处要练。想边唱边对着原唱的音，在这首歌里点「从手机选」。</div>
       <div class="nudge hide" id="nudge"><span>歌词对不上？</span><button class="btn small" id="nudgeE">歌词慢了</button><button class="btn small" id="nudgeL">歌词快了</button></div>
       <button class="btn gold" id="btnStop"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>唱完了</button>
     </div>
@@ -561,7 +569,7 @@ async function startRecording(opts) {
   };
   if (!ytPending) recStart = Date.now();
   show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
+  recTimer = setInterval(() => { if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
   window.scrollTo({ top: 0, behavior: "smooth" });
   return true;
 }
@@ -672,7 +680,7 @@ function drawLive(now) {
     else if (st === "hi") { el.className = "liveSay off"; el.textContent = "有点偏高，稍微往下"; }
     else if (st === "lo") { el.className = "liveSay off"; el.textContent = "有点偏低，稍微往上"; }
     else if (st === "wob") { el.className = "liveSay off"; el.textContent = "音有点晃，气息稳住"; }
-    else if (!el.textContent) { el.className = "liveSay"; el.textContent = "在听…"; }
+    else if (!el.textContent) { el.className = "liveSay"; el.textContent = "正在听，放心唱"; }
     return;
   }
   // —— 有原唱：K 歌式音符条 ——
@@ -810,7 +818,12 @@ const YT_ = {
 
 // ---------- 逐句点评 ----------
 const LV = { good: ["唱得好", "var(--good)"], ok: ["还不错", "var(--mid)"], bad: ["要多练", "var(--bad)"] };
-const jpList = arr => [...new Set(arr.map(z => "「" + SC.jpLabel(z) + "」"))].slice(0, 3).join("");
+// 用"开头/中间/句尾 + 几个字"说位置，不用简谱名（老人看不懂「低音5」）
+const where = (arr, f) => {
+  const span = Math.max(0.5, f.t1 - f.t0), pos = new Set(arr.map(z => { const r = ((z.t0 != null ? z.t0 : z.t) - f.t0) / span; return r < 0.34 ? 0 : r < 0.67 ? 1 : 2; }));
+  const p = pos.size >= 3 ? "好几个地方" : [...pos].sort().map(i => ["开头", "中间", "句尾"][i]).join("和");
+  return `${p}有 ${arr.length} 个字`;
+};
 function phraseInfo(f, idx) {
   const ns = f.notes.filter(z => z.dur > 0.12);
   const tot = ns.reduce((s, z) => s + z.dur, 0) || 1;
@@ -825,9 +838,9 @@ function phraseInfo(f, idx) {
   const level = score >= 85 && !low.length && !high.length && !wrong.length ? "good" : score >= 65 ? "ok" : "bad";
   const last = ns[ns.length - 1];
   const probs = [];
-  if (wrong.length) probs.push(["wrong", `有 ${wrong.length} 个音和原唱不一样，比如原唱「${wrong[0].refJp}」，您唱成了「${SC.jpLabel(wrong[0])}」。`]);
-  if (low.length) probs.push(["low", `${jpList(low)}唱<b>低了</b>${last && low.includes(last) ? "，句尾最明显" : ""}。`]);
-  if (high.length) probs.push(["high", `${jpList(high)}唱<b>高了</b>。`]);
+  if (wrong.length) probs.push(["wrong", `${where(wrong, f)}<b>跑到别的音上</b>了，多听两遍原唱这句。`]);
+  if (low.length) probs.push(["low", `${where(low, f)}唱<b>低了</b>，往上提一点。`]);
+  if (high.length) probs.push(["high", `${where(high, f)}唱<b>高了</b>，放松往下收一点。`]);
   if (tail.length) probs.push(["tail", "句尾的字<b>往下掉</b>，没有“托住”。"]);
   if (scoop.length) probs.push(["scoop", `有 ${scoop.length} 个字开口是从下面<b>“勾”上去</b>的。`]);
   if (shake.length) probs.push(["shake", "拖长的音<b>在晃</b>，不够稳。"]);
@@ -935,7 +948,7 @@ function drawPhList() {
       <div class="phHd"><span class="phNo">第 ${x.idx + 1} 句</span><span class="phT">${SC.fmtT(x.f.t0)}</span><span class="phLv">${lbl} · ${x.score}</span></div>
       <p class="phTip">${x.tip}</p>
       ${miniSvg(x)}${body}
-      <div class="row2"><button class="btn small gold" data-ph="${x.idx}">听这一句</button>${canRef ? `<button class="btn small" data-phr="${x.idx}">原唱这一句</button>` : ""}</div></div>`;
+      <div class="row2"><button class="btn small phListen" data-ph="${x.idx}"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button>${canRef ? `<button class="btn small" data-phr="${x.idx}">原唱这一句</button>` : ""}</div></div>`;
   }).join("") : '<p class="note">这一栏没有句子。</p>';
   $("phList").querySelectorAll("[data-ph]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.ph).f; playRange(f.t0 - 0.3, f.t1 + 0.5); });
   $("phList").querySelectorAll("[data-phr]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.phr).f; playRef(f.t0 - 0.3, f.t1 + 0.5); });
@@ -1069,7 +1082,7 @@ async function loadRef(blob, name, save) {
       $("refState").textContent = "✔ 准备好了 · " + SC.fmtT(ab.duration); $("refProg").parentElement.classList.add("hide");
       return true;
     } catch (e) {
-      REF.name = ""; refUI(); err("这首原唱打不开 😅，换一个文件试试（mp3、m4a 都可以）。"); return false;
+      REF.name = ""; refUI(); err("这首歌打不开，换一个试试。"); return false;
     }
   })();
   return REF.ready;
@@ -1157,10 +1170,10 @@ function mpUI(state) {
   c.classList.toggle("done", has && state !== "busy");
   show("mpBarW", state === "busy"); show("btnMp3", state !== "busy");
   if (state === "busy") { $("mpTitle").textContent = "正在准备原唱…"; $("mpSub").textContent = "在记每个音、去掉人声做伴奏，大约半分钟。"; return; }
-  $("mpTitle").textContent = has ? "原唱已放好" : "有这首歌的原唱 mp3？";
-  $("mpSub").textContent = has ? "唱的时候有原唱的音条对着唱。伴奏去掉了人声，视频静音只看歌词。" : "放一首这首歌的原唱 mp3，唱的时候每个音都有音条，一边唱一边对。";
+  $("mpTitle").textContent = has ? "原唱已放好" : "手机里有这首歌？";
+  $("mpSub").textContent = has ? "唱的时候有原唱的音条对着唱。伴奏去掉了人声，视频静音只看歌词。" : "选进来，唱的时候每个音都有音条，对着唱更准。";
   show("seg", !has); show("segNote", !has);
-  $("btnMp3").textContent = has ? "换一首 mp3" : "放 mp3";
+  $("btnMp3").textContent = has ? "换一个" : "从手机选";
   $("readyNote").textContent = has ? "戴上耳机，点下面的按钮就开始。" : "先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。";
 }
 async function useMp3(s, blob, save) {
