@@ -71,6 +71,22 @@
   input[type=text]:focus{border-color:rgba(216,191,143,.6)}
   input::placeholder{color:#66718a}
   label.l{display:block;font-size:15px;color:var(--mist);margin:20px 0 8px;letter-spacing:.06em}
+  /* 开场页 */
+  .splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px calc(40px + env(safe-area-inset-bottom));text-align:center;
+    background:radial-gradient(70% 45% at 50% 38%,rgba(216,191,143,.16),transparent 70%),radial-gradient(120% 80% at 50% 120%,#0a1220,transparent 60%),linear-gradient(180deg,#14233b,#0b1422);
+    transition:opacity .6s ease,transform .6s ease}
+  .splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+  .splash .logo{width:148px;height:148px;border-radius:34px;display:block;
+    box-shadow:0 0 0 1px rgba(216,191,143,.35),0 0 60px -6px rgba(216,191,143,.35),0 40px 70px -30px rgba(0,0,0,.9);animation:rise .9s ease both,float 6s ease-in-out 1s infinite}
+  .splash .st{font:600 46px/1.2 var(--serif);letter-spacing:.32em;margin:40px 0 0 .32em;color:var(--pearl);animation:rise .9s .15s ease both}
+  .splash .ss{font:500 17px/1.5 var(--serif);letter-spacing:.42em;color:var(--champ);margin:14px 0 0;animation:rise .9s .3s ease both}
+  .splash .ss::before,.splash .ss::after{content:"";display:inline-block;width:30px;height:1px;background:linear-gradient(90deg,transparent,var(--champ));vertical-align:middle;margin:0 14px}
+  .splash .ss::after{background:linear-gradient(90deg,var(--champ),transparent)}
+  .splash .go{margin-top:64px;width:min(280px,100%);min-height:64px;font-size:21px;letter-spacing:.3em;animation:rise .9s .5s ease both}
+  .splash .sf{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom));font-size:13px;letter-spacing:.2em;color:rgba(154,166,184,.6)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @media (prefers-reduced-motion:reduce){.splash *,.splash{animation:none!important;transition:none!important}}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -199,6 +215,13 @@
 </style>
 </head>
 <body>
+<div class="splash" id="splash" role="dialog" aria-label="唱准了">
+  <img class="logo" src="/icon-512.png" alt="" width="148" height="148">
+  <div class="st">唱准了</div>
+  <p class="ss">你的练歌小老师</p>
+  <button class="btn gold go" id="splashGo">开始练歌</button>
+  <div class="sf">SINGOKAY.COM</div>
+</div>
 <div class="wrap">
   <h1>唱准了</h1>
   <p class="lead">你的练歌小老师</p>
@@ -1672,6 +1695,16 @@ $("btnAI").onclick = async () => {
     $("aiOut").textContent = e && e.code === "rate_limited" ? "老师有点忙，请过一会儿再点。" : "这次没连上老师，请再试一次。";
   }
 };
+})();
+</script>
+<script>
+(function(){
+  var sp=document.getElementById('splash');
+  try{ if(sessionStorage.getItem('sc_in')==='1'){ sp.remove(); return; } }catch(e){}
+  document.getElementById('splashGo').addEventListener('click',function(){
+    try{ sessionStorage.setItem('sc_in','1'); }catch(e){}
+    sp.classList.add('out'); setTimeout(function(){ sp.remove(); },650);
+  });
 })();
 </script>
 </body>
