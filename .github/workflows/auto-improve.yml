@@ -41,5 +41,7 @@ jobs:
           TOTAL_CAP_USD: "32"
           RUNS_PER_DAY: "4"
           DEADLINE: "2026-11-14T18:00:00+00:00"
+          AUTO_MERGE: "1"
+          TEST_CMD: "node tools/test.js && node tools/test2.js && node tools/test3.js"
           MODEL: "claude-opus-5-5"
         run: python .github/auto-improve/run.py

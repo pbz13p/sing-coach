@@ -141,7 +141,6 @@ def gh(*args):
 
 def post_report(body, changed):
     """有改动：开/更新一个 PR；开 PR 失败（仓库没开权限）就发到一个固定的 Issue 里。"""
-    body = "@pbz13p 新报告（手机 GitHub App 会提醒）\n\n" + body
     compare = f"https://github.com/{REPO}/compare/main...{BRANCH}"
     pr = gh("pr", "list", "--head", BRANCH, "--state", "open", "--json", "number", "--jq", ".[0].number").stdout.strip()
     if changed and not pr:
@@ -213,11 +212,26 @@ def main():
     sh("git", "push", "-u", "origin", BRANCH)
     branch_differs = bool(sh("git", "diff", "--name-only", "origin/main...HEAD",
                              "--", ".", ":!.auto-improve").stdout.strip())
+    merged = ""
+    if os.environ.get("AUTO_MERGE") == "1" and branch_differs:
+        # 老板说：还没正式上线，测试通过就直接合并到 main，不用等他审核
+        tc = os.environ.get("TEST_CMD", "").strip()
+        ok = True
+        if tc:
+            t = subprocess.run(tc, shell=True, capture_output=True, text=True)
+            ok = t.returncode == 0
+            if not ok:
+                print("测试没通过，不合并：", (t.stdout + t.stderr)[-1500:], flush=True)
+        if ok and sh("git", "push", "origin", "HEAD:main", check=False).returncode == 0:
+            merged = "✅ 测试通过，已自动合并到 main"
+            branch_differs = False
+        else:
+            merged = "⚠️ 测试没通过或合并冲突，这次没合并，改动留在 " + BRANCH + " 分支"
 
     body = (f"### {dt.date.today()} 报告\n\n{report or '（这次没有写出报告）'}\n\n"
             f"---\n💰 本次花费 **${cost:.2f}**，用了 **{toks:,}** 个 token｜"
             f"本月累计 ${spend['total_usd']:.2f} / ${CAP:.2f}，{spend['total_tokens']:,} token｜"
-            f"代码{'有' if changed_code else '没有'}改动")
+            f"代码{'有' if changed_code else '没有'}改动" + (f"｜{merged}" if merged else ""))
     post_report(body, branch_differs)
     print(body)
 
