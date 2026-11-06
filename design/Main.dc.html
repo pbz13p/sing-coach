@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>唱准了 首页</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#d8bf8f}a:hover{color:#f4efe6}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0d1626; color: #f4efe6; font-family: 'Noto Sans SC', sans-serif; padding: 56px 24px 32px; display: flex; flex-direction: column; gap: 28px">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h1 style="margin: 0; font-family: 'Noto Serif SC', serif; font-size: 44px; font-weight: 700; letter-spacing: 4px; color: {{accent}}">唱准了</h1>
+      <p style="margin: 0; font-size: 17px; color: #9aa6b8">你的练歌小老师</p>
+    </div>
+    <a href="History.dc.html" aria-label="练唱记录" style="width: 52px; height: 52px; border-radius: 26px; border: 1px solid rgba(216,191,143,.35); display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d8bf8f" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+    </a>
+  </div>
+
+  <div style="border-radius: 24px; padding: 20px; background: #142238; border: 1px solid rgba(216,191,143,.25); display: flex; flex-direction: column; gap: 14px">
+    <p style="margin: 0; font-size: 15px; color: #9aa6b8">上次唱的</p>
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 600">茉莉花</span>
+      <span style="font-size: 18px; color: #7fd1ae">82 分</span>
+    </div>
+    <a href="Sing.dc.html" style="height: 60px; border-radius: 30px; background: {{accent}}; color: #0d1626; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d1626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+      再唱一遍
+    </a>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
+    <h2 style="margin: 0; font-size: 19px; font-weight: 500; color: #f4efe6">选一首歌，点一下就开始</h2>
+    <sc-for list="{{songs}}" as="s" hint-placeholder-count="5">
+      <a href="Sing.dc.html" style="height: 72px; border-radius: 18px; padding: 0 12px 0 20px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: #f4efe6">
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 21px; font-weight: 500">{{s.title}}</span>
+          <span style="font-size: 14px; color: #9aa6b8">{{s.who}}</span>
+        </span>
+        <span style="width: 48px; height: 48px; border-radius: 24px; border: 1.5px solid {{accent}}; color: {{accent}}; font-family: 'Noto Serif SC', serif; font-size: 20px; display: flex; align-items: center; justify-content: center">唱</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <a href="Sing.dc.html" style="align-self: center; font-size: 16px; color: #9aa6b8; text-decoration: underline; text-underline-offset: 4px">用我自己的伴奏</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#d8bf8f","options":["#d8bf8f","#e9b872","#7fd1ae"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#d8bf8f',
+      songs: [
+        { title: '茉莉花', who: '江苏民歌' },
+        { title: '月亮代表我的心', who: '经典老歌' },
+        { title: '甜蜜蜜', who: '经典老歌' },
+        { title: '我和我的祖国', who: '经典老歌' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

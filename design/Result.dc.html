@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>唱准了 结果</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#d8bf8f}a:hover{color:#f4efe6}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0d1626; color: #f4efe6; font-family: 'Noto Sans SC', sans-serif; padding: 52px 20px 28px; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; align-items: center; gap: 20px">
+    <div style="width: 124px; height: 124px; border-radius: 62px; background: conic-gradient(#d8bf8f 0 82%, rgba(255,255,255,.08) 82% 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+      <div style="width: 104px; height: 104px; border-radius: 52px; background: #0d1626; display: flex; flex-direction: column; align-items: center; justify-content: center">
+        <span style="font-family: 'Noto Serif SC', serif; font-size: 44px; font-weight: 700; color: #d8bf8f; line-height: 1">82</span>
+        <span style="font-size: 14px; color: #9aa6b8">分</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 700">唱得很稳！</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.55; color: #c9d1dd">第 3 句有点低，多练这一句，下次就更好了。</p>
+    </div>
+  </div>
+
+
+  <h2 style="margin: 4px 0 0; font-size: 18px; font-weight: 500">每一句唱得怎么样</h2>
+  <div style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1">
+    <sc-for list="{{lines}}" as="l" hint-placeholder-count="4">
+      <div style="border-radius: 16px; padding: 12px 12px 12px 16px; background: rgba(255,255,255,.04); border: 1px solid {{l.border}}; display: flex; align-items: center; gap: 12px">
+        <span style="width: 12px; height: 12px; border-radius: 6px; background: {{l.c}}; flex-shrink: 0"></span>
+        <span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+          <span style="font-size: 18px">{{l.text}}</span>
+          <span style="font-size: 15px; color: {{l.c}}">{{l.tip}}</span>
+        </span>
+        <button aria-label="听这一句我的录音" style="width: 46px; height: 46px; border-radius: 23px; border: 1px solid rgba(216,191,143,.4); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#d8bf8f" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+        </button>
+      </div>
+    </sc-for>
+  </div>
+
+  <a href="Sing.dc.html" style="height: 62px; border-radius: 31px; background: #d8bf8f; color: #0d1626; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-decoration: none">只练第 3 句</a>
+  <a href="Main.dc.html" style="height: 54px; border-radius: 27px; border: 1px solid rgba(216,191,143,.45); color: #d8bf8f; font-size: 18px; display: flex; align-items: center; justify-content: center; text-decoration: none">回到歌单</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const g = { c: '#7fd1ae', border: 'rgba(127,209,174,.25)' };
+    const b = { c: '#e9b872', border: 'rgba(233,184,114,.45)' };
+    return {
+      lines: [
+        { ...g, text: '好一朵美丽的茉莉花', tip: '很准' },
+        { ...g, text: '好一朵美丽的茉莉花', tip: '很准' },
+        { ...b, text: '芬芳美丽满枝桠', tip: '后半句低了一点，往上提' },
+        { ...g, text: '又香又白人人夸', tip: '不错，尾音再拖长一点' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
