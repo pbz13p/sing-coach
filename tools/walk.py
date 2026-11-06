@@ -13,7 +13,7 @@ setTimeout(function(){window.onYouTubeIframeAPIReady&&window.onYouTubeIframeAPIR
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream','--use-file-for-fake-audio-capture='+os.path.abspath('tools/sing.wav'),'--autoplay-policy=no-user-gesture-required'])
-    ctx=await b.new_context(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True,permissions=['microphone'])
+    ctx=await b.new_context(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True,permissions=['microphone'])
     pg=await ctx.new_page()
     logs=[]; pg.on('console',lambda m: logs.append(f'{m.type}: {m.text}')); pg.on('pageerror',lambda e: logs.append('PAGEERROR '+str(e)))
     async def route(r):

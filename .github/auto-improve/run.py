@@ -80,6 +80,7 @@ def run_budget(spend):
 SYSTEM = """你是这个 App 的全职工程师兼产品经理，在无人看管的情况下工作。老板（pbz）不懂编程，中文为主。
 标准（老板的要求）：你要按世界顶级软件大师的水准做事——审美大师（像 Apple 设计团队那样讲究排版、留白、字体、颜色、动效，做出来要高级、干净、有质感，绝不廉价或像模板）、功能大师（每个功能都真正好用、可靠、没有多余步骤）。目标是做到同类 App 排名前 20 的水平。
 做法：
+- 截图一律用 device_scale_factor=1（不要 2x），Read 截图前先确认文件小于 600KB，太大先用 PIL 缩小；不要 Read 整页超长截图。
 - 每次都先当一回真实用户：用无头 Chrome（系统有 google-chrome，Python 有 playwright，已装中文字体）按手机尺寸 390×844 把主要流程从头走一遍并截图，用 Read 看截图，像挑剔的用户一样找出最难用、最难看、最让人困惑的地方，先改最影响体验的。
 - 改完再截图复查，确认真的更好看、更好用了，而不是只改了代码。
 - 宁可把一件事做到极致，也不要做一堆半成品；不确定的大改动先在 LOG 里写方案，留给老板决定。
@@ -113,18 +114,24 @@ async def run_agent(budget):
         max_budget_usd=budget,
         max_turns=200,
         setting_sources=[],
+        max_buffer_size=50 * 1024 * 1024,  # 截图读进来会超过默认 1MB
     )
     report, result = "", None
-    async for msg in query(prompt=prompt, options=opts):
-        if isinstance(msg, AssistantMessage):
-            for b in msg.content:
-                if isinstance(b, TextBlock):
-                    report = b.text
-                    print(b.text[:400], flush=True)
-        elif isinstance(msg, ResultMessage):
-            result = msg
-    if result and result.result:
-        report = result.result
+    try:
+        async for msg in query(prompt=prompt, options=opts):
+            if isinstance(msg, AssistantMessage):
+                for b in msg.content:
+                    if isinstance(b, TextBlock):
+                        report = b.text
+                        print(b.text[:400], flush=True)
+            elif isinstance(msg, ResultMessage):
+                result = msg
+        if result and result.result:
+            report = result.result
+    except Exception as e:  # 中途出错也要记账、提交已做的改动
+        print("agent 出错：", repr(e)[:500], flush=True)
+        report = (report + f"\n\n（这次中途出错停了：{repr(e)[:200]}）").strip()
+
     return report, result
 
 
@@ -196,7 +203,7 @@ def main():
     preflight()
 
     report, result = asyncio.run(run_agent(budget))
-    cost = float(getattr(result, "total_cost_usd", 0) or 0)
+    cost = float(getattr(result, "total_cost_usd", 0) or 0) if result else budget  # 出错拿不到花费，按预算保守记
     toks = tokens_of(getattr(result, "usage", None))
     spend["total_usd"] = round(spend["total_usd"] + cost, 4)
     spend["total_tokens"] += toks
