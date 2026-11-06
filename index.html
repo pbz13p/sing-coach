@@ -5,106 +5,111 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>练歌小老师</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&text=练歌小老师&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --night:#140f33;--plum:#2c1d5c;--gold:#ffcf6b;--rose:#ff5f87;--aqua:#4fe3c8;--mist:#efe9ff;
-    --sub:#b9b0dd;--good:#4fe3c8;--mid:#ffcf6b;--bad:#ff5f87;
-    --glass:linear-gradient(160deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 45%,rgba(255,255,255,.02));
-    --lift:0 1px 0 rgba(255,255,255,.18) inset,0 -1px 0 rgba(0,0,0,.35) inset,0 24px 48px -18px rgba(0,0,0,.75),0 6px 14px rgba(0,0,0,.35);
+    --ink:#0d1626;--ink2:#142238;--pearl:#f4efe6;--mist:#9aa6b8;--champ:#d8bf8f;--champ2:#b8955a;
+    --good:#7fd1ae;--mid:#e9b872;--bad:#ee8574;
+    --line:rgba(255,255,255,.075);--panel:rgba(255,255,255,.035);
+    --serif:"Noto Serif SC","Songti SC","STSong",serif;
   }
   *{box-sizing:border-box}
-  html{background:var(--night)}
-  body{margin:0;min-height:100vh;color:var(--mist);font:19px/1.65 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%;
-    background:
-      radial-gradient(120% 60% at 50% -8%,rgba(255,207,107,.28),transparent 55%),
-      radial-gradient(90% 50% at 50% 0%,rgba(140,90,255,.35),transparent 70%),
-      radial-gradient(140% 70% at 50% 115%,rgba(255,95,135,.18),transparent 60%),
-      linear-gradient(180deg,#24185a 0%,#140f33 55%,#0e0a26 100%);
-    background-attachment:fixed}
-  .wrap{max-width:640px;margin:0 auto;padding:26px 16px 70px}
-  h1{font:900 46px/1.1 "Noto Serif SC",serif;margin:8px 0 6px;letter-spacing:4px;text-align:center;
-    background:linear-gradient(180deg,#fff4d6 0%,#ffd77a 45%,#d8952d 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 2px 0 #9a5a12) drop-shadow(0 4px 0 #6e3d0a) drop-shadow(0 10px 18px rgba(0,0,0,.6))}
-  .lead{color:var(--sub);margin:0 auto 22px;font-size:17px;text-align:center;max-width:22em;font-size:20px;letter-spacing:3px;color:#ffe3a1}
-  .card{position:relative;background:var(--glass),rgba(44,29,92,.55);border-radius:28px;padding:20px;margin:18px 0;box-shadow:var(--lift);
-    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08)}
-  h2{font-size:22px;margin:0 0 12px;color:#fff;letter-spacing:1px}
-  .step{display:inline-grid;place-items:center;width:34px;height:34px;margin-right:8px;border-radius:50%;font-size:18px;vertical-align:2px;color:#3b2300;
-    background:radial-gradient(circle at 35% 30%,#fff1c4,#ffcf6b 45%,#c4831f);box-shadow:0 3px 0 #8a5510,0 6px 10px rgba(0,0,0,.4)}
-  /* 立体按键 */
-  .btn{--c1:#ff7c9c;--c2:#e2385f;--lip:#8c1a3b;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:62px;border:0;border-radius:18px;
-    font-family:inherit;font-weight:700;font-size:21px;line-height:1.2;color:#fff;cursor:pointer;margin:12px 0 16px;text-shadow:0 1px 0 rgba(0,0,0,.25);
-    background:linear-gradient(180deg,var(--c1),var(--c2));box-shadow:0 1px 0 rgba(255,255,255,.45) inset,0 6px 0 var(--lip),0 12px 20px rgba(0,0,0,.45);
-    transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent}
-  .btn:active{transform:translateY(5px);box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 1px 0 var(--lip),0 4px 8px rgba(0,0,0,.4)}
-  .btn:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
-  .btn.alt{--c1:#6ff0d6;--c2:#21a98f;--lip:#0d5c4e;color:#06322b;text-shadow:0 1px 0 rgba(255,255,255,.3)}
-  .btn.ghost{--c1:#5a4699;--c2:#3b2b74;--lip:#1d1442;color:var(--mist)}
-  .btn.gold{--c1:#ffe3a1;--c2:#f2a93b;--lip:#8a5510;color:#3b2300;text-shadow:0 1px 0 rgba(255,255,255,.35)}
-  .btn:disabled{opacity:.5}
-  .btn.small{min-height:50px;font-size:18px;width:auto;padding:0 18px;margin:0 0 6px}
-  /* 录音大球 */
-  .orbWrap{display:grid;place-items:center;padding:12px 0 4px}
-  .orb{position:relative;width:200px;height:200px;border-radius:50%;border:0;cursor:pointer;color:#fff;font-family:inherit;-webkit-tap-highlight-color:transparent;
-    background:radial-gradient(circle at 34% 28%,#ffd0dc 0%,#ff7c9c 18%,#e2385f 48%,#8c1a3b 82%,#4d0c22 100%);
-    box-shadow:0 0 0 10px rgba(255,95,135,.12),0 0 60px rgba(255,95,135,.45),0 30px 40px -10px rgba(0,0,0,.7),inset 0 -14px 30px rgba(60,0,20,.55);
-    transition:transform .12s}
-  .orb::before{content:"";position:absolute;left:22%;top:9%;width:50%;height:30%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));filter:blur(1px)}
-  .orb:active{transform:scale(.95)}
-  .orb:focus-visible{outline:3px solid var(--gold);outline-offset:8px}
-  .orb .ic{display:block;font-size:52px;line-height:1;margin-top:18px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
-  .orb .tx{display:block;font-size:24px;font-weight:700;margin-top:8px;text-shadow:0 2px 4px rgba(0,0,0,.45)}
-  .orb .sx{display:block;font-size:15px;opacity:.9}
-  .floor{width:170px;height:22px;margin-top:-6px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.6),transparent)}
-  .tips{margin:8px 0 0;padding-left:1.2em;color:var(--sub);font-size:17px}
-  input[type=text]{width:100%;font-size:19px;padding:13px 16px;border:0;border-radius:14px;font-family:inherit;color:#fff;
-    background:rgba(10,6,30,.55);box-shadow:inset 0 3px 8px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.08)}
-  input::placeholder{color:#8a80b5}
-  label.l{display:block;font-size:17px;color:var(--sub);margin:16px 0 8px}
+  html{background:var(--ink)}
+  body{margin:0;min-height:100vh;color:var(--pearl);font:18px/1.7 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(90% 45% at 50% 0%,rgba(216,191,143,.13),transparent 70%),linear-gradient(180deg,var(--ink2),var(--ink) 60%);background-attachment:fixed}
+  .wrap{max-width:600px;margin:0 auto;padding:44px 20px 80px}
+  h1{font:600 38px/1.2 var(--serif);margin:0;letter-spacing:.18em;text-align:center;color:var(--pearl)}
+  .lead{margin:10px auto 34px;text-align:center;font:500 16px/1.5 var(--serif);letter-spacing:.3em;color:var(--champ)}
+  .lead::before,.lead::after{content:"";display:inline-block;width:26px;height:1px;background:linear-gradient(90deg,transparent,var(--champ));vertical-align:middle;margin:0 12px}
+  .lead::after{background:linear-gradient(90deg,var(--champ),transparent)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:24px 22px;margin:16px 0;
+    box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 30px 60px -30px rgba(0,0,0,.6)}
+  h2{font:600 21px/1.4 var(--serif);margin:0 0 14px;color:var(--pearl);letter-spacing:.06em;display:flex;align-items:center;gap:12px}
+  .step{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--champ);color:var(--champ);font:600 15px/1 var(--serif)}
+  .ico{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  h2 .ico{color:var(--champ)}
+  /* 按钮 */
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;border-radius:999px;cursor:pointer;margin:12px 0;
+    font-family:inherit;font-weight:600;font-size:19px;letter-spacing:.06em;line-height:1.2;-webkit-tap-highlight-color:transparent;
+    color:var(--pearl);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);transition:transform .12s,background .2s,border-color .2s}
+  .btn:active{transform:scale(.98)}
+  .btn:focus-visible,.orb:focus-visible{outline:2px solid var(--champ);outline-offset:4px}
+  .btn.gold{color:#1d160a;border:0;background:linear-gradient(180deg,#ecdcb6,#c9a86c);box-shadow:0 10px 24px -10px rgba(216,191,143,.55),inset 0 1px 0 rgba(255,255,255,.5)}
+  .btn.alt{}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45}
+  .btn.small{min-height:48px;font-size:17px;width:auto;padding:0 20px;margin:0 0 4px}
+  .btn .ico{width:20px;height:20px}
+  /* 录音按钮：全页唯一的主角 */
+  .orbWrap{display:grid;place-items:center;padding:22px 0 18px}
+  .orb{position:relative;width:184px;height:184px;border-radius:50%;cursor:pointer;color:var(--pearl);font-family:inherit;-webkit-tap-highlight-color:transparent;
+    border:1px solid rgba(216,191,143,.55);
+    background:radial-gradient(circle at 50% 35%,#24375a 0%,#152440 55%,#0e1a2f 100%);
+    box-shadow:0 0 40px -6px rgba(216,191,143,.28),0 30px 60px -20px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.12),inset 0 -20px 40px rgba(0,0,0,.35);
+    transition:transform .15s}
+  .orb::after{content:"";position:absolute;inset:-22px;border-radius:50%;border:1px solid rgba(216,191,143,.22);animation:breathe 3.2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(.97);opacity:.35}50%{transform:scale(1.03);opacity:.9}}
+  .orb:active{transform:scale(.97)}
+  .orb .ico{width:46px;height:46px;color:var(--champ);stroke-width:1.4;display:block;margin:6px auto 10px}
+  .orb .tx{display:block;font:600 22px/1.2 var(--serif);letter-spacing:.2em;padding-left:.2em}
+  .orb .sx{display:block;font-size:14px;color:var(--mist);margin-top:6px;letter-spacing:.1em}
+  .floor{display:none}
+  @media (prefers-reduced-motion:reduce){.orb::after,.dot{animation:none}}
+  .tips{margin:14px 0 0;padding:0;list-style:none;color:var(--mist);font-size:16px}
+  .tips li{padding:6px 0 6px 18px;position:relative}
+  .tips li::before{content:"";position:absolute;left:2px;top:17px;width:5px;height:5px;border-radius:50%;background:var(--champ2)}
+  .tips b{color:var(--pearl);font-weight:600}
+  input[type=text]{width:100%;font-size:18px;padding:14px 18px;border-radius:16px;font-family:inherit;color:var(--pearl);background:rgba(0,0,0,.22);border:1px solid var(--line);outline:none}
+  input[type=text]:focus{border-color:rgba(216,191,143,.6)}
+  input::placeholder{color:#66718a}
+  label.l{display:block;font-size:15px;color:var(--mist);margin:20px 0 8px;letter-spacing:.06em}
   .hide{display:none!important}
-  .msg{background:rgba(255,207,107,.12);border:1px solid rgba(255,207,107,.35);color:#ffe9b8;border-radius:16px;padding:12px 14px;font-size:17px;margin-top:10px}
-  .rec{font-size:52px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 24px rgba(255,95,135,.7)}
-  .dot{display:inline-block;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd0dc,#ff5f87 50%,#8c1a3b);animation:bl 1s infinite;margin-right:8px;vertical-align:middle;box-shadow:0 0 12px #ff5f87}
-  @keyframes bl{50%{opacity:.25}}
-  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
-  .bar{height:16px;background:rgba(10,6,30,.6);border-radius:10px;overflow:hidden;margin:16px 0 6px;box-shadow:inset 0 2px 5px rgba(0,0,0,.6)}
-  .bar>i{display:block;height:100%;width:0;border-radius:10px;background:linear-gradient(180deg,#9ff7e6,#21a98f);box-shadow:0 0 12px rgba(79,227,200,.6);transition:width .2s}
-  .bar.thin{height:9px;margin:10px 0}
-  .refline{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:20px;color:#fff}
+  .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
+  .msg b{color:var(--champ)}
+  .rec{font:500 56px/1.1 var(--serif);text-align:center;font-variant-numeric:tabular-nums;color:var(--pearl);margin:8px 0 14px;letter-spacing:.04em}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bad);animation:bl 1.4s infinite;vertical-align:middle}
+  @keyframes bl{50%{opacity:.2}}
+  .bar{height:6px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin:18px 0 8px}
+  .bar>i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--champ2),var(--champ));transition:width .2s}
+  .bar.thin{height:4px;margin:12px 0}
+  .refline{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:18px;color:var(--pearl);padding:4px 0 2px}
+  .refline b{display:flex;align-items:center;gap:10px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .refline b .ico{color:var(--champ)}
   .row2{display:flex;gap:10px}.row2 .btn{flex:1}
-  /* 分数 */
-  .scoreRow{display:flex;align-items:center;gap:18px}
-  .ring{flex:none;width:128px;height:128px;border-radius:50%;display:grid;place-items:center;position:relative;
-    box-shadow:0 0 30px rgba(79,227,200,.25),0 14px 24px rgba(0,0,0,.55)}
-  .ring b{font-size:46px;line-height:1;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.4),0 0 18px rgba(255,207,107,.5)}
-  .ring small{display:block;font-size:14px;color:var(--sub);text-align:center}
-  .verdict{font-size:22px;font-weight:700;color:#fff}
-  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
-  .tile{border-radius:16px;padding:12px 6px;text-align:center;background:rgba(10,6,30,.5);box-shadow:inset 0 3px 10px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.07)}
-  .tile b{display:block;font-size:25px;color:var(--gold);text-shadow:0 0 14px rgba(255,207,107,.35)}
-  .tile span{font-size:14px;color:var(--sub)}
-  canvas{width:100%;height:300px;display:block;border-radius:18px;touch-action:pan-y;
-    background:linear-gradient(180deg,rgba(8,5,26,.85),rgba(20,12,50,.85));box-shadow:inset 0 4px 14px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.08)}
-  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:15px;color:var(--sub);margin:10px 0}
-  .legend i{display:inline-block;width:18px;height:8px;border-radius:4px;margin-right:5px;vertical-align:middle}
-  .ctrl{display:flex;gap:10px;align-items:center;margin-top:12px}
-  .ctrl input[type=range]{flex:1;height:40px;accent-color:var(--gold)}
-  .spot{margin:12px 0;padding:14px 16px 10px;border-radius:20px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));
-    box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 10px 20px -8px rgba(0,0,0,.6)}
-  .tag{font-weight:700;font-size:21px;color:#fff}
-  .tag em{font-style:normal;border-radius:10px;padding:2px 12px;margin-left:8px;font-size:17px;color:#fff;
-    background:linear-gradient(180deg,#ff7c9c,#e2385f);box-shadow:0 2px 0 #8c1a3b}
-  .spot p{margin:6px 0 0}
-  .spot b,.tip b,.tip p b{color:var(--gold)}
-  .tip{padding:14px 16px;margin:12px 0;border-radius:20px;background:rgba(10,6,30,.35);box-shadow:inset 4px 0 0 var(--aqua),0 8px 18px -10px rgba(0,0,0,.6)}
-  .tip>b{font-size:20px;color:#fff}
-  .tip p{margin:4px 0 8px}
-  .how{background:rgba(79,227,200,.1);border-radius:14px;padding:10px 12px;font-size:17px;color:#d9fff7}
-  .how b{color:#9ff7e6}
-  .ai{white-space:pre-wrap;font-size:19px}
-  .note{font-size:15px;color:var(--sub)}
-  .foot{font-size:15px;color:#8a80b5;text-align:center;margin-top:20px}
+  /* 成绩 */
+  .scoreRow{display:flex;align-items:center;gap:22px}
+  .ring{flex:none;width:124px;height:124px;border-radius:50%;display:grid;place-items:center}
+  .ring b{font:600 46px/1 var(--serif);color:var(--pearl)}
+  .ring small{display:block;font-size:13px;color:var(--mist);text-align:center;letter-spacing:.2em;margin-top:4px}
+  .verdict{font:600 21px/1.45 var(--serif);color:var(--pearl);letter-spacing:.03em}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);margin-top:22px;border-top:1px solid var(--line)}
+  .tile{padding:16px 4px 2px;text-align:center}
+  .tile+.tile{border-left:1px solid var(--line)}
+  .tile b{display:block;font:600 24px/1.3 var(--serif);color:var(--champ)}
+  .tile span{font-size:13px;color:var(--mist);letter-spacing:.08em}
+  canvas{width:100%;height:300px;display:block;border-radius:18px;touch-action:pan-y;background:rgba(0,0,0,.25);border:1px solid var(--line)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--mist);margin:12px 0}
+  .legend i{display:inline-block;width:16px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .ctrl{display:flex;gap:10px;align-items:center;margin-top:14px}
+  .ctrl input[type=range]{flex:1;height:40px;accent-color:var(--champ)}
+  .ctrl .btn.small{width:48px;padding:0}
+  .spot{padding:18px 0 14px;border-top:1px solid var(--line)}
+  .spot:first-child{border-top:0;padding-top:4px}
+  .tag{font:600 20px/1.4 var(--serif);color:var(--pearl);display:flex;align-items:center;gap:10px}
+  .tag em{font:500 14px/1 -apple-system,"PingFang SC",sans-serif;font-style:normal;letter-spacing:.08em;color:var(--bad);border:1px solid rgba(238,133,116,.45);border-radius:999px;padding:6px 12px}
+  .spot p{margin:8px 0 12px;color:#d9d4cb}
+  .spot b,.tip p b{color:var(--champ);font-weight:600}
+  .tip{padding:18px 0;border-top:1px solid var(--line)}
+  .tip:first-child{border-top:0;padding-top:4px}
+  .tip>b{font:600 19px/1.5 var(--serif);color:var(--pearl);letter-spacing:.03em}
+  .tip p{margin:6px 0 12px;color:#d9d4cb}
+  .how{background:rgba(127,209,174,.07);border-radius:14px;padding:12px 16px;font-size:16px;color:#d5efe4}
+  .how::before{content:"怎么练";display:block;font-size:13px;letter-spacing:.2em;color:var(--good);margin-bottom:4px}
+  .how b{color:#bff0dc}
+  .ai{white-space:pre-wrap;font-size:18px;color:#e8e3da}
+  .note{font-size:15px;color:var(--mist)}
+  .foot{font-size:14px;color:#6f7a8f;text-align:center;margin:26px 8px 0;line-height:1.7}
 </style>
 </head>
 <body>
@@ -117,7 +122,7 @@
     <h2><span class="step">1</span>放原唱（可以不放）</h2>
     <div id="refNone">
       <div class="note">放一首原唱进来，就能跟原唱一个音一个音地比。只要选一次，下次打开还在。</div>
-      <button class="btn gold" id="btnRef">🎵 选原唱歌曲</button>
+      <button class="btn gold" id="btnRef"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>选原唱歌曲</button>
     </div>
     <div id="refHas" class="hide">
       <div class="refline"><b id="refName"></b><span id="refState" class="note"></span></div>
@@ -129,9 +134,9 @@
 
   <div class="card">
     <h2><span class="step">2</span>开始唱</h2>
-    <div id="earTip" class="msg hide" style="margin:0 0 6px">🎧 <b>请戴上耳机</b>。点“开始唱”后，原唱在耳机里放，您跟着唱就行，唱完点停止。</div>
-    <div class="orbWrap"><button class="orb" id="btnRec"><span class="ic">🎤</span><span class="tx">开始唱</span><span class="sx" id="recSub"></span></button><div class="floor"></div></div>
-    <button class="btn alt" id="btnFile">📂 选手机里录好的歌</button>
+    <div id="earTip" class="msg hide" style="margin:0 0 6px"><b>请戴上耳机</b>。点“开始唱”后，原唱在耳机里放，您跟着唱就行，唱完点停止。</div>
+    <div class="orbWrap"><button class="orb" id="btnRec"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">开始唱</span><span class="sx" id="recSub"></span></button><div class="floor"></div></div>
+    <button class="btn" id="btnFile"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>选手机里录好的歌</button>
     <input type="file" id="file" accept="audio/*,video/*" class="hide">
     <div id="micMsg" class="msg hide">麦克风没打开。请在弹出的提示里点<b>“允许”</b>；如果没弹出，在浏览器设置里允许这个网站用麦克风。也可以先用手机录音机录好，再点绿色按钮选文件。</div>
     <label class="l" for="song">歌名（可以不填）</label>
@@ -146,11 +151,11 @@
 
   <!-- 录音中 -->
   <div class="card hide" id="stepRec">
-    <h2><span class="dot"></span>正在录音…</h2>
+    <h2><span class="dot"></span>正在录音</h2>
     <div class="rec" id="recT">0:00</div>
     <canvas id="live" style="height:170px"></canvas>
     <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
-    <button class="btn" id="btnStop">⏹ 唱完了，停止</button>
+    <button class="btn gold" id="btnStop"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>唱完了</button>
   </div>
 
   <!-- 分析中 -->
@@ -177,38 +182,38 @@
     </div>
 
     <div class="card">
-      <h2>🎼 音高图</h2>
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M3 12h2l2-5 3 10 3-14 3 12 2-3h3"/></svg>音高图</h2>
       <div class="note">横线是简谱音，彩色条是您唱的音。条在线上 = 唱准了。点图上任何地方，就从那儿播放。</div>
-      <div class="legend"><span><i style="background:var(--good)"></i>准</span><span><i style="background:var(--mid)"></i>差一点</span><span><i style="background:var(--bad)"></i>不准</span><span><i style="background:rgba(255,255,255,.5);height:3px"></i>您的声音</span><span id="lgRef"><i style="background:#8fd3ff;height:3px"></i>原唱</span></div>
+      <div class="legend"><span><i style="background:var(--good)"></i>准</span><span><i style="background:var(--mid)"></i>差一点</span><span><i style="background:var(--bad)"></i>不准</span><span><i style="background:rgba(244,239,230,.4);height:2px"></i>您的声音</span><span id="lgRef"><i style="background:#a9c4e8;height:2px"></i>原唱</span></div>
       <canvas id="cv"></canvas>
       <div class="ctrl">
-        <button class="btn small ghost" id="prev">◀</button>
+        <button class="btn small ghost" id="prev" aria-label="往前"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
         <input type="range" id="pos" min="0" max="100" value="0" step="0.1">
-        <button class="btn small ghost" id="next">▶</button>
+        <button class="btn small ghost" id="next" aria-label="往后"><svg class="ico" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
-      <button class="btn alt" id="btnPlay">▶ 听我唱的</button>
+      <button class="btn gold" id="btnPlay"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg><span>听我唱的</span></button>
       <audio id="aud" preload="auto" class="hide"></audio>
     </div>
 
     <div class="card">
-      <h2>🔍 最需要改的几处</h2>
+      <h2><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>最需要改的几处</h2>
       <div id="spots"></div>
     </div>
 
     <div class="card">
-      <h2>📋 主要问题和练法</h2>
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>主要问题和练法</h2>
       <div id="tipsBox"></div>
     </div>
 
     <div class="card" id="aiCard">
-      <h2>👨‍🏫 请老师详细点评</h2>
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>请老师详细点评</h2>
       <div class="note">让 AI 老师根据上面的结果，用大白话给您讲讲，再给一个每天的练习计划。</div>
       <button class="btn gold" id="btnAI">请老师点评</button>
       <div class="ai" id="aiOut"></div>
     </div>
 
-    <button class="btn ghost" id="again">🔁 再唱一遍</button>
-    <p class="foot">说明：选了原唱，就跟原唱比；没选原唱，就按您自己唱的调判断（看音和音之间准不准）。戴耳机跟着原唱唱，还能比节奏快慢。机器听也会有误差，有疑问就点“▶ 原唱”和“▶ 我唱的”对比听一听。</p>
+    <button class="btn" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
+    <p class="foot">说明：选了原唱，就跟原唱比；没选原唱，就按您自己唱的调判断（看音和音之间准不准）。戴耳机跟着原唱唱，还能比节奏快慢。机器听也会有误差，有疑问就点“原唱”和“我唱的”对比听一听。</p>
   </div>
 </div>
 
@@ -727,6 +732,7 @@ const SC = (() => {
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+const NOTE_ICO = '<svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>';
 const show = (id, on = true) => $(id).classList.toggle("hide", !on);
 let actx = null, R = null, audioURL = null, viewStart = 0, VIEW = 10, stopAt = null, raf = 0;
 const getCtx = () => { if (!actx) { const C = window.AudioContext || window.webkitAudioContext; actx = new C(); } return actx; };
@@ -802,7 +808,7 @@ function drawLive(now) {
   const lo = mid - 9, hi = mid + 9, X = t => (t - (now - 8)) / 8 * W, Y = m => H - (m - lo) / (hi - lo) * H;
   g.strokeStyle = "rgba(255,255,255,.08)"; g.lineWidth = 1;
   for (let m = Math.ceil(lo); m <= hi; m++) { g.beginPath(); g.moveTo(0, Y(m)); g.lineTo(W, Y(m)); g.stroke(); }
-  g.shadowColor = "#4fe3c8"; g.shadowBlur = 10; g.strokeStyle = "#4fe3c8"; g.lineWidth = 4; g.lineCap = "round"; g.beginPath(); let pen = false;
+  g.shadowBlur = 0; g.strokeStyle = "#d8bf8f"; g.lineWidth = 3; g.lineCap = "round"; g.beginPath(); let pen = false;
   live.forEach(p => { if (isNaN(p.m)) { pen = false; return; } const x = X(p.t), y = Y(p.m); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; });
   g.stroke();
 }
@@ -860,7 +866,7 @@ function refUI() {
   const has = !!REF.name;
   show("refNone", !has); show("refHas", has); show("earTip", has);
   $("recSub").textContent = has ? "会放原唱" : "";
-  $("refName").textContent = has ? "🎵 " + REF.name : "";
+  $("refName").innerHTML = has ? NOTE_ICO + "<span></span>" : ""; if (has) $("refName").lastChild.textContent = REF.name;
 }
 async function loadRef(blob, name, save) {
   REF.name = name.replace(/\.[^.]+$/, ""); REF.melody = null; REF.ab = null; refUI();
@@ -967,7 +973,7 @@ function issueTag(z) {
 function buildTips(s) {
   const T = [];
   if (s.wrongCount >= 1) T.push(["有音唱得跟原唱不一样", `有 ${s.wrongCount} 个音和原唱不是同一个音（见上面“唱错音”）。这是最先要改的。`,
-    "点上面的<b>“▶ 原唱”</b>多听几遍这一句，跟着原唱<b>小声哼</b>，哼准了再大声唱。还可以对着简谱，把这句慢下来一个音一个音唱。"]);
+    "点上面的<b>“原唱”</b>多听几遍这一句，跟着原唱<b>小声哼</b>，哼准了再大声唱。还可以对着简谱，把这句慢下来一个音一个音唱。"]);
   if (s.lateCount + s.earlyCount >= 2) T.push([s.lateCount >= s.earlyCount ? "有几句比原唱慢（拖拍）" : "有几句比原唱快（抢拍）", "跟原唱比，有几句进来的时间不对。",
     "听原唱时<b>用手轻轻打拍子</b>，先把拍子打稳再开口；换气要在句子之间提前换好，别等到该唱了才吸气。"]);
   if (Math.abs(s.keyShift) >= 0.5) T.push(["起的调和原唱不一样", `您是按自己的调唱的，比原唱${s.keyShift > 0 ? "高" : "低"}了约 ${Math.round(Math.abs(s.keyShift))} 个音。`,
@@ -1000,10 +1006,10 @@ function render() {
   const s = R.stats;
   show("stepBusy", false); show("result");
   $("score").textContent = s.score;
-  const col = s.score >= 85 ? "var(--good)" : s.score >= 70 ? "var(--mid)" : "var(--bad)";
-  $("ring").style.background = `conic-gradient(${col} ${s.score * 3.6}deg, rgba(255,255,255,.1) 0)`;
-  $("ring").firstElementChild.style.cssText = "background:radial-gradient(circle at 35% 30%,#4a3990,#1c1446 70%);width:100px;height:100px;border-radius:50%;display:grid;place-content:center;box-shadow:inset 0 2px 0 rgba(255,255,255,.2),inset 0 -6px 14px rgba(0,0,0,.6)";
-  $("verdict").textContent = s.score >= 85 ? "唱得很不错！👍" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
+  const col = "var(--champ)";
+  $("ring").style.background = `conic-gradient(${col} ${s.score * 3.6}deg, rgba(255,255,255,.08) 0)`;
+  $("ring").firstElementChild.style.cssText = "background:#121e33;width:116px;height:116px;border-radius:50%;display:grid;place-content:center";
+  $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
   $("keyLine").textContent = (withRef ? `已跟原唱《${REF.name}》对比 · ` : `听出来是 ${R.keyName} 调（大约） · `) + `唱了 ${SC.fmtT(R.duration)}，共 ${s.noteCount} 个音`;
   $("tAcc").textContent = Math.round(s.accuracy * 100) + "%";
@@ -1019,12 +1025,12 @@ function render() {
   show("lgRef", withRef);
 
   $("spots").innerHTML = R.spots.length ? R.spots.map((z, i) =>
-    `<div class="spot"><div class="tag">${SC.fmtT(z.t0)}<em>${issueTag(z)}</em></div><p>${spotText(z)}</p><div class="row2" style="margin-top:10px"><button class="btn small" data-i="${i}">▶ 我唱的</button>${(z.refDev !== undefined || z.wrong) && REF.ab ? `<button class="btn small alt" data-r="${i}">▶ 原唱</button>` : ""}</div></div>`).join("")
+    `<div class="spot"><div class="tag">${SC.fmtT(z.t0)}<em>${issueTag(z)}</em></div><p>${spotText(z)}</p><div class="row2" style="margin-top:10px"><button class="btn small gold" data-i="${i}">我唱的</button>${(z.refDev !== undefined || z.wrong) && REF.ab ? `<button class="btn small" data-r="${i}">原唱</button>` : ""}</div></div>`).join("")
     : "<p>没发现明显的问题，很棒！</p>";
   $("spots").querySelectorAll("button[data-i]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.i]; playRange(z.t0 - 1.2, z.t1 + 0.8); });
   $("spots").querySelectorAll("button[data-r]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.r]; playRef(z.t0 - 1.2, z.t1 + 0.8); });
 
-  $("tipsBox").innerHTML = buildTips(s).map(t => `<div class="tip"><b>${t[0]}</b><p>${t[1]}</p><div class="how">💡 怎么练：${t[2]}</div></div>`).join("");
+  $("tipsBox").innerHTML = buildTips(s).map(t => `<div class="tip"><b>${t[0]}</b><p>${t[1]}</p><div class="how">${t[2]}</div></div>`).join("");
   $("aiOut").textContent = ""; $("btnAI").disabled = false; $("btnAI").textContent = "请老师点评";
 
   $("pos").max = Math.max(0, R.duration - VIEW);
@@ -1056,35 +1062,35 @@ function draw() {
     const rel = SC.mod12(m - R.key.majorTonic);
     if (!SC.MAJOR.includes(rel)) continue;
     const y = Y(m), oc = Math.floor((m - R.refTonic) / 12);
-    g.strokeStyle = rel === 0 ? "rgba(255,207,107,.45)" : "rgba(255,255,255,.12)"; g.lineWidth = rel === 0 ? 1.5 : 1;
+    g.strokeStyle = rel === 0 ? "rgba(216,191,143,.4)" : "rgba(255,255,255,.07)"; g.lineWidth = rel === 0 ? 1.5 : 1;
     g.beginPath(); g.moveTo(L, y); g.lineTo(W, y); g.stroke();
-    g.fillStyle = rel === 0 ? "#ffcf6b" : "#d8d0ff"; g.fillText(SC.JP[rel], 18, y);
+    g.fillStyle = rel === 0 ? "#d8bf8f" : "#9aa6b8"; g.fillText(SC.JP[rel], 18, y);
     for (let k = 0; k < Math.abs(oc); k++) { g.beginPath(); g.arc(18 + 0, oc > 0 ? y - 11 - k * 5 : y + 11 + k * 5, 1.8, 0, 7); g.fill(); }
   }
   // 时间
-  g.fillStyle = "rgba(216,208,255,.6)"; g.font = "13px sans-serif";
+  g.fillStyle = "rgba(154,166,184,.7)"; g.font = "13px sans-serif";
   for (let t = Math.ceil(viewStart / 2) * 2; t <= viewStart + VIEW; t += 2) g.fillText(SC.fmtT(t), X(t), H - 10);
   // 声音走向
   const i0 = Math.max(0, Math.floor(viewStart / R.hopS)), i1 = Math.min(R.p.length, Math.ceil((viewStart + VIEW) / R.hopS));
-  g.strokeStyle = "rgba(255,255,255,.4)"; g.lineWidth = 1.5; g.beginPath(); let pen = false;
+  g.strokeStyle = "rgba(244,239,230,.28)"; g.lineWidth = 1.5; g.beginPath(); let pen = false;
   for (let i = i0; i < i1; i++) { const v = R.p[i]; if (isNaN(v)) { pen = false; continue; } const x = X(i * R.hopS), y = Y(v); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; }
   g.stroke();
   // 音符
   g.lineCap = "round";
   vis.forEach(z => {
     const a = Math.abs(z.dev), bad = a > 40 || z.issues.includes("调外");
-    g.strokeStyle = bad ? "#ff5f87" : a > 25 ? "#ffcf6b" : "#4fe3c8";
-    g.shadowColor = g.strokeStyle; g.shadowBlur = 12; g.lineWidth = 8; g.beginPath(); g.moveTo(X(z.t0) + 3, Y(z.center)); g.lineTo(X(z.t1) - 3, Y(z.center)); g.stroke();
+    g.strokeStyle = bad ? "#ee8574" : a > 25 ? "#e9b872" : "#7fd1ae";
+    g.shadowColor = g.strokeStyle; g.shadowBlur = 6; g.lineWidth = 7; g.beginPath(); g.moveTo(X(z.t0) + 3, Y(z.center)); g.lineTo(X(z.t1) - 3, Y(z.center)); g.stroke();
     g.shadowBlur = 0;
     if (z.issues.length && (bad || a > 25 || z.scoop || z.tailDrop)) {
-      g.fillStyle = "#ff8fa8"; g.font = "bold 13px sans-serif";
+      g.fillStyle = "#ee8574"; g.font = "bold 13px sans-serif";
       g.fillText(z.dev > 25 ? "↑高" : z.dev < -25 ? "↓低" : z.scoop ? "勾" : z.tailDrop ? "掉" : "", (X(z.t0) + X(z.t1)) / 2, Y(z.center) - 13);
     }
   });
   // 原唱旋律
   if (R.mode !== "self" && R.refMap) {
     const H = R.refHop; let last = NaN, lastV = NaN;
-    g.strokeStyle = "#8fd3ff"; g.lineWidth = 2.5; g.setLineDash([6, 4]); g.beginPath(); let pn = false;
+    g.strokeStyle = "#a9c4e8"; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath(); let pn = false;
     for (let t = Math.max(0, viewStart); t < viewStart + VIEW; t += H) {
       const j = Math.round(t / H), ri = R.refMap[j], i = Math.min(R.p.length - 1, Math.round(t / R.hopS));
       if (!isNaN(R.p[i])) last = R.p[i];
@@ -1097,7 +1103,7 @@ function draw() {
   }
   // 播放线
   const ct = $("aud").currentTime;
-  if (!$("aud").paused && ct >= viewStart && ct <= viewStart + VIEW) { g.strokeStyle = "#ffcf6b"; g.lineWidth = 2; g.beginPath(); g.moveTo(X(ct), top); g.lineTo(X(ct), bot); g.stroke(); }
+  if (!$("aud").paused && ct >= viewStart && ct <= viewStart + VIEW) { g.strokeStyle = "#d8bf8f"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(ct), top); g.lineTo(X(ct), bot); g.stroke(); }
 }
 
 // ---------- 播放 ----------
@@ -1132,8 +1138,8 @@ function playRef(a, b) {
 }
 function playRange(a, b) {
   try { refPlay && refPlay.stop(); } catch (e) {} setView(a - 1); playFrom(a, b); $("cv").scrollIntoView({ behavior: "smooth", block: "center" }); }
-aud.onplay = () => $("btnPlay").textContent = "⏸ 暂停";
-aud.onpause = () => $("btnPlay").textContent = "▶ 听我唱的";
+aud.onplay = () => $("btnPlay").lastChild.textContent = "暂停";
+aud.onpause = () => $("btnPlay").lastChild.textContent = "听我唱的";
 $("btnPlay").onclick = () => aud.paused ? playFrom(aud.currentTime > 0 && aud.currentTime < R.duration - 0.5 ? aud.currentTime : viewStart) : aud.pause();
 cv.addEventListener("click", e => { if (!R) return; const r = cv.getBoundingClientRect(); const t = viewStart + (e.clientX - r.left - 44) / (r.width - 50) * VIEW; playFrom(t - 0.3); });
 
