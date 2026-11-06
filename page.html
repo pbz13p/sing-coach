@@ -127,6 +127,11 @@
   @media (prefers-reduced-motion:reduce){.splash *,.splashX{animation:none!important;transition:none!important}}
   .liveSay{text-align:center;font-size:22px;font-weight:600;min-height:32px;margin:4px 0 8px;color:var(--mist)}
   .liveSay.ok{color:#f3d892}.liveSay.off{color:#f0a860}
+  #stageReady .mpCard{margin-top:22px}
+  #stageReady .mpCard:not(.done){display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;background:none;border-style:dashed}
+  #stageReady .mpCard:not(.done) .mpIco,#stageReady .mpCard:not(.done) #mpSub{display:none}
+  #stageReady .mpCard:not(.done) b{margin:0;font-size:16px;color:var(--mist);font-weight:500}
+  #stageReady .mpCard:not(.done) .btn{margin:0 0 0 auto}
   .mpCard{display:grid;grid-template-columns:42px 1fr;align-items:start;column-gap:14px;margin:14px 0 4px;padding:14px 14px 14px 16px;border-radius:20px;
     background:linear-gradient(135deg,rgba(216,191,143,.13),rgba(216,191,143,.03));border:1px solid rgba(216,191,143,.28)}
   .mpCard .mpIco{flex:none;width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:rgba(216,191,143,.14)}
@@ -282,6 +287,9 @@
   .top .lead::before,.top .lead::after{display:none}
   .histBtn{all:unset;box-sizing:border-box;flex:none;width:52px;height:52px;border-radius:50%;border:1px solid rgba(216,191,143,.35);display:grid;place-items:center;color:var(--champ);cursor:pointer;margin:0}
   .histBtn .ico{width:24px;height:24px}
+  .top .histBtn{width:auto;height:auto;border:0;border-radius:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .top .histBtn .ico{width:52px;height:52px;padding:13px;border:1px solid rgba(216,191,143,.35);border-radius:50%}
+  .hbL{font-size:14px;color:var(--champ)}
   .histBtn:focus-visible{outline:2px solid var(--champ);outline-offset:3px}
   .lastCard{background:var(--ink2);border:1px solid rgba(216,191,143,.25);border-radius:24px;padding:20px;margin:0 0 26px}
   .lastCard .lk{font-size:15px;color:var(--mist)}
@@ -310,7 +318,11 @@
   .ph::before{left:0;top:12px;bottom:12px}
   .ph .mini,.ph .teach{display:none}
   .ph .phTip{margin:0 0 6px;font-size:19px;font-weight:600;color:var(--c)}
-  .ph .phTxt{margin:2px 0 6px;font-size:15px;color:var(--mist)}
+  .ph .phTxt{margin:2px 0 6px;font-size:17px;color:var(--mist)}
+  .ph.compact{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 18px}
+  .ph.compact .phNo{font:500 18px/1.3 var(--serif);flex:none}
+  .ph.compact .phOk{flex:1;color:var(--good);font-size:18px;font-weight:600}
+  .ph.compact .phPlay{flex:none;width:auto;min-height:46px;padding:0 16px;margin:0}
   .ph .phTxt b{color:var(--pearl)}
   .ph .btn.small{min-height:44px;font-size:16px}
   .actions .btn{margin:10px 0}
@@ -324,7 +336,7 @@
 <div class="wrap">
   <div class="top">
     <div><h1>唱准了</h1><p class="lead">你的练歌小老师</p></div>
-    <button class="histBtn" id="btnHist" aria-label="练唱记录"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+    <button class="histBtn" id="btnHist" aria-label="练唱记录"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="hbL">记录</span></button>
   </div>
 
   <div id="stepIn">
@@ -373,15 +385,15 @@
     <div class="note hide" id="segNote"></div>
     <div id="recYt" class="hide"><div id="recYtBox"></div></div>
     <div id="stageReady" class="hide">
-      <div class="mpCard" id="mpCard">
-        <div class="mpIco"><svg viewBox="0 0 24 24"><path d="M3 17V9M7 17V6M11 17v-5M15 17V8M19 17v-3"/></svg></div>
-        <div class="mpTx"><b id="mpTitle">想看着音条唱？</b><span id="mpSub">放一首这首歌的原唱 mp3，唱的时候就能看到原唱每个音，一边唱一边对。</span>
-          <div class="mpBar hide" id="mpBarW"><i id="mpProg"></i></div></div>
-        <button class="btn small gold" id="btnMp3">放 mp3</button>
-      </div>
       <input type="file" id="mpFile" accept="audio/*,.mp3,.m4a,.wav,.aac" class="hide">
       <div class="note" id="readyNote" style="text-align:center;margin-top:8px">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
       <div class="orbWrap"><button class="orb" id="stageGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">开始唱</span></button></div>
+      <div class="mpCard" id="mpCard">
+        <div class="mpIco"><svg viewBox="0 0 24 24"><path d="M3 17V9M7 17V6M11 17v-5M15 17V8M19 17v-3"/></svg></div>
+        <div class="mpTx"><b id="mpTitle">有原唱 mp3？</b><span id="mpSub">放进来，唱的时候能看到每个音。</span>
+          <div class="mpBar hide" id="mpBarW"><i id="mpProg"></i></div></div>
+        <button class="btn small gold" id="btnMp3">放 mp3</button>
+      </div>
     </div>
     <div id="stageRec">
       <div class="rec" id="recT">0:00</div>
@@ -461,8 +473,8 @@
       <div class="ai" id="aiOut"></div>
     </div>
 
-    </details>
     <p class="foot">说明：选了原唱，就跟原唱比；没选原唱，就按您自己唱的调判断（看音和音之间准不准）。戴耳机跟着原唱唱，还能比节奏快慢。机器听也会有误差，有疑问就点“原唱”和“我唱的”对比听一听。</p>
+    </details>
   </div>
 </div>
 
@@ -518,7 +530,7 @@ async function startRecording(opts) {
     $("volTxt").textContent = "音乐一开始就自动录音。如果视频没动，点一下视频上的播放键。";
     try { if (YT_.player && YT_.player.getPlayerState() === 1) { ytPending = false; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; } } catch (e) {}
   } else { stageSong = null; YT_.stop(); $("recTitle").textContent = REF.name ? "跟着原唱唱" : "正在录音（清唱）"; }
-  stageUI(opts.yt ? "rec" : "plain"); show("liveNote", !!opts.yt && !mp3Song); show("nudge", !!mp3Song);
+  stageUI(opts.yt ? "rec" : "plain"); show("liveNote", false); show("nudge", !!mp3Song);
   if (!opts.yt && REF.name) {
     $("recSub").textContent = "原唱准备中…";
     await REF.ready; refUI();
@@ -803,12 +815,14 @@ function phraseInfo(f, idx) {
   const ns = f.notes.filter(z => z.dur > 0.12);
   const tot = ns.reduce((s, z) => s + z.dur, 0) || 1;
   const acc = ns.filter(z => !z.wrong && Math.abs(z.dev) <= 25).reduce((s, z) => s + z.dur, 0) / tot;
+  // 打分用"差多少扣多少"：偏 25 音分以内满分，偏 45 约 3/4 分，偏 105 才算 0，避免差一点就从 100 掉到个位数
+  const credit = ns.reduce((s, z) => s + z.dur * (z.wrong ? 0 : Math.max(0, Math.min(1, 1 - (Math.abs(z.dev) - 25) / 80))), 0) / tot;
   const has = t => ns.filter(z => (z.issues || []).includes(t));
   const wrong = ns.filter(z => z.wrong), low = has("低"), high = has("高"), scoop = ns.filter(z => z.scoop), tail = ns.filter(z => z.tailDrop),
     shake = has("抖"), late = has("慢"), early = has("快");
-  let score = 100 * acc - 15 * wrong.length - 7 * scoop.length - 8 * tail.length - 6 * shake.length - (late.length || early.length ? 10 : 0);
+  let score = 100 * credit - 15 * wrong.length - 7 * scoop.length - 8 * tail.length - 6 * shake.length - (late.length || early.length ? 10 : 0);
   score = Math.max(0, Math.min(100, Math.round(score)));
-  const level = score >= 85 ? "good" : score >= 65 ? "ok" : "bad";
+  const level = score >= 85 && !low.length && !high.length && !wrong.length ? "good" : score >= 65 ? "ok" : "bad";
   const last = ns[ns.length - 1];
   const probs = [];
   if (wrong.length) probs.push(["wrong", `有 ${wrong.length} 个音和原唱不一样，比如原唱「${wrong[0].refJp}」，您唱成了「${SC.jpLabel(wrong[0])}」。`]);
@@ -914,6 +928,9 @@ function drawPhList() {
       ? `<p class="phTxt good">${x.praise.join("，") || "唱得很好"}。</p>`
       : `${x.praise.length ? `<p class="phTxt good">做得好：${x.praise[0]}。</p>` : ""}<p class="phTxt">要注意：${x.probs.slice(0, 2).map(q => q[1]).join(" ")}</p>${x.probs.length ? teachSvg(x.probs[0][0]) : ""}`;
     const canRef = R.refMap && REF.ab && REF.name === R.refName;
+    if (x.level === "good") return `<div class="ph lv-good compact" style="--c:${col}">
+      <span class="phNo">第 ${x.idx + 1} 句</span><span class="phOk">✓ ${x.tip}</span>
+      <button class="btn small ghost phPlay" data-ph="${x.idx}" aria-label="听第 ${x.idx + 1} 句"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听</button></div>`;
     return `<div class="ph lv-${x.level}" style="--c:${col}">
       <div class="phHd"><span class="phNo">第 ${x.idx + 1} 句</span><span class="phT">${SC.fmtT(x.f.t0)}</span><span class="phLv">${lbl} · ${x.score}</span></div>
       <p class="phTip">${x.tip}</p>
@@ -1140,7 +1157,7 @@ function mpUI(state) {
   c.classList.toggle("done", has && state !== "busy");
   show("mpBarW", state === "busy"); show("btnMp3", state !== "busy");
   if (state === "busy") { $("mpTitle").textContent = "正在准备原唱…"; $("mpSub").textContent = "在记每个音、去掉人声做伴奏，大约半分钟。"; return; }
-  $("mpTitle").textContent = has ? "原唱已放好" : "想对着原唱的音唱？";
+  $("mpTitle").textContent = has ? "原唱已放好" : "有这首歌的原唱 mp3？";
   $("mpSub").textContent = has ? "唱的时候有原唱的音条对着唱。伴奏去掉了人声，视频静音只看歌词。" : "放一首这首歌的原唱 mp3，唱的时候每个音都有音条，一边唱一边对。";
   show("seg", !has); show("segNote", !has);
   $("btnMp3").textContent = has ? "换一首 mp3" : "放 mp3";
@@ -1298,7 +1315,7 @@ function render(fromHist) {
   $("ring").firstElementChild.style.cssText = "background:#121e33;width:116px;height:116px;border-radius:50%;display:grid;place-content:center";
   $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
-  $("keyLine").textContent = (withRef ? `已跟原唱《${R.refName || REF.name}》对比 · ` : `听出来是 ${R.keyName} 调（大约） · `) + `唱了 ${SC.fmtT(R.duration)}，共 ${s.noteCount} 个音`;
+  $("keyLine").textContent = (withRef ? `跟原唱比 · ` : ``) + `唱了 ${SC.fmtT(R.duration)}`;
   $("tAcc").textContent = Math.round(s.accuracy * 100) + "%";
   $("tStab").textContent = s.unstableRate < 0.15 ? "稳" : s.unstableRate < 0.35 ? "还行" : "晃";
   if (withRef) {
@@ -1310,7 +1327,7 @@ function render(fromHist) {
     $("tTrend").textContent = Math.abs(s.meanDev) < 10 ? "正好" : s.meanDev < 0 ? "偏低" : "偏高";
   }
   show("lgRef", withRef);
-  $("histTag").textContent = fromHist ? "这是之前的记录 · " + fmtDate(R.histId) + ($("song").value && !fromHist ? "" : "") : "已自动保存到“练唱记录”";
+  $("histTag").textContent = fromHist ? "这是之前的记录 · " + fmtDate(R.histId) + ($("song").value && !fromHist ? "" : "") : "";
 
   $("spots").innerHTML = R.spots.length ? R.spots.slice(0, 3).map((z, i) =>
     `<div class="spot"><div class="tag">${SC.fmtT(z.t0)}<em>${issueTag(z)}</em></div><p>${spotText(z)}</p><div class="row2" style="margin-top:10px"><button class="btn small gold" data-i="${i}">我唱的</button>${(z.refDev !== undefined || z.wrong) && REF.ab && REF.name === R.refName ? `<button class="btn small" data-r="${i}">原唱</button>` : ""}</div></div>`).join("")
