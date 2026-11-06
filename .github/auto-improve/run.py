@@ -93,9 +93,11 @@ SYSTEM = """你是这个 App 的全职工程师兼产品经理，在无人看管
 async def run_agent(budget):
     goals = (BOT_DIR / "goals.md").read_text(encoding="utf-8")
     prompt = (
-        f"今天是 {dt.date.today()}。这次运行的预算约 ${budget:.2f}，花到差不多就收尾写报告。\n\n"
+        f"今天是 {dt.date.today()}。这次运行的预算约 ${budget:.2f}，尽量用到八九成再收尾写报告。\n\n"
         f"这个 App 的目标和改进方向：\n{goals}\n\n"
-        "现在开始：读代码和 LOG，挑 1-3 个最值得做的改进，动手做完、测试通过、写好记录和报告。"
+        "现在开始：读代码和 LOG，按优先级一个接一个地做改进：每做完一个就跑测试、确认通过，再做下一个。"
+        "不要只做一个小改动就停：这次的预算是专门给你用的，月底不用就作废，请持续工作直到预算用到八九成（或者优先级清单全部做完）。"
+        "最后写好记录和报告。"
     )
     opts = ClaudeAgentOptions(
         system_prompt=SYSTEM,
