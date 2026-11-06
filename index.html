@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>唱准了</title>
+<script>
+// 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
+(function () {
+  var V = "1793960572";
+  function check() {
+    if (location.protocol !== "https:") return;
+    fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+      t = (t || "").trim(); if (!t || t === V) return;
+      try { if (sessionStorage.getItem("sc_rl") === t) return; sessionStorage.setItem("sc_rl", t); } catch (e) {}
+      var busy = document.getElementById("stepRec"); if (busy && !busy.classList.contains("hide")) return;
+      location.replace(location.pathname + "?v=" + t);
+    }).catch(function () {});
+  }
+  check(); document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
+})();
+</script>
 <meta name="theme-color" content="#0d1626">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -85,7 +101,9 @@
   #stepRec .orb::after{inset:-14px}
   #stepRec .rec{margin:2px 0 4px}
   #stepRec .ytFrame{max-width:calc(30vh * 16 / 9);margin:0 auto}
-  #stepRec:has(#stageRec:not(.hide)) .ytFrame{max-width:calc(20vh * 16 / 9)}
+  /* 唱的时候歌词在视频里，视频要够大才看得清：铺满宽度 */
+  #stepRec:has(#stageRec:not(.hide)) .ytFrame{max-width:none}
+  #stepRec:has(#stageRec:not(.hide)):has(#recYt:not(.hide)) #live{height:clamp(96px,14vh,130px)!important}
   #stepRec #live{height:clamp(150px,26vh,230px)!important}
   #stepRec .rec{font-size:40px}
   #stepRec #btnStop{margin-top:10px}
