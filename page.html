@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>练歌小老师</title>
+<title>唱准了</title>
 <meta name="theme-color" content="#0d1626">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="练歌小老师">
+<meta name="apple-mobile-web-app-title" content="唱准了">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -163,8 +163,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>练歌小老师</h1>
-  <p class="lead">唱准了，你的练歌小老师</p>
+  <h1>唱准了</h1>
+  <p class="lead">你的练歌小老师</p>
   <button class="btn small histBtn" id="btnHist"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4l3 2"/></svg>练唱记录</button>
 
   <div id="stepIn">
@@ -568,7 +568,7 @@ async function loadRef(blob, name, save) {
   })();
   return REF.ready;
 }
-const SONGS = [{"lv": "易", "t": "月亮代表我的心", "s": "邓丽君", "w": "音域窄、速度慢，最适合先练音准和气息", "v": "IiFm7AWP9n4"}, {"lv": "易", "t": "甜蜜蜜", "s": "邓丽君", "w": "旋律轻快，练轻声唱、咬字清楚", "v": "KrAc3uKfgQs"}, {"lv": "易", "t": "小城故事", "s": "邓丽君", "w": "节奏平稳，练句尾收得干净", "v": "dqHYAU_3JVI"}, {"lv": "易", "t": "茉莉花", "s": "江苏民歌", "w": "婉转的小滑音多，练音和音之间连贯", "v": "IwvwjjSVbug"}, {"lv": "易", "t": "康定情歌", "s": "四川民歌", "w": "节奏规整，练拍子跟得稳", "v": "Na_Bvk1EUFo"}, {"lv": "易", "t": "送别", "s": "李叔同 词", "w": "长音多，练长音稳、不晃", "v": "dsM6aXVbMLI"}, {"lv": "易", "t": "难忘今宵", "s": "李谷一", "w": "中速抒情，练气息均匀", "v": "bwpRPZpltqA"}, {"lv": "易", "t": "涛声依旧", "s": "毛宁", "w": "音区舒服，练副歌情绪起伏", "v": "PMpESd-eIDA"}, {"lv": "易", "t": "外婆的澎湖湾", "s": "潘安邦", "w": "节奏明快，练抢拍、拖拍", "v": "JEoNjnyd56s"}, {"lv": "易", "t": "军港之夜", "s": "苏小明", "w": "轻柔摇曳，练小声也唱准", "v": "wbhXtQtXnHs"}, {"lv": "易", "t": "恰似你的温柔", "s": "蔡琴", "w": "低音区多，练低音唱稳", "v": "Yvg3L7RbFHY"}, {"lv": "易", "t": "时间都去哪儿了", "s": "王铮亮", "w": "说话般的旋律，练咬字和感情", "v": "b8zf-69I0Yw"}, {"lv": "中", "t": "我和我的祖国", "s": "李谷一", "w": "起伏大，练换气和长句", "v": "z18nBzxDbb0"}, {"lv": "中", "t": "我的祖国", "s": "郭兰英", "w": "合唱团常唱，练音准和齐唱", "v": "Za3ET-BGkYs"}, {"lv": "中", "t": "映山红", "s": "邓玉华", "w": "高音长句，练高音不往下掉", "v": "IiZ4qWpTHS0"}, {"lv": "中", "t": "弯弯的月亮", "s": "刘欢", "w": "长句多，练一口气唱完一句", "v": "owoeycAYIUc"}, {"lv": "中", "t": "好人一生平安", "s": "李娜", "w": "抒情长音，练长音收尾", "v": "Eg_lh5eBvDM"}, {"lv": "中", "t": "母亲", "s": "阎维文", "w": "民族唱法入门，练声音饱满", "v": "CIAOPY3A5HM"}, {"lv": "中", "t": "我爱你，塞北的雪", "s": "殷秀梅", "w": "跨度大，练高低音转换", "v": "kGm53qmBwqw"}, {"lv": "中", "t": "但愿人长久", "s": "邓丽君", "w": "旋律起伏细，练音准细节", "v": "wA0H7Zvb0u4"}, {"lv": "中", "t": "朋友", "s": "周华健", "w": "副歌偏高，练副歌有力不喊", "v": "6lbPgfKK7m4"}, {"lv": "中", "t": "父亲", "s": "筷子兄弟", "w": "情感浓，练控制住不跑调", "v": "UNj9QsW67dA"}, {"lv": "难", "t": "在希望的田野上", "s": "彭丽媛", "w": "节奏快、音域宽，练灵活和高音", "v": "jk5AeO1x0YI"}, {"lv": "难", "t": "牡丹之歌", "s": "蒋大为", "w": "高音很多，练高音位置", "v": "3eq7pETZDbs"}, {"lv": "难", "t": "天路", "s": "韩红", "w": "高音长音，练气息支撑", "v": "KeuXF8-orZg"}, {"lv": "难", "t": "青藏高原", "s": "李娜", "w": "极高的长音，挑战音域上限", "v": "ePF6V9P9XJU"}, {"lv": "难", "t": "一剪梅", "s": "费玉清", "w": "高音轻唱，练高音不费力", "v": "toKr7Pa-k4c"}];
+const SONGS = [{"lv": "易", "t": "月亮代表我的心", "s": "邓丽君", "w": "音域窄、速度慢，最适合先练音准和气息", "v": "IiFm7AWP9n4"}, {"lv": "易", "t": "甜蜜蜜", "s": "邓丽君", "w": "旋律轻快，练轻声唱、咬字清楚", "v": "KrAc3uKfgQs"}, {"lv": "易", "t": "小城故事", "s": "邓丽君", "w": "节奏平稳，练句尾收得干净", "v": "dqHYAU_3JVI"}, {"lv": "易", "t": "茉莉花", "s": "江苏民歌", "w": "婉转的小滑音多，练音和音之间连贯", "v": "IwvwjjSVbug"}, {"lv": "易", "t": "康定情歌", "s": "四川民歌", "w": "节奏规整，练拍子跟得稳", "v": "ESL8tHsmUns"}, {"lv": "易", "t": "送别", "s": "李叔同 词", "w": "长音多，练长音稳、不晃", "v": "dsM6aXVbMLI"}, {"lv": "易", "t": "难忘今宵", "s": "李谷一", "w": "中速抒情，练气息均匀", "v": "bwpRPZpltqA"}, {"lv": "易", "t": "涛声依旧", "s": "毛宁", "w": "音区舒服，练副歌情绪起伏", "v": "PMpESd-eIDA"}, {"lv": "易", "t": "外婆的澎湖湾", "s": "潘安邦", "w": "节奏明快，练抢拍、拖拍", "v": "JEoNjnyd56s"}, {"lv": "易", "t": "军港之夜", "s": "苏小明", "w": "轻柔摇曳，练小声也唱准", "v": "wbhXtQtXnHs"}, {"lv": "易", "t": "恰似你的温柔", "s": "蔡琴", "w": "低音区多，练低音唱稳", "v": "Yvg3L7RbFHY"}, {"lv": "易", "t": "时间都去哪儿了", "s": "王铮亮", "w": "说话般的旋律，练咬字和感情", "v": "b8zf-69I0Yw"}, {"lv": "中", "t": "我和我的祖国", "s": "李谷一", "w": "起伏大，练换气和长句", "v": "z18nBzxDbb0"}, {"lv": "中", "t": "我的祖国", "s": "郭兰英", "w": "合唱团常唱，练音准和齐唱", "v": "kZrYf1ibgN4"}, {"lv": "中", "t": "映山红", "s": "邓玉华", "w": "高音长句，练高音不往下掉", "v": "IiZ4qWpTHS0"}, {"lv": "中", "t": "弯弯的月亮", "s": "刘欢", "w": "长句多，练一口气唱完一句", "v": "yrJZj-Dkoxc"}, {"lv": "中", "t": "好人一生平安", "s": "李娜", "w": "抒情长音，练长音收尾", "v": "Eg_lh5eBvDM"}, {"lv": "中", "t": "母亲", "s": "阎维文", "w": "民族唱法入门，练声音饱满", "v": "CIAOPY3A5HM"}, {"lv": "中", "t": "我爱你，塞北的雪", "s": "殷秀梅", "w": "跨度大，练高低音转换", "v": "kGm53qmBwqw"}, {"lv": "中", "t": "但愿人长久", "s": "邓丽君", "w": "旋律起伏细，练音准细节", "v": "wA0H7Zvb0u4"}, {"lv": "中", "t": "朋友", "s": "周华健", "w": "副歌偏高，练副歌有力不喊", "v": "6lbPgfKK7m4"}, {"lv": "中", "t": "父亲", "s": "筷子兄弟", "w": "情感浓，练控制住不跑调", "v": "UNj9QsW67dA"}, {"lv": "难", "t": "在希望的田野上", "s": "彭丽媛", "w": "节奏快、音域宽，练灵活和高音", "v": "jk5AeO1x0YI"}, {"lv": "难", "t": "牡丹之歌", "s": "蒋大为", "w": "高音很多，练高音位置", "v": "3eq7pETZDbs"}, {"lv": "难", "t": "天路", "s": "韩红", "w": "高音长音，练气息支撑", "v": "KeuXF8-orZg"}, {"lv": "难", "t": "青藏高原", "s": "李娜", "w": "极高的长音，挑战音域上限", "v": "ePF6V9P9XJU"}, {"lv": "难", "t": "一剪梅", "s": "费玉清", "w": "高音轻唱，练高音不费力", "v": "ostYkR2hD4s"}];
 let pendingSong = "";
 function openSheet() { show("songSheet"); document.body.style.overflow = "hidden"; $("sheetClose").focus(); }
 function closeSheet() { show("songSheet", false); document.body.style.overflow = ""; if (!ytAlong) YT_.stop(); }
