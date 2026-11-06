@@ -1,0 +1,12 @@
+{
+ "total_usd": 0.6792,
+ "total_tokens": 2710595,
+ "runs": [
+  {
+   "at": "2026-11-06T13:11+00:00",
+   "usd": 0.6792,
+   "tokens": 2710595,
+   "status": "success"
+  }
+ ]
+}
