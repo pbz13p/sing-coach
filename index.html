@@ -71,6 +71,26 @@
   input[type=text]:focus{border-color:rgba(216,191,143,.6)}
   input::placeholder{color:#66718a}
   label.l{display:block;font-size:15px;color:var(--mist);margin:20px 0 8px;letter-spacing:.06em}
+  /* 唱歌这一屏：一屏放下，不用往下翻 */
+  .wrap:has(#stepRec:not(.hide)){padding-top:max(14px,env(safe-area-inset-top))}
+  .wrap:has(#stepRec:not(.hide)) > h1,.wrap:has(#stepRec:not(.hide)) > .lead,.wrap:has(#stepRec:not(.hide)) > #btnHist{display:none}
+  #stepRec{margin-top:4px;padding:16px 16px 18px}
+  #stepRec h2{font-size:22px;margin:0 0 10px;justify-content:center}
+  #stepRec .linkBack{margin:0 0 6px}
+  #stepRec .seg button{padding:10px 4px;font-size:15px}
+  #stepRec #segNote{text-align:center;margin:0 0 8px;font-size:14px}
+  #stepRec #stageReady .note{font-size:15px;margin-top:6px!important}
+  #stepRec .orbWrap{padding:12px 0 4px}
+  #stepRec .orb{width:132px;height:132px}
+  #stepRec .orb::after{inset:-14px}
+  #stepRec .rec{margin:2px 0 4px}
+  #stepRec .ytFrame{max-width:calc(30vh * 16 / 9);margin:0 auto}
+  #stepRec:has(#stageRec:not(.hide)) .ytFrame{max-width:calc(20vh * 16 / 9)}
+  #stepRec #live{height:clamp(150px,26vh,230px)!important}
+  #stepRec .rec{font-size:40px}
+  #stepRec #btnStop{margin-top:10px}
+  #stepRec .ytMsg:empty{display:none}
+  @media (max-height:720px){#stepRec .orb{width:112px;height:112px}#stepRec h2{font-size:20px;margin-bottom:6px}#stepRec .seg button{padding:8px 4px}#stepRec .ytFrame{max-width:calc(26vh * 16 / 9)}}
   /* 开场页 */
   .splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px calc(40px + env(safe-area-inset-bottom));text-align:center;
     background:radial-gradient(70% 45% at 50% 38%,rgba(216,191,143,.16),transparent 70%),radial-gradient(120% 80% at 50% 120%,#0a1220,transparent 60%),linear-gradient(180deg,#14233b,#0b1422);
@@ -266,7 +286,7 @@
     <button class="linkBack" id="stageBack">‹ 换一首歌</button>
     <h2><span class="dot hide" id="recDot"></span><span id="recTitle">正在录音</span></h2>
     <div class="seg hide" id="seg" role="radiogroup" aria-label="放什么">
-      <button class="on" data-m="k" role="radio" aria-checked="true">伴奏（只有音乐）</button><button data-m="o" role="radio" aria-checked="false">原唱（有歌手带）</button>
+      <button class="on" data-m="k" role="radio" aria-checked="true">伴奏</button><button data-m="o" role="radio" aria-checked="false">原唱带唱</button>
     </div>
     <div class="note hide" id="segNote"></div>
     <div id="recYt" class="hide"><div id="recYtBox"></div></div>
