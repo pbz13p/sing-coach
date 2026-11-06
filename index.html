@@ -140,12 +140,32 @@
   .song .why{color:#d9d4cb;font-size:16px;margin:0 0 12px}
   .song .row2 .btn{margin:0}
   a.btn{text-decoration:none}
+
+  .sheetHd .btn{white-space:nowrap;flex:none}
+  .histBtn{margin:-18px auto 26px;display:flex}
+  .linkBtn{all:unset;display:block;margin:14px auto 2px;font-size:15px;color:var(--mist);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:center}
+  .yt{margin:0 0 12px}
+  .ytFrame{position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+  .ytFrame>*{position:absolute;inset:0;width:100%;height:100%}
+  .ytMsg{margin-top:8px;text-align:center}
+  .msg a{color:var(--champ)}
+  #recYt{margin:0 0 6px}
+  .hItem{display:flex;align-items:center;border-top:1px solid var(--line)}
+  .hMain{all:unset;box-sizing:border-box;flex:1;display:flex;align-items:center;gap:14px;padding:14px 2px;cursor:pointer;min-width:0}
+  .hMain:focus-visible,.hDel:focus-visible{outline:2px solid var(--champ);border-radius:8px}
+  .hScore{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(216,191,143,.55);font:600 20px/1 var(--serif);color:var(--champ)}
+  .hTxt{display:flex;flex-direction:column;min-width:0}
+  .hTxt .nm{font:600 18px/1.4 var(--serif);color:var(--pearl);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hTxt .by{font-size:14px;color:var(--mist)}
+  .hDel{all:unset;cursor:pointer;font-size:14px;color:var(--mist);padding:10px 4px 10px 12px}
+  .hDel[data-sure="1"]{color:var(--bad)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>练歌小老师</h1>
   <p class="lead">唱准了，你的练歌小老师</p>
+  <button class="btn small histBtn" id="btnHist"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4l3 2"/></svg>练唱记录</button>
 
   <div id="stepIn">
   <div class="card">
@@ -181,7 +201,8 @@
 
   <!-- 录音中 -->
   <div class="card hide" id="stepRec">
-    <h2><span class="dot"></span>正在录音</h2>
+    <h2><span class="dot"></span><span id="recTitle">正在录音</span></h2>
+    <div id="recYt" class="hide"><div id="recYtBox"></div></div>
     <div class="rec" id="recT">0:00</div>
     <canvas id="live" style="height:170px"></canvas>
     <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
@@ -202,7 +223,7 @@
     <div class="card">
       <div class="scoreRow">
         <div class="ring" id="ring"><div><b id="score">0</b><small>总分</small></div></div>
-        <div><div class="verdict" id="verdict"></div><div class="note" id="keyLine"></div></div>
+        <div><div class="note" id="histTag" style="margin-bottom:4px"></div><div class="verdict" id="verdict"></div><div class="note" id="keyLine"></div></div>
       </div>
       <div class="tiles">
         <div class="tile"><b id="tAcc">-</b><span>唱准的音</span></div>
@@ -242,19 +263,28 @@
       <div class="ai" id="aiOut"></div>
     </div>
 
+    <button class="btn" id="btnHist2"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4l3 2"/></svg>看全部练唱记录</button>
     <button class="btn" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
     <p class="foot">说明：选了原唱，就跟原唱比；没选原唱，就按您自己唱的调判断（看音和音之间准不准）。戴耳机跟着原唱唱，还能比节奏快慢。机器听也会有误差，有疑问就点“原唱”和“我唱的”对比听一听。</p>
   </div>
 </div>
 
 
+<div id="histSheet" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+  <div class="sheetBg" id="histBg"></div>
+  <div class="sheetPanel">
+    <div class="sheetHd"><div><div class="sheetTitle" id="histTitle">练唱记录</div><div class="note">保存在这部手机上，点一条就能看结果、听录音</div></div>
+      <button class="btn small" id="histClose">关闭</button></div>
+    <div id="histList"></div>
+  </div>
+</div>
 <div id="songSheet" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="sheetBg" id="sheetBg"></div>
   <div class="sheetPanel">
     <div class="sheetHd"><div><div class="sheetTitle" id="sheetTitle">推荐练唱歌单</div><div class="note">第 1 期 · 共 27 首 · 定期更新</div></div>
       <button class="btn small" id="sheetClose" aria-label="关闭">关闭</button></div>
     <button class="btn gold" id="btnOwnFile">我已经有原唱文件，直接选</button>
-    <div class="note" style="margin:2px 2px 6px">点一首歌，可以先去听原唱，再选原唱文件。</div>
+    <div class="note" style="margin:2px 2px 6px">点一首歌：可以先在这里听原唱；戴上耳机点“跟着唱”，唱完马上出结果。</div>
     <div id="songList"></div>
   </div>
 </div>
@@ -784,17 +814,29 @@ function err(t) { $("err").innerHTML = t; show("err", !!t); }
 $("btnFile").onclick = () => { getCtx(); $("file").click(); };
 $("file").onchange = e => { const f = e.target.files[0]; if (f) handleBlob(f); e.target.value = ""; };
 
-let recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
-$("btnRec").onclick = async () => {
+let recSong = "", recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
+let ytPending = false;
+$("btnRec").onclick = () => startRecording({});
+async function startRecording(opts) {
   err(""); show("micMsg", false);
   const c = getCtx();
   try {
     if (c.state === "suspended") await c.resume();
     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-  } catch (e) { show("micMsg"); return; }
+  } catch (e) { show("micMsg"); show("stepIn"); return false; }
   chunks = []; live = []; liveBuf = [];
   recMode = "self"; refSrc = null; let startAt = 0;
-  if (REF.name) {
+  recSong = opts.yt ? opts.yt.t : "";
+  ytPending = !!opts.yt;
+  show("recYt", !!opts.yt);
+  if (opts.yt) {
+    $("recTitle").textContent = "跟着《" + opts.yt.t + "》唱";
+    YT_.play($("recYtBox"), opts.yt.v, { autoplay: true, hint: "戴好耳机。点视频上的播放键，原唱一开始就自动录音。", onState: st => {
+      if (st === 1 && ytPending) { ytPending = false; chunks = []; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; }
+      if (st === 0 && !$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200);
+    } });
+  } else $("recTitle").textContent = "正在录音";
+  if (!opts.yt && REF.name) {
     $("recSub").textContent = "原唱准备中…";
     await REF.ready; refUI();
     if (REF.ab) {
@@ -810,6 +852,7 @@ $("btnRec").onclick = async () => {
   srcNode.connect(proc); proc.connect(mute); mute.connect(c.destination);
   const ratio = Math.max(1, Math.round(c.sampleRate / 16000));
   proc.onaudioprocess = ev => {
+    if (ytPending) return;
     if (ev.playbackTime + ev.inputBuffer.duration <= startAt) return;
     let d = ev.inputBuffer.getChannelData(0);
     if (ev.playbackTime < startAt) d = d.subarray(Math.floor((startAt - ev.playbackTime) * c.sampleRate));
@@ -820,8 +863,10 @@ $("btnRec").onclick = async () => {
   };
   recStart = Date.now();
   show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { const s = (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
-};
+  recTimer = setInterval(() => { const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  return true;
+}
 function yinOne(x, sr) {
   const W = 400, tMin = Math.floor(sr / 900), tMax = Math.ceil(sr / 70);
   if (x.length < W + tMax + 2) return 0;
@@ -855,12 +900,13 @@ function drawLive(now) {
 }
 $("btnStop").onclick = () => {
   show("stepRec", false); clearInterval(recTimer);
+  if (ytAlong) { YT_.stop(); ytAlong = false; } ytPending = false;
   if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
   try { proc.disconnect(); srcNode.disconnect(); } catch (e) {}
   if (stream) stream.getTracks().forEach(t => t.stop());
   const len = chunks.reduce((a, c) => a + c.length, 0), raw = new Float32Array(len);
   let o = 0; chunks.forEach(c => { raw.set(c, o); o += c.length; }); chunks = [];
-  handlePCM(raw, getCtx().sampleRate, recMode);
+  handlePCM(raw, getCtx().sampleRate, recSong ? "yt" : recMode);
 };
 function wavBlob(x, sr) {
   const n = x.length, b = new DataView(new ArrayBuffer(44 + n * 2));
@@ -870,6 +916,107 @@ function wavBlob(x, sr) {
   for (let i = 0; i < n; i++) b.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x[i])) * 32000, true);
   return new Blob([b], { type: "audio/wav" });
 }
+
+
+// ---------- YouTube 播放（在软件里听原唱） ----------
+let ytAlong = false;
+const YT_ = {
+  ready: null, player: null, host: null,
+  load() {
+    if (this.ready) return this.ready;
+    this.ready = new Promise((res, rej) => {
+      if (window.YT && YT.Player) return res();
+      window.onYouTubeIframeAPIReady = () => res();
+      const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.onerror = () => rej(new Error("yt"));
+      document.head.appendChild(s);
+      setTimeout(() => rej(new Error("yt")), 12000);
+    });
+    return this.ready;
+  },
+  async play(hostEl, id, opts = {}) {
+    this.stop();
+    hostEl.innerHTML = '<div class="ytFrame"><div></div></div><div class="note ytMsg">正在打开…</div>';
+    this.host = hostEl;
+    try { await this.load(); } catch (e) { this.fail(id); return; }
+    const target = hostEl.querySelector(".ytFrame>div");
+    this.player = new YT.Player(target, {
+      videoId: id, host: "https://www.youtube-nocookie.com",
+      playerVars: { playsinline: 1, rel: 0, modestbranding: 1, autoplay: opts.autoplay ? 1 : 0 },
+      events: {
+        onReady: e => { const m = hostEl.querySelector(".ytMsg"); if (m) m.textContent = opts.hint || ""; if (opts.autoplay) try { e.target.playVideo(); } catch (_) {} },
+        onStateChange: e => opts.onState && opts.onState(e.data),
+        onError: () => this.fail(id),
+      },
+    });
+  },
+  fail(id) {
+    if (!this.host) return;
+    this.host.innerHTML = `<div class="msg">这首歌的视频暂时放不了。可以<a href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener">点这里去 YouTube 听</a>，回来再唱。</div>`;
+  },
+  stop() {
+    try { this.player && this.player.destroy(); } catch (e) {}
+    this.player = null;
+    if (this.host) this.host.innerHTML = "";
+    this.host = null;
+  },
+};
+function listenSong(i) { const s = SONGS[i]; YT_.play($("yt" + i), s.v, { autoplay: true, hint: "听熟了，就点“跟着唱”" }); }
+async function singAlong(i) {
+  const s = SONGS[i];
+  $("song").value = s.t;
+  ytAlong = true; closeSheet();
+  const ok = await startRecording({ yt: s });
+  if (!ok) { ytAlong = false; return; }
+}
+
+
+// ---------- 练唱记录 ----------
+const HIST_MAX = 60;
+async function histAll() { const v = await DB.get("hist"); return Array.isArray(v) ? v : []; }
+async function histSave(res, blob) {
+  try {
+    const list = await histAll();
+    const id = Date.now();
+    const meta = { id, t: id, song: $("song").value.trim() || res.refName || "", score: res.stats.score, dur: res.duration, mode: res.mode };
+    list.unshift(meta);
+    const drop = list.splice(HIST_MAX);
+    await DB.put("h_" + id, { res, blob });
+    await DB.put("hist", list);
+    drop.forEach(d => DB.del("h_" + d.id));
+    res.histId = id;
+  } catch (e) {}
+}
+function fmtDate(t) { const d = new Date(t); const p = n => String(n).padStart(2, "0"); return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`; }
+async function openHist() {
+  aud.pause();
+  const list = await histAll();
+  $("histList").innerHTML = list.length ? list.map(h => `<div class="hItem" data-id="${h.id}">
+      <button class="hMain"><span class="hScore">${h.score}</span><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "未命名"}</span><span class="by">${fmtDate(h.t)} · 唱了 ${SC.fmtT(h.dur)}</span></span></button>
+      <button class="hDel" aria-label="删除这条">删除</button></div>`).join("")
+    : '<p class="note" style="padding:20px 0">还没有记录。唱完一首，会自动存在这里。</p>';
+  $("histList").querySelectorAll(".hMain").forEach(b => b.onclick = () => loadHist(+b.parentElement.dataset.id));
+  $("histList").querySelectorAll(".hDel").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "确定删？"; return; }
+    const id = +b.parentElement.dataset.id;
+    const l = (await histAll()).filter(h => h.id !== id); await DB.put("hist", l); DB.del("h_" + id); openHist();
+  });
+  show("histSheet"); document.body.style.overflow = "hidden"; $("histClose").focus();
+}
+function closeHist() { show("histSheet", false); document.body.style.overflow = ""; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+async function loadHist(id) {
+  const v = await DB.get("h_" + id);
+  if (!v || !v.res) { err("这条记录打不开了。"); closeHist(); return; }
+  closeHist();
+  R = v.res; R.histId = id;
+  if (audioURL) URL.revokeObjectURL(audioURL);
+  audioURL = URL.createObjectURL(v.blob); $("aud").src = audioURL;
+  show("stepIn", false); err("");
+  render(true);
+}
+$("btnHist").onclick = openHist;
+$("btnHist2").onclick = openHist;
+$("histClose").onclick = $("histBg").onclick = closeHist;
 
 // ---------- 解码 + 降采样到 16k ----------
 function decode(buf) {
@@ -930,10 +1077,10 @@ async function loadRef(blob, name, save) {
   })();
   return REF.ready;
 }
-const SONGS = [{"lv": "易", "t": "月亮代表我的心", "s": "邓丽君", "w": "音域窄、速度慢，最适合先练音准和气息"}, {"lv": "易", "t": "甜蜜蜜", "s": "邓丽君", "w": "旋律轻快，练轻声唱、咬字清楚"}, {"lv": "易", "t": "小城故事", "s": "邓丽君", "w": "节奏平稳，练句尾收得干净"}, {"lv": "易", "t": "茉莉花", "s": "江苏民歌", "w": "婉转的小滑音多，练音和音之间连贯"}, {"lv": "易", "t": "康定情歌", "s": "四川民歌", "w": "节奏规整，练拍子跟得稳"}, {"lv": "易", "t": "送别", "s": "李叔同 词", "w": "长音多，练长音稳、不晃"}, {"lv": "易", "t": "难忘今宵", "s": "李谷一", "w": "中速抒情，练气息均匀"}, {"lv": "易", "t": "涛声依旧", "s": "毛宁", "w": "音区舒服，练副歌情绪起伏"}, {"lv": "易", "t": "外婆的澎湖湾", "s": "潘安邦", "w": "节奏明快，练抢拍、拖拍"}, {"lv": "易", "t": "军港之夜", "s": "苏小明", "w": "轻柔摇曳，练小声也唱准"}, {"lv": "易", "t": "恰似你的温柔", "s": "蔡琴", "w": "低音区多，练低音唱稳"}, {"lv": "易", "t": "时间都去哪儿了", "s": "王铮亮", "w": "说话般的旋律，练咬字和感情"}, {"lv": "中", "t": "我和我的祖国", "s": "李谷一", "w": "起伏大，练换气和长句"}, {"lv": "中", "t": "我的祖国", "s": "郭兰英", "w": "合唱团常唱，练音准和齐唱"}, {"lv": "中", "t": "映山红", "s": "邓玉华", "w": "高音长句，练高音不往下掉"}, {"lv": "中", "t": "弯弯的月亮", "s": "刘欢", "w": "长句多，练一口气唱完一句"}, {"lv": "中", "t": "好人一生平安", "s": "李娜", "w": "抒情长音，练长音收尾"}, {"lv": "中", "t": "母亲", "s": "阎维文", "w": "民族唱法入门，练声音饱满"}, {"lv": "中", "t": "我爱你，塞北的雪", "s": "殷秀梅", "w": "跨度大，练高低音转换"}, {"lv": "中", "t": "但愿人长久", "s": "邓丽君", "w": "旋律起伏细，练音准细节"}, {"lv": "中", "t": "朋友", "s": "周华健", "w": "副歌偏高，练副歌有力不喊"}, {"lv": "中", "t": "父亲", "s": "筷子兄弟", "w": "情感浓，练控制住不跑调"}, {"lv": "难", "t": "在希望的田野上", "s": "彭丽媛", "w": "节奏快、音域宽，练灵活和高音"}, {"lv": "难", "t": "牡丹之歌", "s": "蒋大为", "w": "高音很多，练高音位置"}, {"lv": "难", "t": "天路", "s": "韩红", "w": "高音长音，练气息支撑"}, {"lv": "难", "t": "青藏高原", "s": "李娜", "w": "极高的长音，挑战音域上限"}, {"lv": "难", "t": "一剪梅", "s": "费玉清", "w": "高音轻唱，练高音不费力"}];
+const SONGS = [{"lv": "易", "t": "月亮代表我的心", "s": "邓丽君", "w": "音域窄、速度慢，最适合先练音准和气息", "v": "IiFm7AWP9n4"}, {"lv": "易", "t": "甜蜜蜜", "s": "邓丽君", "w": "旋律轻快，练轻声唱、咬字清楚", "v": "KrAc3uKfgQs"}, {"lv": "易", "t": "小城故事", "s": "邓丽君", "w": "节奏平稳，练句尾收得干净", "v": "dqHYAU_3JVI"}, {"lv": "易", "t": "茉莉花", "s": "江苏民歌", "w": "婉转的小滑音多，练音和音之间连贯", "v": "IwvwjjSVbug"}, {"lv": "易", "t": "康定情歌", "s": "四川民歌", "w": "节奏规整，练拍子跟得稳", "v": "Na_Bvk1EUFo"}, {"lv": "易", "t": "送别", "s": "李叔同 词", "w": "长音多，练长音稳、不晃", "v": "dsM6aXVbMLI"}, {"lv": "易", "t": "难忘今宵", "s": "李谷一", "w": "中速抒情，练气息均匀", "v": "bwpRPZpltqA"}, {"lv": "易", "t": "涛声依旧", "s": "毛宁", "w": "音区舒服，练副歌情绪起伏", "v": "PMpESd-eIDA"}, {"lv": "易", "t": "外婆的澎湖湾", "s": "潘安邦", "w": "节奏明快，练抢拍、拖拍", "v": "JEoNjnyd56s"}, {"lv": "易", "t": "军港之夜", "s": "苏小明", "w": "轻柔摇曳，练小声也唱准", "v": "wbhXtQtXnHs"}, {"lv": "易", "t": "恰似你的温柔", "s": "蔡琴", "w": "低音区多，练低音唱稳", "v": "Yvg3L7RbFHY"}, {"lv": "易", "t": "时间都去哪儿了", "s": "王铮亮", "w": "说话般的旋律，练咬字和感情", "v": "b8zf-69I0Yw"}, {"lv": "中", "t": "我和我的祖国", "s": "李谷一", "w": "起伏大，练换气和长句", "v": "z18nBzxDbb0"}, {"lv": "中", "t": "我的祖国", "s": "郭兰英", "w": "合唱团常唱，练音准和齐唱", "v": "Za3ET-BGkYs"}, {"lv": "中", "t": "映山红", "s": "邓玉华", "w": "高音长句，练高音不往下掉", "v": "IiZ4qWpTHS0"}, {"lv": "中", "t": "弯弯的月亮", "s": "刘欢", "w": "长句多，练一口气唱完一句", "v": "owoeycAYIUc"}, {"lv": "中", "t": "好人一生平安", "s": "李娜", "w": "抒情长音，练长音收尾", "v": "Eg_lh5eBvDM"}, {"lv": "中", "t": "母亲", "s": "阎维文", "w": "民族唱法入门，练声音饱满", "v": "CIAOPY3A5HM"}, {"lv": "中", "t": "我爱你，塞北的雪", "s": "殷秀梅", "w": "跨度大，练高低音转换", "v": "kGm53qmBwqw"}, {"lv": "中", "t": "但愿人长久", "s": "邓丽君", "w": "旋律起伏细，练音准细节", "v": "wA0H7Zvb0u4"}, {"lv": "中", "t": "朋友", "s": "周华健", "w": "副歌偏高，练副歌有力不喊", "v": "6lbPgfKK7m4"}, {"lv": "中", "t": "父亲", "s": "筷子兄弟", "w": "情感浓，练控制住不跑调", "v": "UNj9QsW67dA"}, {"lv": "难", "t": "在希望的田野上", "s": "彭丽媛", "w": "节奏快、音域宽，练灵活和高音", "v": "jk5AeO1x0YI"}, {"lv": "难", "t": "牡丹之歌", "s": "蒋大为", "w": "高音很多，练高音位置", "v": "3eq7pETZDbs"}, {"lv": "难", "t": "天路", "s": "韩红", "w": "高音长音，练气息支撑", "v": "KeuXF8-orZg"}, {"lv": "难", "t": "青藏高原", "s": "李娜", "w": "极高的长音，挑战音域上限", "v": "ePF6V9P9XJU"}, {"lv": "难", "t": "一剪梅", "s": "费玉清", "w": "高音轻唱，练高音不费力", "v": "toKr7Pa-k4c"}];
 let pendingSong = "";
 function openSheet() { show("songSheet"); document.body.style.overflow = "hidden"; $("sheetClose").focus(); }
-function closeSheet() { show("songSheet", false); document.body.style.overflow = ""; }
+function closeSheet() { show("songSheet", false); document.body.style.overflow = ""; if (!ytAlong) YT_.stop(); }
 (function buildSongs() {
   const lv = { "易": "容易上手", "中": "进阶练习", "难": "有挑战" };
   const chev = '<svg class="ico chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
@@ -944,17 +1091,21 @@ function closeSheet() { show("songSheet", false); document.body.style.overflow =
       if (s.lv !== L) return;
       const q = encodeURIComponent(s.t + " " + s.s.replace(/ 词$/, ""));
       html += `<div class="song" data-i="${i}"><button aria-expanded="false"><div><div class="nm">${s.t}</div><div class="by">${s.s}</div></div>${chev}</button>
-        <div class="more"><p class="why">${s.w}</p><div class="row2">
-          <a class="btn small" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">先听原唱</a>
-          <button class="btn small gold" data-pick="${i}">选原唱文件</button></div></div></div>`;
+        <div class="more"><p class="why">${s.w}</p><div class="yt" id="yt${i}"></div><div class="row2">
+          <button class="btn small" data-listen="${i}">在这里听</button>
+          <button class="btn small gold" data-along="${i}">跟着唱</button></div>
+          <button class="linkBtn" data-pick="${i}">我有这首歌的原唱文件，用它逐音比对</button></div></div>`;
     });
   });
   $("songList").innerHTML = html;
   $("songList").querySelectorAll(".song>button").forEach(b => b.onclick = () => {
     const el = b.parentElement, open = !el.classList.contains("open");
     $("songList").querySelectorAll(".song.open").forEach(o => { o.classList.remove("open"); o.firstElementChild.setAttribute("aria-expanded", "false"); });
+    YT_.stop();
     if (open) { el.classList.add("open"); b.setAttribute("aria-expanded", "true"); }
   });
+  $("songList").querySelectorAll("[data-listen]").forEach(b => b.onclick = () => listenSong(+b.dataset.listen));
+  $("songList").querySelectorAll("[data-along]").forEach(b => b.onclick = () => singAlong(+b.dataset.along));
   $("songList").querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
     const s = SONGS[+b.dataset.pick]; pendingSong = s.t; $("song").value = s.t; getCtx(); $("refFile").click();
   });
@@ -991,16 +1142,20 @@ async function runAnalysis(ab, blob, mode) {
     const x = toMono16k(ab, 360);
     const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; });
     if (res.error) throw new Error(res.error);
-    if (REF.name && REF.ready) {
+    if (mode !== "yt" && REF.name && REF.ready) {
       $("busyTxt").textContent = "正在跟原唱对比…";
       await REF.ready;
       if (REF.melody) { await new Promise(r => setTimeout(r, 30)); SC.compareWithRef(res, REF.melody, mode === "sync" ? "sync" : "free"); }
     }
     R = res;
+    R.refName = R.mode === "sync" || R.mode === "free" ? REF.name : "";
+    if (R.mode === "yt") R.mode = "self";
+    const keep = blob || wavBlob(x, 16000);
     if (audioURL) URL.revokeObjectURL(audioURL);
-    audioURL = URL.createObjectURL(blob || wavBlob(x, 16000));
+    audioURL = URL.createObjectURL(keep);
     $("aud").src = audioURL;
     render();
+    histSave(R, keep);
 }
 function fail(e) {
     show("stepBusy", false); show("stepIn");
@@ -1076,7 +1231,7 @@ function buildTips(s) {
 }
 
 // ---------- 渲染结果 ----------
-function render() {
+function render(fromHist) {
   const s = R.stats;
   show("stepBusy", false); show("result");
   $("score").textContent = s.score;
@@ -1085,7 +1240,7 @@ function render() {
   $("ring").firstElementChild.style.cssText = "background:#121e33;width:116px;height:116px;border-radius:50%;display:grid;place-content:center";
   $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
-  $("keyLine").textContent = (withRef ? `已跟原唱《${REF.name}》对比 · ` : `听出来是 ${R.keyName} 调（大约） · `) + `唱了 ${SC.fmtT(R.duration)}，共 ${s.noteCount} 个音`;
+  $("keyLine").textContent = (withRef ? `已跟原唱《${R.refName || REF.name}》对比 · ` : `听出来是 ${R.keyName} 调（大约） · `) + `唱了 ${SC.fmtT(R.duration)}，共 ${s.noteCount} 个音`;
   $("tAcc").textContent = Math.round(s.accuracy * 100) + "%";
   $("tStab").textContent = s.unstableRate < 0.15 ? "稳" : s.unstableRate < 0.35 ? "还行" : "晃";
   if (withRef) {
@@ -1097,9 +1252,10 @@ function render() {
     $("tTrend").textContent = Math.abs(s.meanDev) < 10 ? "正好" : s.meanDev < 0 ? "偏低" : "偏高";
   }
   show("lgRef", withRef);
+  $("histTag").textContent = fromHist ? "这是之前的记录 · " + fmtDate(R.histId) + ($("song").value && !fromHist ? "" : "") : "已自动保存到“练唱记录”";
 
   $("spots").innerHTML = R.spots.length ? R.spots.map((z, i) =>
-    `<div class="spot"><div class="tag">${SC.fmtT(z.t0)}<em>${issueTag(z)}</em></div><p>${spotText(z)}</p><div class="row2" style="margin-top:10px"><button class="btn small gold" data-i="${i}">我唱的</button>${(z.refDev !== undefined || z.wrong) && REF.ab ? `<button class="btn small" data-r="${i}">原唱</button>` : ""}</div></div>`).join("")
+    `<div class="spot"><div class="tag">${SC.fmtT(z.t0)}<em>${issueTag(z)}</em></div><p>${spotText(z)}</p><div class="row2" style="margin-top:10px"><button class="btn small gold" data-i="${i}">我唱的</button>${(z.refDev !== undefined || z.wrong) && REF.ab && REF.name === R.refName ? `<button class="btn small" data-r="${i}">原唱</button>` : ""}</div></div>`).join("")
     : "<p>没发现明显的问题，很棒！</p>";
   $("spots").querySelectorAll("button[data-i]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.i]; playRange(z.t0 - 1.2, z.t1 + 0.8); });
   $("spots").querySelectorAll("button[data-r]").forEach(b => b.onclick = () => { const z = R.spots[+b.dataset.r]; playRef(z.t0 - 1.2, z.t1 + 0.8); });
