@@ -2,7 +2,7 @@ name: 自动改进机器人
 
 on:
   schedule:
-    - cron: "27 2,10,18 * * *"
+    - cron: "27 0,6,12,18 earwise mahjong qa"
   workflow_dispatch: {}
 
 permissions:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   improve:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,14 +30,16 @@ jobs:
           node-version: "20"
       - name: 安装
         run: |
+          sudo apt-get install -y -qq fonts-noto-cjk >/dev/null || true
+          pip install -q playwright || true
           pip install -q claude-agent-sdk httpx
           echo 'no extra deps'
       - name: 运行
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TOTAL_CAP_USD: "21"
-          RUNS_PER_DAY: "3"
+          TOTAL_CAP_USD: "32"
+          RUNS_PER_DAY: "4"
           DEADLINE: "2026-11-14T18:00:00+00:00"
-          MODEL: "claude-sonnet-5-5"
+          MODEL: "claude-opus-5-5"
         run: python .github/auto-improve/run.py
