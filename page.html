@@ -276,9 +276,9 @@
     </div>
     <div id="stageRec">
       <div class="rec" id="recT">0:00</div>
-      <canvas id="live" style="height:150px"></canvas>
+      <canvas id="live" style="height:230px"></canvas>
       <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
-      <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">网上的伴奏读不出原唱的音，所以这里只画你唱的。想对着“原唱该唱的”线来唱，在首页「其他练法」里放一首原唱文件。</div>
+      <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">跟网上伴奏唱时，读不到原唱的音，唱完再看哪句准。想边唱边看“金色音符条”，在首页「其他练法」里放一首原唱文件。</div>
       <button class="btn gold" id="btnStop"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>唱完了</button>
     </div>
   </div>
@@ -390,7 +390,7 @@ async function startRecording(opts) {
     else stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     warmStream = null;
   } catch (e) { show("micMsg"); show("stepRec", false); show("stepIn"); try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} return false; }
-  chunks = []; live = []; liveBuf = [];
+  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
   recMode = "self"; refSrc = null; let startAt = 0;
   recSong = opts.yt ? opts.yt.t : "";
   ytPending = !!opts.yt;
@@ -467,50 +467,92 @@ async function reacquireMic() {
   } catch (e) {}
   setTimeout(() => { reacq = false; quietSince = 0; }, 4000);
 }
+// 把原唱的音高曲线切成一条条“音符条”（像 K 歌软件那样）
+let refNotes = null, refNotesFor = null;
+function getRefNotes() {
+  const M = REF.melody; if (!M) return null;
+  if (refNotesFor === M) return refNotes;
+  const out = [], hs = M.hopS; let cur = null;
+  const close = () => { if (cur && cur.n >= Math.round(0.12 / hs)) { const v = cur.v.slice().sort((x, y) => x - y); out.push({ t0: cur.i0 * hs, t1: (cur.i0 + cur.n) * hs, m: Math.round(v[v.length >> 1]), hit: 0, seen: 0 }); } cur = null; };
+  for (let i = 0; i < M.midi.length; i++) {
+    const v = M.midi[i];
+    if (!(v > 0)) { if (cur && ++cur.gap > Math.round(0.06 / hs)) close(); continue; }
+    if (cur && Math.abs(v - cur.ref) <= 0.7) { cur.v.push(v); cur.n = i - cur.i0 + 1; cur.gap = 0; }
+    else { close(); cur = { i0: i, n: 1, v: [v], ref: v, gap: 0 }; }
+  }
+  close();
+  refNotes = out; refNotesFor = M; return out;
+}
+let liveHits = [], liveCombo = 0;
 function drawLive(now) {
   const cvL = $("live"), dpr = window.devicePixelRatio || 1, W = cvL.clientWidth, H = cvL.clientHeight;
   cvL.width = W * dpr; cvL.height = H * dpr; const g = cvL.getContext("2d"); g.scale(dpr, dpr);
-  const PAST = 6, FUT = recMode === "sync" ? 2 : 0, SPAN = PAST + FUT;
-  const X = t => (t - (now - PAST)) / SPAN * W;
+  const sans = "-apple-system,'PingFang SC',system-ui,sans-serif";
   const vs = live.filter(p => !isNaN(p.m));
-  // 他自己的“音准基准”（不同人的调稍有偏差，按他自己的来算）
-  let sx = 0, sy = 0; vs.forEach(p => { const a = 2 * Math.PI * (p.m - Math.round(p.m)); sx += Math.cos(a); sy += Math.sin(a); });
-  const off = vs.length > 10 ? Math.atan2(sy, sx) / (2 * Math.PI) : 0;
-  let mid = vs.length ? vs.map(p => p.m).sort((a, b) => a - b)[vs.length >> 1] : 60;
-  // 原唱应该唱的音（只有放了原唱文件时才有）
-  const tgt = [];
-  if (recMode === "sync" && REF.melody) {
-    const M = REF.melody, hs = M.hopS, rt = getCtx().currentTime - refStartAt;
-    const tm = []; for (let k = -Math.round(PAST / hs); k <= Math.round(FUT / hs); k++) { const i = Math.round(rt / hs) + k; const v = M.midi[i]; tm.push({ t: now + k * hs, m: i >= 0 && v > 0 ? v : NaN }); }
-    const tv = tm.filter(p => !isNaN(p.m)).map(p => p.m).sort((a, b) => a - b);
-    if (tv.length) { const tmid = tv[tv.length >> 1]; const sh = vs.length > 10 ? 12 * Math.round((mid - tmid) / 12) : 0; tm.forEach(p => { if (!isNaN(p.m)) p.m += sh; }); if (!vs.length) mid = tmid + sh; }
-    tgt.push(...tm);
+  const cur = live.length ? live[live.length - 1] : null;
+  const notes = recMode === "sync" ? getRefNotes() : null;
+  if (!notes || !notes.length) {
+    // 没有原唱的音（比如网上伴奏）：不画看不懂的线，只告诉他“听到了没有、现在唱的是哪个音”
+    const lv = cur ? Math.min(1, Math.sqrt(cur.rms) * 4) : 0;
+    const cx = W / 2, cy = H / 2 - 4, r = Math.min(W, H) * 0.28;
+    g.fillStyle = "rgba(216,191,143,.08)"; g.beginPath(); g.arc(cx, cy, r * (1 + lv * 0.55), 0, 7); g.fill();
+    g.strokeStyle = "rgba(216,191,143,.55)"; g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.stroke();
+    g.textAlign = "center"; g.textBaseline = "middle";
+    const sing = cur && !isNaN(cur.m) && cur.rms > 0.004;
+    g.fillStyle = sing ? "#f4efe6" : "rgba(244,239,230,.4)"; g.font = "600 " + Math.round(r * 0.62) + "px " + sans;
+    g.fillText(sing ? "🎵" : "🎤", cx, cy);
+    g.font = "14px " + sans; g.fillStyle = "rgba(244,239,230,.6)";
+    g.fillText(sing ? "听到了，接着唱，唱完告诉您哪句准" : "一开口，圈圈就会跟着动", cx, H - 14);
+    g.textAlign = "left";
+    return;
   }
-  const lo = mid - 7, hi = mid + 7, Y = m => H - (m - lo) / (hi - lo) * H;
-  g.strokeStyle = "rgba(255,255,255,.07)"; g.lineWidth = 1;
-  for (let m = Math.ceil(lo - off); m <= hi; m++) { const y = Y(m + off); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-  if (FUT) { const xn = X(now); g.strokeStyle = "rgba(255,255,255,.25)"; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(xn, 0); g.lineTo(xn, H); g.stroke(); g.setLineDash([]); }
-  // 原唱：宽的半透明带子
-  if (tgt.length) {
-    g.strokeStyle = "rgba(160,190,255,.35)"; g.lineWidth = 10; g.lineCap = "round"; g.beginPath(); let pen = false;
-    let pm = NaN; tgt.forEach(p => { if (isNaN(p.m) || (!isNaN(pm) && Math.abs(p.m - pm) > 4)) { pen = false; pm = p.m; return; } pm = p.m; const x = X(p.t), y = Y(p.m); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; });
-    g.stroke();
+  // —— 有原唱：K 歌式音符条 ——
+  const rt = getCtx().currentTime - refStartAt;           // 原唱播到第几秒
+  const PAST = 1.6, FUT = 4.2, nowX = W * 0.26;
+  const X = t => nowX + (t - rt) / FUT * (W - nowX);
+  const vis = notes.filter(n => n.t1 > rt - PAST && n.t0 < rt + FUT);
+  // 他和原唱可能差八度：按八度对齐
+  let sh = 0;
+  if (vs.length > 10 && vis.length) { const dm = vs.map(p => p.m).sort((a, b) => a - b)[vs.length >> 1], tm = vis.map(n => n.m).sort((a, b) => a - b)[vis.length >> 1]; sh = 12 * Math.round((dm - tm) / 12); }
+  const ms = vis.map(n => n.m + sh); if (cur && !isNaN(cur.m)) ms.push(cur.m);
+  let lo = ms.length ? Math.min(...ms) - 2 : 55, hi = ms.length ? Math.max(...ms) + 2 : 70; if (hi - lo < 10) { const c = (hi + lo) / 2; lo = c - 5; hi = c + 5; }
+  const top = 30, bot = H - 10, Y = m => bot - (m - lo) / (hi - lo) * (bot - top), bh = Math.max(9, Math.min(16, (bot - top) / (hi - lo) * 0.8));
+  // 背景：淡淡的音阶横线
+  g.strokeStyle = "rgba(255,255,255,.05)"; g.lineWidth = 1;
+  for (let m = Math.ceil(lo); m <= hi; m++) { const y = Y(m); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  // 现在这一刻：竖线
+  const grd = g.createLinearGradient(0, top, 0, bot); grd.addColorStop(0, "rgba(216,191,143,0)"); grd.addColorStop(.5, "rgba(216,191,143,.7)"); grd.addColorStop(1, "rgba(216,191,143,0)");
+  g.strokeStyle = grd; g.lineWidth = 2; g.beginPath(); g.moveTo(nowX, top - 6); g.lineTo(nowX, bot); g.stroke();
+  // 他现在唱的音，和当下该唱的那条比
+  const nowNote = notes.find(n => n.t0 <= rt && n.t1 >= rt);
+  let hitNow = false;
+  if (nowNote && cur && !isNaN(cur.m) && cur.rms > 0.004) { nowNote.seen++; if (Math.abs(cur.m - (nowNote.m + sh)) <= 0.8) { nowNote.hit++; hitNow = true; } }
+  // 音符条
+  vis.forEach(n => {
+    const x0 = X(n.t0), x1 = Math.max(x0 + 6, X(n.t1)), y = Y(n.m + sh) - bh / 2, done = n.t1 < rt, ratio = n.seen ? n.hit / n.seen : 0;
+    let fill;
+    if (n === nowNote && hitNow) fill = "#f3d892";
+    else if (done) fill = ratio > 0.45 ? "rgba(127,209,174,.85)" : n.seen ? "rgba(238,133,116,.55)" : "rgba(255,255,255,.12)";
+    else fill = "rgba(216,191,143,.32)";
+    g.fillStyle = fill; g.beginPath(); g.roundRect ? g.roundRect(x0, y, x1 - x0, bh, bh / 2) : g.rect(x0, y, x1 - x0, bh); g.fill();
+    if (!done) { g.strokeStyle = "rgba(216,191,143,.55)"; g.lineWidth = 1; g.stroke(); }
+  });
+  // 他的声音：一颗发光的小球 + 短尾巴
+  g.lineCap = "round";
+  const tail = live.filter(p => p.t > now - PAST && !isNaN(p.m));
+  for (let i = 1; i < tail.length; i++) { const a = tail[i - 1], b = tail[i]; if (b.t - a.t > 0.25 || Math.abs(b.m - a.m) > 1.5) continue; const xa = nowX - (now - a.t) / FUT * (W - nowX), xb = nowX - (now - b.t) / FUT * (W - nowX); g.strokeStyle = "rgba(244,239,230," + (0.1 + 0.5 * (i / tail.length)) + ")"; g.lineWidth = 3; g.beginPath(); g.moveTo(xa, Y(a.m)); g.lineTo(xb, Y(b.m)); g.stroke(); }
+  if (cur && !isNaN(cur.m) && cur.rms > 0.004) {
+    const y = Math.max(top, Math.min(bot, Y(cur.m)));
+    g.fillStyle = hitNow ? "rgba(243,216,146,.35)" : "rgba(244,239,230,.18)"; g.beginPath(); g.arc(nowX, y, hitNow ? 16 : 12, 0, 7); g.fill();
+    g.fillStyle = hitNow ? "#fff3cf" : "#f4efe6"; g.beginPath(); g.arc(nowX, y, 6.5, 0, 7); g.fill();
   }
-  // 他唱的：准就绿，偏就黄
-  g.lineWidth = 3.5; g.lineCap = "round";
-  for (let i = 1; i < live.length; i++) {
-    const a = live[i - 1], b = live[i]; if (isNaN(a.m) || isNaN(b.m)) continue;
-    let ok;
-    if (tgt.length) { const c0 = Math.round((b.t - tgt[0].t) / REF.melody.hopS); let any = false; ok = false; for (let k = c0 - 15; k <= c0 + 5; k++) { const tp = tgt[k]; if (!tp || isNaN(tp.m)) continue; any = true; if (Math.abs(SC.wrap12(b.m - tp.m)) < 0.5) { ok = true; break; } } if (!any) ok = null; }
-    else { const d = b.m - off; ok = Math.abs(d - Math.round(d)) < 0.25; }
-    g.strokeStyle = ok === null ? "#d8bf8f" : ok ? "#7fd8a4" : "#f0a860";
-    g.beginPath(); g.moveTo(X(a.t), Y(a.m)); g.lineTo(X(b.t), Y(b.m)); g.stroke();
-  }
-  g.font = "12px -apple-system,system-ui,sans-serif"; g.textBaseline = "top"; let lx = 8;
-  const tag = (col, txt) => { g.fillStyle = col; g.fillRect(lx, 9, 10, 4); lx += 14; g.fillStyle = "rgba(255,255,255,.75)"; g.fillText(txt, lx, 4); lx += g.measureText(txt).width + 12; };
-  if (tgt.length) tag("rgba(160,190,255,.7)", "原唱该唱的");
-  tag("#7fd8a4", tgt.length ? "你跟上了" : "唱准了"); tag("#f0a860", tgt.length ? "没跟上" : "有点偏");
-  if (!vs.length) { g.fillStyle = "rgba(255,255,255,.45)"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "14px -apple-system,system-ui,sans-serif"; g.fillText("一开口，这里就画出你唱的音高", W / 2, H / 2 + 6); g.textAlign = "left"; }
+  // 连续唱准 → 鼓励一下
+  if (hitNow) liveCombo++; else if (cur && cur.rms > 0.004) liveCombo = Math.max(0, liveCombo - 2);
+  g.textBaseline = "top"; g.font = "600 13px " + sans;
+  g.fillStyle = "rgba(244,239,230,.7)"; g.fillText("● 你的声音", 10, 8);
+  g.fillStyle = "rgba(216,191,143,.9)"; g.fillText("▬ 原唱的音", 96, 8);
+  if (liveCombo > 25) { g.textAlign = "right"; g.fillStyle = "#f3d892"; g.font = "700 15px " + sans; g.fillText(liveCombo > 80 ? "太准了！✨" : "唱准了！", W - 10, 6); g.textAlign = "left"; }
+  if (!vs.length) { g.fillStyle = "rgba(255,255,255,.5)"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "14px " + sans; g.fillText("小球碰到金色条 = 唱准了", W / 2, H / 2 + 10); g.textAlign = "left"; }
 }
 $("btnStop").onclick = () => {
   show("stepRec", false); clearInterval(recTimer);
