@@ -157,6 +157,25 @@ def post_report(body, changed):
         gh("issue", "create", "--title", title, "--body", body)
 
 
+def preflight():
+    """检查钥匙：只打印长度/开头类型，不打印钥匙本身。"""
+    import httpx
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    clean = key.strip().strip('"').strip("'")
+    if clean != key:
+        print("注意：钥匙前后有空格/引号，已自动去掉", flush=True)
+        os.environ["ANTHROPIC_API_KEY"] = clean
+    print(f"钥匙长度 {len(clean)}，开头 {clean[:11]}…", flush=True)
+    body = {"model": "claude-haiku-5-5", "max_tokens": 5, "messages": [{"role": "user", "content": "hi"}]}
+    base = {"anthropic-version": "2023-06-01", "content-type": "application/json"}
+    for name, h in (("x-api-key", {"x-api-key": clean}), ("bearer", {"authorization": f"Bearer {clean}"})):
+        try:
+            r = httpx.post("https://api.anthropic.com/v1/messages", headers={**base, **h}, json=body, timeout=30)
+            print(f"preflight {name}: HTTP {r.status_code} {r.text[:160] if r.status_code != 200 else ''}", flush=True)
+        except Exception as e:
+            print(f"preflight {name}: {e}", flush=True)
+
+
 def main():
     if not DRY_RUN:
         prepare_branch()
@@ -167,6 +186,7 @@ def main():
         return
     if DRY_RUN:
         return
+    preflight()
 
     report, result = asyncio.run(run_agent(budget))
     cost = float(getattr(result, "total_cost_usd", 0) or 0)

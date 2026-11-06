@@ -30,7 +30,7 @@ jobs:
           node-version: "20"
       - name: 安装
         run: |
-          pip install -q claude-agent-sdk
+          pip install -q claude-agent-sdk httpx
           echo 'no extra deps'
       - name: 运行
         env:
