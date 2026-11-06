@@ -159,7 +159,8 @@ const SC = (() => {
   }
 
   // ---------- 5. 主分析 ----------
-  async function analyze(x, sr, onProgress) {
+  async function analyze(x, sr, onProgress, opt) {
+    opt = opt || {};
     const tr = await trackPitch(x, sr, onProgress);
     const hopS = tr.hop, n = tr.f0.length;
     const m = cleanMidi(tr.f0);
@@ -175,11 +176,11 @@ const SC = (() => {
     const p = new Float64Array(n);
     for (let i = 0; i < n; i++) p[i] = m[i] - off[i];
     let voicedN = 0; for (let i = 0; i < n; i++) if (!isNaN(m[i])) voicedN++;
-    if (voicedN * hopS < 4) return { error: "short", voicedSec: voicedN * hopS };
+    if (voicedN * hopS < (opt.minVoiced || 4)) return { error: "short", voicedSec: voicedN * hopS };
 
     const pSeg = new Float64Array(n); for (let i = 0; i < n; i++) pSeg[i] = mS[i] - off[i];
     const raw = segment(pSeg, hopS);
-    if (raw.length < 5) return { error: "few" };
+    if (raw.length < (opt.minNotes || 5)) return { error: "few" };
     const key = detectKey(raw, hopS);
     const qMed = median(raw.map(r => r.q));
     let refTonic = Math.floor(qMed); while (mod12(refTonic) !== key.majorTonic) refTonic--;

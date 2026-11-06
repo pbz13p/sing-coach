@@ -37,6 +37,12 @@ async def main():
     await pg.wait_for_selector('#result:not(.hide)',timeout=60000); await pg.wait_for_timeout(800)
     await pg.screenshot(path=f'{OUT}/07_result.png')
     await pg.screenshot(path=f'{OUT}/08_result_full.png',full_page=True)
+    if await pg.is_visible('#btnWorst'):  # 只练这一句
+      await pg.click('#btnWorst'); await pg.wait_for_timeout(3000)
+      await pg.screenshot(path=f'{OUT}/07b_practice_sing.png')
+      await pg.wait_for_selector('#practice:not(.hide)',timeout=60000); await pg.wait_for_timeout(800)
+      await pg.screenshot(path=f'{OUT}/07c_practice_result.png')
+      await pg.click('#prBack'); await pg.wait_for_timeout(800)
     await pg.click('#btnHome'); await pg.wait_for_timeout(800)
     await pg.screenshot(path=f'{OUT}/09_home_after.png')
     await pg.click('#btnHist'); await pg.wait_for_timeout(800)

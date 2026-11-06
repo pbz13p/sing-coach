@@ -170,6 +170,15 @@
   .row2{display:flex;gap:10px}.row2 .btn{flex:1}
   /* 成绩 */
   .scoreRow{display:flex;align-items:center;gap:22px}
+  .prCard{text-align:center;padding:30px 22px 26px}
+  .prKick{font-size:16px;color:var(--champ);letter-spacing:.12em}
+  .prScore{font:700 64px/1.1 var(--serif);color:var(--pearl);margin:14px 0 4px}
+  .prScore small{font-size:20px;font-weight:600;margin-left:4px;color:var(--champ)}
+  .prTip{font:700 24px/1.4 var(--serif);color:var(--c,var(--pearl))}
+  .prSub{font-size:17px;line-height:1.6;color:rgba(244,239,230,.7);margin-top:8px}
+  .prSub b{color:var(--pearl)}
+  #prMini .mini{margin-top:16px}
+  .phPr{background:var(--champ);color:#16233b}
   .ring{flex:none;width:124px;height:124px;border-radius:50%;display:grid;place-items:center}
   .ring b{font:600 46px/1 var(--serif);color:var(--pearl)}
   .ring small{display:block;font-size:13px;color:var(--mist);text-align:center;letter-spacing:.2em;margin-top:4px}
@@ -415,6 +424,20 @@
   </div>
 
   <!-- 分析中 -->
+  <div id="practice" class="hide">
+    <div class="card prCard">
+      <div class="prKick" id="prKick"></div>
+      <div class="prScore" id="prScore"></div>
+      <div class="prTip" id="prTip"></div>
+      <div class="prSub" id="prSub"></div>
+      <div id="prMini"></div>
+    </div>
+    <div class="actions">
+      <button class="btn gold main" id="prAgain"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再练这一句</button>
+      <button class="btn sec" id="prListen"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听我刚唱的</button>
+      <button class="btn sec" id="prBack">回到整首歌的结果</button>
+    </div>
+  </div>
   <div class="card hide" id="stepBusy">
     <h2>正在认真听您唱…</h2>
     <div class="bar"><i id="prog"></i></div>
@@ -444,7 +467,7 @@
     </div>
 
     <div class="actions">
-      <button class="btn gold main hide" id="btnWorst">听第 <span id="worstNo"></span> 句（最需要练）</button>
+      <button class="btn gold main hide" id="btnWorst"><span id="worstVerb">听</span>第 <span id="worstNo"></span> 句（最需要练）</button>
       <button class="btn gold main" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
       <button class="btn sec" id="btnHome">回到歌单</button>
       <button class="btn sec hide" id="btnHist2">看全部练唱记录</button>
@@ -514,7 +537,7 @@ $("btnFile").onclick = () => { getCtx(); $("file").click(); };
 $("file").onchange = e => { const f = e.target.files[0]; if (f) handleBlob(f); e.target.value = ""; };
 
 let recSong = "", recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
-let ytPending = false;
+let ytPending = false, stageVid = "", recYt = null, PR = null; // PR：正在“只练这一句”
 $("btnRec").onclick = () => startRecording({});
 async function startRecording(opts) {
   err(""); show("micMsg", false);
@@ -527,7 +550,8 @@ async function startRecording(opts) {
   } catch (e) { show("micMsg"); show("stepRec", false); show("stepIn"); try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} return false; }
   chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
   recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
-  recSong = opts.yt ? opts.yt.t : "";
+  recSong = opts.yt ? opts.yt.t : ""; recYt = null;
+  if (opts.practice) mp3Song = null;
   ytPending = !!opts.yt;
   if (mp3Song) {
     await REF.ready; recMode = "sync";
@@ -536,7 +560,7 @@ async function startRecording(opts) {
     try { if (YT_.player && YT_.player.getPlayerState() === 1) setTimeout(startMp3, 0); } catch (e) {}
   } else if (opts.yt) {
     $("volTxt").textContent = "音乐一开始就自动录音。如果视频没动，点一下视频上的播放键。";
-    try { if (YT_.player && YT_.player.getPlayerState() === 1) { ytPending = false; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; } } catch (e) {}
+    try { if (YT_.player && YT_.player.getPlayerState() === 1) ytGo(); } catch (e) {}
   } else { stageSong = null; YT_.stop(); $("recTitle").textContent = REF.name ? "跟着原唱唱" : "正在录音（清唱）"; }
   stageUI(opts.yt ? "rec" : "plain"); show("liveNote", false); show("nudge", !!mp3Song);
   if (!opts.yt && REF.name) {
@@ -569,7 +593,8 @@ async function startRecording(opts) {
   };
   if (!ytPending) recStart = Date.now();
   show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
+  recTimer = setInterval(() => { if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
+    if (PR && !ytPending) { let vt = 0; try { vt = YT_.player.getCurrentTime(); } catch (e) {} if (vt >= PR.end || s > PR.end - PR.a + 6) $("btnStop").click(); } }, 250);
   window.scrollTo({ top: 0, behavior: "smooth" });
   return true;
 }
@@ -794,7 +819,7 @@ const YT_ = {
     const target = hostEl.querySelector(".ytFrame>div");
     this.player = new YT.Player(target, {
       videoId: id, host: "https://www.youtube-nocookie.com",
-      playerVars: { playsinline: 1, rel: 0, modestbranding: 1, autoplay: opts.autoplay ? 1 : 0 },
+      playerVars: Object.assign({ playsinline: 1, rel: 0, modestbranding: 1, autoplay: opts.autoplay ? 1 : 0 }, opts.start ? { start: Math.floor(opts.start) } : {}),
       events: {
         onReady: e => { const m = hostEl.querySelector(".ytMsg"); if (m) m.textContent = opts.hint || ""; if (opts.autoplay) try { e.target.playVideo(); } catch (_) {} },
         onStateChange: e => opts.onState && opts.onState(e.data),
@@ -948,9 +973,10 @@ function drawPhList() {
       <div class="phHd"><span class="phNo">第 ${x.idx + 1} 句</span><span class="phT">${SC.fmtT(x.f.t0)}</span><span class="phLv">${lbl} · ${x.score}</span></div>
       <p class="phTip">${x.tip}</p>
       ${miniSvg(x)}${body}
-      <div class="row2"><button class="btn small phListen" data-ph="${x.idx}"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button>${canRef ? `<button class="btn small" data-phr="${x.idx}">原唱这一句</button>` : ""}</div></div>`;
+      ${R.yt ? `<button class="btn gold main phPr" data-pr="${x.idx}" style="margin:12px 0 10px"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>只练这一句</button>` : ""}<div class="row2"><button class="btn small phListen" data-ph="${x.idx}"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button>${canRef ? `<button class="btn small" data-phr="${x.idx}">原唱这一句</button>` : ""}</div></div>`;
   }).join("") : '<p class="note">这一栏没有句子。</p>';
   $("phList").querySelectorAll("[data-ph]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.ph).f; playRange(f.t0 - 0.3, f.t1 + 0.5); });
+  $("phList").querySelectorAll("[data-pr]").forEach(b => b.onclick = () => startPractice(PH.find(x => x.idx === +b.dataset.pr)));
   $("phList").querySelectorAll("[data-phr]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.phr).f; playRef(f.t0 - 0.3, f.t1 + 0.5); });
 }
 $("detMore").addEventListener("toggle", () => { if ($("detMore").open && R) draw(); });
@@ -1112,19 +1138,26 @@ function stageUI(state) { // ready | rec | plain
   show("recYt", !!stageSong);
   if (state !== "ready") show("segNote", false);
 }
+function ytGo() { // 视频开始放了 → 开始录，并记下此刻视频播到哪（以后“只练这一句”要靠它对齐）
+  ytPending = false; chunks = []; recStart = Date.now();
+  $("volTxt").textContent = PR ? "" : "开始录音了，跟着唱";
+  let t = 0; try { t = YT_.player.getCurrentTime() || 0; } catch (e) {}
+  recYt = { t0: t, vid: stageVid, song: recSong };
+}
 function stageVideo() {
   const s = stageSong;
-  const id = stageMode === "k" && s.k ? s.k : s.v;
+  const id = stageMode === "k" && s.k ? s.k : s.v; stageVid = id;
   $("segNote").textContent = !s.k ? "这首歌暂时只有原唱版，跟着歌手一起唱也可以。" : stageMode === "k" ? "只有音乐，没有歌手，屏幕上有歌词。" : "有歌手带着唱，适合还不熟的歌。";
   show("segNote", !mp3Has[s.t]);
   YT_.play($("recYtBox"), id, { autoplay: false, hint: "", onState: st => {
     if (st === 1 && ytPending && mp3Song) { startMp3(); return; }
-    if (st === 1 && ytPending) { ytPending = false; chunks = []; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; }
+    if (st === 1 && ytPending) ytGo();
     if (st === 0 && mp3Song) return; // 有 mp3 时，以 mp3 放完为准
     if (st === 0 && !$("stageRec").classList.contains("hide") && !$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200);
   } });
 }
 function openStage(i) {
+  $("stageBack").textContent = "‹ 换一首歌";
   stageSong = SONGS[i]; stageMode = stageSong.k ? "k" : "o";
   { const s = stageSong; mpUI(); if (REF.name === s.t && REF.ab) { mp3Has[s.t] = true; mpUI(); } else DB.get("ref_" + s.t).then(v => { if (v && v.blob && stageSong === s) useMp3(s, v.blob, false); }); }
   $("song").value = stageSong.t;
@@ -1198,6 +1231,7 @@ function cancelRec() {
 }
 $("stageBack").onclick = () => {
   cancelRec(); YT_.stop(); stageSong = null;
+  if (PR) { if (stream) stream.getTracks().forEach(t => t.stop()); show("stepRec", false); $("prBack").click(); return; }
   show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0, behavior: "smooth" });
 };
 $("btnRef").onclick = $("btnRefChange").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
@@ -1226,7 +1260,7 @@ async function runAnalysis(ab, blob, mode) {
     $("busyTxt").textContent = tooLong ? "歌比较长，先分析前 6 分钟…" : "正在一个音一个音地听…";
     await new Promise(r => setTimeout(r, 30));
     const x = toMono16k(ab, 360);
-    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; });
+    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; }, PR ? { minVoiced: 1, minNotes: 2 } : null);
     if (res.error) throw new Error(res.error);
     if (mode !== "yt" && REF.name && REF.ready) {
       $("busyTxt").textContent = "正在跟原唱对比…";
@@ -1235,23 +1269,75 @@ async function runAnalysis(ab, blob, mode) {
         const M = REF.melody, k = mode === "sync" ? Math.round(recRefSkip / M.hopS) : 0;
         SC.compareWithRef(res, k ? { hopS: M.hopS, midi: M.midi.subarray(k), duration: M.duration - recRefSkip } : M, mode === "sync" ? "sync" : "free"); }
     }
-    R = res;
+    R = res; R.yt = mode === "yt" && recYt && !PR ? recYt : null;
     R.refName = R.mode === "sync" || R.mode === "free" ? REF.name : "";
     if (R.mode === "yt") R.mode = "self";
     const keep = blob || wavBlob(x, 16000);
-    if (audioURL) URL.revokeObjectURL(audioURL);
+    if (audioURL && !(PR && PR.prevURL === audioURL)) URL.revokeObjectURL(audioURL);
     audioURL = URL.createObjectURL(keep);
     $("aud").src = audioURL;
+    if (PR) { renderPractice(); return; }
     render();
     histSave(R, keep);
 }
 function fail(e) {
-    show("stepBusy", false); show("stepIn");
     const m = e.message;
+    if (PR && (m === "short" || m === "few")) { PR.miss = true; renderPractice(); return; }
+    show("stepBusy", false); show("stepIn");
     err(m === "decode" ? "这个文件打不开 😅。可以换个方式录：用手机<b>录像</b>，或者苹果“语音备忘录”、安卓“录音机”录成 m4a，再选文件。"
       : m === "short" || m === "few" ? "没听到足够的歌声。请离手机近一点、唱长一点（至少 20～30 秒），最好清唱再试一次。"
       : "出了点问题：" + m);
 }
+
+// ---------- 只练这一句：视频跳到这句前 2.5 秒，只录这一句，唱完马上打分 ----------
+function startPractice(x) {
+  const base = PR ? PR.prevR : R, y = base && base.yt, song = y && SONGS.find(s => s.t === y.song);
+  if (!song) return;
+  if (!PR) PR = { prevR: R, prevURL: audioURL, best: x.score };
+  const f = x.f;
+  Object.assign(PR, { x, f, a: Math.max(0, y.t0 + f.t0 - 2.5), target: y.t0 + f.t0, end: y.t0 + f.t1 + 1, miss: false });
+  aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {}
+  show("result", false); show("practice", false); show("stepIn", false); err("");
+  stageSong = song; stageVid = y.vid; show("stepRec"); $("stageBack").textContent = "‹ 回到结果";
+  $("recTitle").textContent = `第 ${x.idx + 1} 句 · 《${song.t}》`;
+  YT_.play($("recYtBox"), y.vid, { autoplay: true, start: PR.a, hint: "", onState: st => {
+    if (st === 1 && ytPending) ytGo();
+  } });
+  startRecording({ yt: song, practice: true }).then(ok => { if (ok) { show("segNote", false); $("volTxt").textContent = "视频会从这句前面一点开始，听到这句就跟着唱。没动就点一下视频。"; } });
+}
+function renderPractice() {
+  show("stepBusy", false); show("result", false); show("practice");
+  let info = null;
+  if (!PR.miss && R && R.phrases) {
+    const lead = PR.target - (recYt ? recYt.t0 : PR.a), dur = PR.f.t1 - PR.f.t0;
+    const ov = f => Math.min(f.t1, lead + dur) - Math.max(f.t0, lead);
+    const ph = R.phrases.filter(f => f.notes.length >= 2 && ov(f) > 0).sort((a, b) => ov(b) - ov(a))[0];
+    if (ph) info = phraseInfo(ph, PR.x.idx);
+  }
+  $("prKick").textContent = `第 ${PR.x.idx + 1} 句 · 单句练习`;
+  if (!info) {
+    $("prScore").textContent = "没听清"; $("prTip").style.removeProperty("--c");
+    $("prTip").textContent = "离手机近一点，再唱一次";
+    $("prSub").textContent = "视频放到这句时，跟着大声唱出来就行。"; $("prMini").innerHTML = ""; show("prListen", false);
+  } else {
+    const before = PR.best;
+    $("prScore").innerHTML = `${info.score}<small>分</small>`;
+    $("prTip").style.setProperty("--c", LV[info.level][1]);
+    $("prTip").textContent = info.level === "good" ? "✓ 这句唱准了" : info.tip;
+    $("prSub").innerHTML = info.score > before ? `比之前的 ${before} 分<b>进步了 ${info.score - before} 分</b>，真棒！`
+      : info.level === "good" ? "很稳，可以回去唱整首了。" : info.probs.length ? info.probs[0][1] : "";
+    PR.best = Math.max(before, info.score);
+    $("prMini").innerHTML = miniSvg(info); show("prListen");
+    $("prListen").onclick = () => playFrom(Math.max(0, info.f.t0 - 0.3), info.f.t1 + 0.5);
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+$("prAgain").onclick = () => { aud.pause(); startPractice(PR.x); };
+$("prBack").onclick = () => {
+  aud.pause(); if (audioURL && audioURL !== PR.prevURL) URL.revokeObjectURL(audioURL);
+  R = PR.prevR; audioURL = PR.prevURL; $("aud").src = audioURL; PR = null;
+  show("practice", false); render();
+};
 
 // ---------- 文字说明 ----------
 const howMuch = c => { const a = Math.abs(c); return a < 35 ? "一点点" : a < 55 ? "比较明显" : "挺多"; };
@@ -1352,7 +1438,8 @@ function render(fromHist) {
   renderPhrases();
   { const w = PH.filter(x => x.level !== "good").sort((a, b) => a.score - b.score)[0];
     show("btnWorst", !!w);
-    if (w) { $("worstNo").textContent = w.idx + 1; $("btnWorst").onclick = () => playRange(w.f.t0 - 0.3, w.f.t1 + 0.5); } }
+    if (w) { $("worstNo").textContent = w.idx + 1; $("worstVerb").textContent = R.yt ? "只练" : "听";
+      $("btnWorst").onclick = () => R.yt ? startPractice(w) : playRange(w.f.t0 - 0.3, w.f.t1 + 0.5); } }
   $("detMore").open = false;
   $("tipsBox").innerHTML = buildTips(s).map(t => `<div class="tip"><b>${t[0]}</b><p>${t[1]}</p><div class="how">${t[2]}</div></div>`).join("");
   $("aiOut").textContent = ""; $("btnAI").disabled = false; $("btnAI").textContent = "请老师点评";
