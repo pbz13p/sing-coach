@@ -179,6 +179,23 @@
   .teach svg{display:block;width:100%;max-width:340px;margin:0 auto}
   .teachTip{font-size:16px;color:#d5efe4;margin-top:6px}
   .teachTip::before{content:"怎么练  ";color:var(--good);font-size:13px;letter-spacing:.15em}
+
+  details.more{padding:0}
+  details.more summary{cursor:pointer;list-style:none;padding:20px 22px;font:600 18px/1.4 var(--serif);color:var(--mist)}
+  details.more summary::-webkit-details-marker{display:none}
+  details.more summary::after{content:"＋";float:right;color:var(--champ)}
+  details.more[open] summary::after{content:"－"}
+  .moreBody{padding:0 22px 22px}
+  .moreBody h3{font:600 17px/1.4 var(--serif);color:var(--pearl);margin:18px 0 4px}
+  .song .by{font-size:14px;color:var(--mist);line-height:1.5}
+  .linkBack{all:unset;cursor:pointer;color:var(--mist);font-size:16px;margin:-4px 0 10px;display:inline-block}
+  .linkBack:focus-visible{outline:2px solid var(--champ)}
+  .seg{display:flex;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:999px;padding:4px;margin:4px 0 8px}
+  .seg button{all:unset;flex:1;text-align:center;padding:12px 6px;border-radius:999px;font-size:16px;color:var(--mist);cursor:pointer}
+  .seg button.on{background:linear-gradient(180deg,#ecdcb6,#c9a86c);color:#1d160a;font-weight:600}
+  .seg button:disabled{opacity:.35;cursor:default}
+  .seg button:focus-visible{outline:2px solid var(--champ)}
+  #segNote{text-align:center;margin:0 0 10px}
 </style>
 </head>
 <body>
@@ -189,44 +206,57 @@
 
   <div id="stepIn">
   <div class="card">
-    <h2><span class="step">1</span>放原唱（可以不放）</h2>
-    <div id="refNone">
-      <div class="note">放一首原唱进来，就能跟原唱一个音一个音地比。只要选一次，下次打开还在。</div>
-      <button class="btn gold" id="btnRef" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>选原唱歌曲</button>
-    </div>
-    <div id="refHas" class="hide">
-      <div class="refline"><b id="refName"></b><span id="refState" class="note"></span></div>
-      <div class="bar thin"><i id="refProg"></i></div>
-      <div class="row2"><button class="btn small ghost" id="btnRefChange">换一首</button><button class="btn small ghost" id="btnRefOff">不用原唱</button></div>
-    </div>
-    <input type="file" id="refFile" accept="audio/*,video/*" class="hide">
+    <h2>选一首歌，跟着伴奏唱</h2>
+    <div class="note" style="margin:-6px 0 4px">点歌名 → 戴上耳机 → 点“开始唱”。唱完马上打分。</div>
+    <div id="songList"></div>
   </div>
 
-  <div class="card">
-    <h2><span class="step">2</span>开始唱</h2>
-    <div id="earTip" class="msg hide" style="margin:0 0 6px"><b>请戴上耳机</b>。点“开始唱”后，原唱在耳机里放，您跟着唱就行，唱完点停止。</div>
-    <div class="orbWrap"><button class="orb" id="btnRec"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">开始唱</span><span class="sx" id="recSub"></span></button><div class="floor"></div></div>
-    <button class="btn" id="btnFile"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>选手机里录好的歌</button>
-    <input type="file" id="file" accept="audio/*,video/*" class="hide">
-    <div id="micMsg" class="msg hide">麦克风没打开。请在弹出的提示里点<b>“允许”</b>；如果没弹出，在浏览器设置里允许这个网站用麦克风。也可以先用手机录音机录好，再点绿色按钮选文件。</div>
-    <label class="l" for="song">歌名（可以不填）</label>
-    <input type="text" id="song" placeholder="比如：我和我的祖国">
-    <ul class="tips">
-      <li>找个安静的地方，手机离嘴大约一臂远</li>
-      <li>没选原唱的话，最好<b>清唱</b>（不放伴奏）</li>
-      <li>唱 30 秒到 5 分钟都可以</li>
-    </ul>
-  </div>
+  <details class="card more">
+    <summary>其他练法（清唱、自己的录音、原唱文件）</summary>
+    <div class="moreBody">
+      <h3>不放音乐，直接清唱</h3>
+      <div class="orbWrap"><button class="orb" id="btnRec"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">清唱</span><span class="sx" id="recSub"></span></button></div>
+      <div id="earTip" class="msg hide" style="margin:0 0 6px">已选了原唱文件：点上面的按钮会在耳机里放原唱，<b>请戴上耳机</b>。</div>
+      <h3>已经录好的歌</h3>
+      <button class="btn" id="btnFile"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>选手机里录好的歌</button>
+      <input type="file" id="file" accept="audio/*,video/*" class="hide">
+      <h3>用原唱文件，一个音一个音地比</h3>
+      <div id="refNone">
+        <div class="note">手机里有这首歌的 mp3 / m4a 文件，就能跟原唱逐音比对。选一次，下次还在。</div>
+        <button class="btn" id="btnRef"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>选原唱文件</button>
+      </div>
+      <div id="refHas" class="hide">
+        <div class="refline"><b id="refName"></b><span id="refState" class="note"></span></div>
+        <div class="bar thin"><i id="refProg"></i></div>
+        <div class="row2"><button class="btn small ghost" id="btnRefChange">换一首</button><button class="btn small ghost" id="btnRefOff">不用原唱</button></div>
+      </div>
+      <input type="file" id="refFile" accept="audio/*,video/*" class="hide">
+      <label class="l" for="song">歌名（可以不填）</label>
+      <input type="text" id="song" placeholder="比如：我和我的祖国">
+    </div>
+  </details>
+  <div id="micMsg" class="msg hide">麦克风没打开。请在弹出的提示里点<b>“允许”</b>；如果没弹出，在浏览器设置里允许这个网站用麦克风。</div>
   </div>
 
   <!-- 录音中 -->
   <div class="card hide" id="stepRec">
-    <h2><span class="dot"></span><span id="recTitle">正在录音</span></h2>
+    <button class="linkBack" id="stageBack">‹ 换一首歌</button>
+    <h2><span class="dot hide" id="recDot"></span><span id="recTitle">正在录音</span></h2>
+    <div class="seg hide" id="seg" role="radiogroup" aria-label="放什么">
+      <button class="on" data-m="k" role="radio" aria-checked="true">伴奏（只有音乐）</button><button data-m="o" role="radio" aria-checked="false">原唱（有歌手带）</button>
+    </div>
+    <div class="note hide" id="segNote"></div>
     <div id="recYt" class="hide"><div id="recYtBox"></div></div>
-    <div class="rec" id="recT">0:00</div>
-    <canvas id="live" style="height:170px"></canvas>
-    <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
-    <button class="btn gold" id="btnStop"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>唱完了</button>
+    <div id="stageReady" class="hide">
+      <div class="note" style="text-align:center;margin-top:8px">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
+      <div class="orbWrap"><button class="orb" id="stageGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">开始唱</span></button></div>
+    </div>
+    <div id="stageRec">
+      <div class="rec" id="recT">0:00</div>
+      <canvas id="live" style="height:150px"></canvas>
+      <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
+      <button class="btn gold" id="btnStop"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>唱完了</button>
+    </div>
   </div>
 
   <!-- 分析中 -->
@@ -305,16 +335,6 @@
     <div class="sheetHd"><div><div class="sheetTitle" id="histTitle">练唱记录</div><div class="note">保存在这部手机上，点一条就能看结果、听录音</div></div>
       <button class="btn small" id="histClose">关闭</button></div>
     <div id="histList"></div>
-  </div>
-</div>
-<div id="songSheet" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-  <div class="sheetBg" id="sheetBg"></div>
-  <div class="sheetPanel">
-    <div class="sheetHd"><div><div class="sheetTitle" id="sheetTitle">推荐练唱歌单</div><div class="note">第 1 期 · 共 27 首 · 定期更新</div></div>
-      <button class="btn small" id="sheetClose" aria-label="关闭">关闭</button></div>
-    <button class="btn gold" id="btnOwnFile">我已经有原唱文件，直接选</button>
-    <div class="note" style="margin:2px 2px 6px">点一首歌：可以先在这里听原唱；戴上耳机点“跟着唱”，唱完马上出结果。</div>
-    <div id="songList"></div>
   </div>
 </div>
 <script>
@@ -851,20 +871,19 @@ async function startRecording(opts) {
   const c = getCtx();
   try {
     if (c.state === "suspended") await c.resume();
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-  } catch (e) { show("micMsg"); show("stepIn"); return false; }
+    if (warmStream && warmStream.getAudioTracks().some(t => t.readyState === "live")) stream = warmStream;
+    else stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    warmStream = null;
+  } catch (e) { show("micMsg"); show("stepRec", false); show("stepIn"); try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} return false; }
   chunks = []; live = []; liveBuf = [];
   recMode = "self"; refSrc = null; let startAt = 0;
   recSong = opts.yt ? opts.yt.t : "";
   ytPending = !!opts.yt;
-  show("recYt", !!opts.yt);
   if (opts.yt) {
-    $("recTitle").textContent = "跟着《" + opts.yt.t + "》唱";
-    YT_.play($("recYtBox"), opts.yt.v, { autoplay: true, hint: "戴好耳机。点视频上的播放键，原唱一开始就自动录音。", onState: st => {
-      if (st === 1 && ytPending) { ytPending = false; chunks = []; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; }
-      if (st === 0 && !$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200);
-    } });
-  } else $("recTitle").textContent = "正在录音";
+    $("volTxt").textContent = "音乐一开始就自动录音。如果视频没动，点一下视频上的播放键。";
+    try { if (YT_.player && YT_.player.getPlayerState() === 1) { ytPending = false; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; } } catch (e) {}
+  } else { stageSong = null; YT_.stop(); $("recTitle").textContent = "正在录音（清唱）"; }
+  stageUI(opts.yt ? "rec" : "plain");
   if (!opts.yt && REF.name) {
     $("recSub").textContent = "原唱准备中…";
     await REF.ready; refUI();
@@ -890,7 +909,7 @@ async function startRecording(opts) {
     if (liveBuf.length > 4000) liveBuf.splice(0, liveBuf.length - 4000);
     livePitch(c.sampleRate / ratio);
   };
-  recStart = Date.now();
+  if (!ytPending) recStart = Date.now();
   show("stepIn", false); show("stepRec");
   recTimer = setInterval(() => { const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = SC.fmtT(s); if (s > 360) $("btnStop").click(); }, 250);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -929,7 +948,7 @@ function drawLive(now) {
 }
 $("btnStop").onclick = () => {
   show("stepRec", false); clearInterval(recTimer);
-  if (ytAlong) { YT_.stop(); ytAlong = false; } ytPending = false;
+  if (recSong) YT_.stop(); stageSong = null; ytPending = false;
   if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
   try { proc.disconnect(); srcNode.disconnect(); } catch (e) {}
   if (stream) stream.getTracks().forEach(t => t.stop());
@@ -948,7 +967,6 @@ function wavBlob(x, sr) {
 
 
 // ---------- YouTube 播放（在软件里听原唱） ----------
-let ytAlong = false;
 const YT_ = {
   ready: null, player: null, host: null,
   load() {
@@ -989,14 +1007,6 @@ const YT_ = {
     this.host = null;
   },
 };
-function listenSong(i) { const s = SONGS[i]; YT_.play($("yt" + i), s.v, { autoplay: true, hint: "听熟了，就点“跟着唱”" }); }
-async function singAlong(i) {
-  const s = SONGS[i];
-  $("song").value = s.t;
-  ytAlong = true; closeSheet();
-  const ok = await startRecording({ yt: s });
-  if (!ok) { ytAlong = false; return; }
-}
 
 
 
@@ -1221,10 +1231,8 @@ async function loadRef(blob, name, save) {
   })();
   return REF.ready;
 }
-const SONGS = [{"lv": "易", "t": "月亮代表我的心", "s": "邓丽君", "w": "音域窄、速度慢，最适合先练音准和气息", "v": "IiFm7AWP9n4"}, {"lv": "易", "t": "甜蜜蜜", "s": "邓丽君", "w": "旋律轻快，练轻声唱、咬字清楚", "v": "KrAc3uKfgQs"}, {"lv": "易", "t": "小城故事", "s": "邓丽君", "w": "节奏平稳，练句尾收得干净", "v": "dqHYAU_3JVI"}, {"lv": "易", "t": "茉莉花", "s": "江苏民歌", "w": "婉转的小滑音多，练音和音之间连贯", "v": "IwvwjjSVbug"}, {"lv": "易", "t": "康定情歌", "s": "四川民歌", "w": "节奏规整，练拍子跟得稳", "v": "ESL8tHsmUns"}, {"lv": "易", "t": "送别", "s": "李叔同 词", "w": "长音多，练长音稳、不晃", "v": "dsM6aXVbMLI"}, {"lv": "易", "t": "难忘今宵", "s": "李谷一", "w": "中速抒情，练气息均匀", "v": "bwpRPZpltqA"}, {"lv": "易", "t": "涛声依旧", "s": "毛宁", "w": "音区舒服，练副歌情绪起伏", "v": "PMpESd-eIDA"}, {"lv": "易", "t": "外婆的澎湖湾", "s": "潘安邦", "w": "节奏明快，练抢拍、拖拍", "v": "JEoNjnyd56s"}, {"lv": "易", "t": "军港之夜", "s": "苏小明", "w": "轻柔摇曳，练小声也唱准", "v": "wbhXtQtXnHs"}, {"lv": "易", "t": "恰似你的温柔", "s": "蔡琴", "w": "低音区多，练低音唱稳", "v": "Yvg3L7RbFHY"}, {"lv": "易", "t": "时间都去哪儿了", "s": "王铮亮", "w": "说话般的旋律，练咬字和感情", "v": "b8zf-69I0Yw"}, {"lv": "中", "t": "我和我的祖国", "s": "李谷一", "w": "起伏大，练换气和长句", "v": "z18nBzxDbb0"}, {"lv": "中", "t": "我的祖国", "s": "郭兰英", "w": "合唱团常唱，练音准和齐唱", "v": "kZrYf1ibgN4"}, {"lv": "中", "t": "映山红", "s": "邓玉华", "w": "高音长句，练高音不往下掉", "v": "IiZ4qWpTHS0"}, {"lv": "中", "t": "弯弯的月亮", "s": "刘欢", "w": "长句多，练一口气唱完一句", "v": "yrJZj-Dkoxc"}, {"lv": "中", "t": "好人一生平安", "s": "李娜", "w": "抒情长音，练长音收尾", "v": "Eg_lh5eBvDM"}, {"lv": "中", "t": "母亲", "s": "阎维文", "w": "民族唱法入门，练声音饱满", "v": "CIAOPY3A5HM"}, {"lv": "中", "t": "我爱你，塞北的雪", "s": "殷秀梅", "w": "跨度大，练高低音转换", "v": "kGm53qmBwqw"}, {"lv": "中", "t": "但愿人长久", "s": "邓丽君", "w": "旋律起伏细，练音准细节", "v": "wA0H7Zvb0u4"}, {"lv": "中", "t": "朋友", "s": "周华健", "w": "副歌偏高，练副歌有力不喊", "v": "6lbPgfKK7m4"}, {"lv": "中", "t": "父亲", "s": "筷子兄弟", "w": "情感浓，练控制住不跑调", "v": "UNj9QsW67dA"}, {"lv": "难", "t": "在希望的田野上", "s": "彭丽媛", "w": "节奏快、音域宽，练灵活和高音", "v": "jk5AeO1x0YI"}, {"lv": "难", "t": "牡丹之歌", "s": "蒋大为", "w": "高音很多，练高音位置", "v": "3eq7pETZDbs"}, {"lv": "难", "t": "天路", "s": "韩红", "w": "高音长音，练气息支撑", "v": "KeuXF8-orZg"}, {"lv": "难", "t": "青藏高原", "s": "李娜", "w": "极高的长音，挑战音域上限", "v": "ePF6V9P9XJU"}, {"lv": "难", "t": "一剪梅", "s": "费玉清", "w": "高音轻唱，练高音不费力", "v": "ostYkR2hD4s"}];
+const SONGS = [{"lv": "易", "t": "月亮代表我的心", "s": "邓丽君", "w": "音域窄、速度慢，最适合先练音准和气息", "v": "IiFm7AWP9n4", "k": "9l4gJ5shON4"}, {"lv": "易", "t": "甜蜜蜜", "s": "邓丽君", "w": "旋律轻快，练轻声唱、咬字清楚", "v": "KrAc3uKfgQs", "k": "MlnbnqtL0mM"}, {"lv": "易", "t": "小城故事", "s": "邓丽君", "w": "节奏平稳，练句尾收得干净", "v": "dqHYAU_3JVI", "k": "QtyAZwQzDT4"}, {"lv": "易", "t": "茉莉花", "s": "江苏民歌", "w": "婉转的小滑音多，练音和音之间连贯", "v": "IwvwjjSVbug", "k": "IDqK40Wb_Gs"}, {"lv": "易", "t": "康定情歌", "s": "四川民歌", "w": "节奏规整，练拍子跟得稳", "v": "ESL8tHsmUns", "k": "ii0seUMXQuM"}, {"lv": "易", "t": "送别", "s": "李叔同 词", "w": "长音多，练长音稳、不晃", "v": "dsM6aXVbMLI", "k": "bCEmEC1bTM0"}, {"lv": "易", "t": "难忘今宵", "s": "李谷一", "w": "中速抒情，练气息均匀", "v": "bwpRPZpltqA", "k": "1T7HwGJC0TM"}, {"lv": "易", "t": "涛声依旧", "s": "毛宁", "w": "音区舒服，练副歌情绪起伏", "v": "PMpESd-eIDA", "k": "jEapLqsyeKc"}, {"lv": "易", "t": "外婆的澎湖湾", "s": "潘安邦", "w": "节奏明快，练抢拍、拖拍", "v": "JEoNjnyd56s", "k": "LNQhjapV3Bw"}, {"lv": "易", "t": "军港之夜", "s": "苏小明", "w": "轻柔摇曳，练小声也唱准", "v": "wbhXtQtXnHs", "k": "S0e32PppTos"}, {"lv": "易", "t": "恰似你的温柔", "s": "蔡琴", "w": "低音区多，练低音唱稳", "v": "Yvg3L7RbFHY", "k": "sWe14DpUG10"}, {"lv": "易", "t": "时间都去哪儿了", "s": "王铮亮", "w": "说话般的旋律，练咬字和感情", "v": "b8zf-69I0Yw", "k": "1lJF78qe12I"}, {"lv": "中", "t": "我和我的祖国", "s": "李谷一", "w": "起伏大，练换气和长句", "v": "z18nBzxDbb0", "k": "7lINXQUJgNA"}, {"lv": "中", "t": "我的祖国", "s": "郭兰英", "w": "合唱团常唱，练音准和齐唱", "v": "kZrYf1ibgN4", "k": "jEYW0MmdTuw"}, {"lv": "中", "t": "映山红", "s": "邓玉华", "w": "高音长句，练高音不往下掉", "v": "IiZ4qWpTHS0", "k": "YNQ26jcRPaY"}, {"lv": "中", "t": "弯弯的月亮", "s": "刘欢", "w": "长句多，练一口气唱完一句", "v": "yrJZj-Dkoxc", "k": "UHomujM_AYA"}, {"lv": "中", "t": "好人一生平安", "s": "李娜", "w": "抒情长音，练长音收尾", "v": "Eg_lh5eBvDM", "k": "zJVRTdyly3Y"}, {"lv": "中", "t": "母亲", "s": "阎维文", "w": "民族唱法入门，练声音饱满", "v": "CIAOPY3A5HM", "k": "qTk45g03SUg"}, {"lv": "中", "t": "我爱你，塞北的雪", "s": "殷秀梅", "w": "跨度大，练高低音转换", "v": "kGm53qmBwqw", "k": "pZTHe8wnMXw"}, {"lv": "中", "t": "但愿人长久", "s": "邓丽君", "w": "旋律起伏细，练音准细节", "v": "wA0H7Zvb0u4", "k": "QL2CfgENUTc"}, {"lv": "中", "t": "朋友", "s": "周华健", "w": "副歌偏高，练副歌有力不喊", "v": "6lbPgfKK7m4", "k": "17riCFmmpEo"}, {"lv": "中", "t": "父亲", "s": "筷子兄弟", "w": "情感浓，练控制住不跑调", "v": "UNj9QsW67dA"}, {"lv": "难", "t": "在希望的田野上", "s": "彭丽媛", "w": "节奏快、音域宽，练灵活和高音", "v": "jk5AeO1x0YI"}, {"lv": "难", "t": "牡丹之歌", "s": "蒋大为", "w": "高音很多，练高音位置", "v": "3eq7pETZDbs"}, {"lv": "难", "t": "天路", "s": "韩红", "w": "高音长音，练气息支撑", "v": "KeuXF8-orZg", "k": "fx9twtl7LBI"}, {"lv": "难", "t": "青藏高原", "s": "李娜", "w": "极高的长音，挑战音域上限", "v": "ePF6V9P9XJU"}, {"lv": "难", "t": "一剪梅", "s": "费玉清", "w": "高音轻唱，练高音不费力", "v": "ostYkR2hD4s", "k": "pB5dGKeA_0M"}];
 let pendingSong = "";
-function openSheet() { show("songSheet"); document.body.style.overflow = "hidden"; $("sheetClose").focus(); }
-function closeSheet() { show("songSheet", false); document.body.style.overflow = ""; if (!ytAlong) YT_.stop(); }
 (function buildSongs() {
   const lv = { "易": "容易上手", "中": "进阶练习", "难": "有挑战" };
   const chev = '<svg class="ico chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
@@ -1233,33 +1241,66 @@ function closeSheet() { show("songSheet", false); document.body.style.overflow =
     html += `<div class="lvHd">${lv[L]}</div>`;
     SONGS.forEach((s, i) => {
       if (s.lv !== L) return;
-      const q = encodeURIComponent(s.t + " " + s.s.replace(/ 词$/, ""));
-      html += `<div class="song" data-i="${i}"><button aria-expanded="false"><div><div class="nm">${s.t}</div><div class="by">${s.s}</div></div>${chev}</button>
-        <div class="more"><p class="why">${s.w}</p><div class="yt" id="yt${i}"></div><div class="row2">
-          <button class="btn small" data-listen="${i}">在这里听</button>
-          <button class="btn small gold" data-along="${i}">跟着唱</button></div>
-          <button class="linkBtn" data-pick="${i}">我有这首歌的原唱文件，用它逐音比对</button></div></div>`;
+      html += `<div class="song"><button data-i="${i}"><div><div class="nm">${s.t}</div><div class="by">${s.s} · ${s.w}</div></div>${chev}</button></div>`;
     });
   });
   $("songList").innerHTML = html;
-  $("songList").querySelectorAll(".song>button").forEach(b => b.onclick = () => {
-    const el = b.parentElement, open = !el.classList.contains("open");
-    $("songList").querySelectorAll(".song.open").forEach(o => { o.classList.remove("open"); o.firstElementChild.setAttribute("aria-expanded", "false"); });
-    YT_.stop();
-    if (open) { el.classList.add("open"); b.setAttribute("aria-expanded", "true"); }
-  });
-  $("songList").querySelectorAll("[data-listen]").forEach(b => b.onclick = () => listenSong(+b.dataset.listen));
-  $("songList").querySelectorAll("[data-along]").forEach(b => b.onclick = () => singAlong(+b.dataset.along));
-  $("songList").querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
-    const s = SONGS[+b.dataset.pick]; pendingSong = s.t; $("song").value = s.t; getCtx(); $("refFile").click();
-  });
+  $("songList").querySelectorAll("button[data-i]").forEach(b => b.onclick = () => openStage(+b.dataset.i));
 })();
-$("btnRef").onclick = openSheet;
-$("btnRefChange").onclick = openSheet;
-$("sheetClose").onclick = $("sheetBg").onclick = closeSheet;
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("songSheet").classList.contains("hide")) closeSheet(); });
-$("btnOwnFile").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
-$("refFile").onchange = e => { const f = e.target.files[0]; if (f) { closeSheet(); loadRef(f, pendingSong || f.name, true); } pendingSong = ""; e.target.value = ""; };
+// ---------- 唱歌舞台：选歌 → 放伴奏 → 跟着唱 ----------
+let stageSong = null, stageMode = "k", warmStream = null;
+function stageUI(state) { // ready | rec | plain
+  show("seg", state === "ready" && !!stageSong);
+  show("stageReady", state === "ready");
+  show("stageRec", state !== "ready");
+  show("recDot", state !== "ready");
+  show("recYt", !!stageSong);
+  if (state !== "ready") show("segNote", false);
+}
+function stageVideo() {
+  const s = stageSong;
+  const id = stageMode === "k" && s.k ? s.k : s.v;
+  $("segNote").textContent = !s.k ? "这首歌暂时只有原唱版，跟着歌手一起唱也可以。" : stageMode === "k" ? "只有音乐，没有歌手，屏幕上有歌词。" : "有歌手带着唱，适合还不熟的歌。";
+  show("segNote");
+  YT_.play($("recYtBox"), id, { autoplay: false, hint: "", onState: st => {
+    if (st === 1 && ytPending) { ytPending = false; chunks = []; recStart = Date.now(); $("volTxt").textContent = "开始录音了，跟着唱"; }
+    if (st === 0 && !$("stageRec").classList.contains("hide") && !$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200);
+  } });
+}
+function openStage(i) {
+  stageSong = SONGS[i]; stageMode = stageSong.k ? "k" : "o";
+  $("song").value = stageSong.t;
+  $("recTitle").textContent = "《" + stageSong.t + "》";
+  $("seg").querySelectorAll("button").forEach(b => { const on = b.dataset.m === stageMode; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); b.disabled = b.dataset.m === "k" && !stageSong.k; });
+  show("stepIn", false); err(""); show("stepRec"); stageUI("ready");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  stageVideo();
+  // 先要麦克风权限，开始唱的时候就不用再等
+  getCtx();
+  if (!warmStream && navigator.mediaDevices) navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(s => { warmStream = s; }).catch(() => {});
+}
+$("seg").querySelectorAll("button").forEach(b => b.onclick = () => {
+  if (b.disabled || b.dataset.m === stageMode) return;
+  stageMode = b.dataset.m;
+  $("seg").querySelectorAll("button").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-checked", on); });
+  stageVideo();
+});
+$("stageGo").onclick = () => {
+  try { YT_.player && YT_.player.playVideo(); } catch (e) {}
+  startRecording({ yt: stageSong });
+};
+function cancelRec() {
+  clearInterval(recTimer); ytPending = false;
+  if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
+  try { proc && proc.disconnect(); srcNode && srcNode.disconnect(); } catch (e) {}
+  chunks = [];
+}
+$("stageBack").onclick = () => {
+  cancelRec(); YT_.stop(); stageSong = null;
+  show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0, behavior: "smooth" });
+};
+$("btnRef").onclick = $("btnRefChange").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
+$("refFile").onchange = e => { const f = e.target.files[0]; if (f) loadRef(f, pendingSong || f.name, true); pendingSong = ""; e.target.value = ""; };
 $("btnRefOff").onclick = () => { REF.name = ""; REF.ab = null; REF.melody = null; REF.ready = null; DB.del("ref"); refUI(); };
 DB.get("ref").then(v => { if (v && v.blob) loadRef(v.blob, v.name, false); });
 
