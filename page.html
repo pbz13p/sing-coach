@@ -157,13 +157,16 @@
   .nudge .btn{width:auto;min-height:36px;padding:0 12px;font-size:14px}
   /* 3-2-1 倒数：盖在视频上，不挡点击 */
   #recYt{position:relative}
-  .cd{position:absolute;inset:0;z-index:5;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    border-radius:14px;background:radial-gradient(circle at 50% 45%,rgba(10,16,30,.55),rgba(6,10,20,.88));backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-  .cd b{font-family:var(--serif,serif);font-size:min(30vw,150px);line-height:1;font-weight:600;
-    background:linear-gradient(180deg,#fff6dc,#e8c97a 60%,#b8955a);-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 6px 28px rgba(232,201,122,.45))}
+  /* 倒数盖在视频下面的音准区，不挡歌词 */
+  #stageRec{position:relative}
+  .cd{position:absolute;left:-4px;right:-4px;top:30px;bottom:70px;z-index:5;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:22px;background:radial-gradient(circle at 50% 42%,#46340f,#080c16 75%);
+    border:2px solid rgba(243,216,146,.6);box-shadow:0 0 50px rgba(232,201,122,.35),inset 0 0 40px rgba(232,201,122,.12)}
+  .cd b{font-family:var(--serif,serif);font-size:min(32vw,128px);line-height:1;font-weight:900;
+    background:linear-gradient(180deg,#fffaf0 0%,#ffe39a 45%,#d9a94e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 26px rgba(255,214,120,.7))}
   .cd b.pop{animation:cdPop .9s cubic-bezier(.2,.9,.25,1) both}
-  .cd span{margin-top:10px;font-size:19px;letter-spacing:.12em;color:rgba(244,239,230,.85)}
+  .cd span{margin-top:2px;font-size:28px;font-weight:800;letter-spacing:.08em;color:#fff6e0;text-shadow:0 2px 14px rgba(0,0,0,.6)}
   @keyframes cdPop{0%{transform:scale(1.9);opacity:0}25%{opacity:1}100%{transform:scale(1);opacity:1}}
   @media (prefers-reduced-motion:reduce){.cd b.pop{animation:none}}
   .liveSay.cdn{color:#f3d892;font-size:30px}
@@ -434,9 +437,8 @@
       <button class="on" data-m="k" role="radio" aria-checked="true">伴奏</button><button data-m="o" role="radio" aria-checked="false">原唱带唱</button>
     </div>
     <div class="note hide" id="segNote"></div>
-    <div id="recYt" class="hide"><div id="recYtBox"></div>
-      <div class="cd hide" id="cd" aria-live="assertive"><b id="cdN">3</b><span id="cdTx">准备好</span></div></div>
-    <div class="rotHint hide" id="rotHint">手机横过来，歌词更大</div>
+    <div id="recYt" class="hide"><div id="recYtBox"></div></div>
+    <div class="rotHint hide" id="rotHint">伴奏太轻就按手机侧面的音量＋　·　手机横过来，歌词更大</div>
     <div id="stageReady" class="hide">
       <input type="file" id="mpFile" accept="audio/*,.mp3,.m4a,.wav,.aac" class="hide">
       <div class="note" id="readyNote" style="text-align:center;margin-top:8px">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
@@ -449,6 +451,7 @@
       </div>
     </div>
     <div id="stageRec">
+      <div class="cd hide" id="cd" aria-live="assertive"><b id="cdN">3</b><span id="cdTx">准备好</span></div>
       <div class="rec" id="recT">0:00</div>
       <div id="liveSay" class="liveSay"></div>
       <canvas id="live" style="height:230px"></canvas>
@@ -604,7 +607,7 @@ async function startRecording(opts) {
     await REF.ready; refUI();
     if (REF.ab) {
       refSrc = c.createBufferSource(); refSrc.buffer = REF.kara || REF.ab;
-      const gn = c.createGain(); gn.gain.value = 0.9; refSrc.connect(gn); gn.connect(c.destination);
+      const gn = loudOut(c, REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
       startAt = c.currentTime + 0.4; refSrc.start(startAt); recMode = "sync";
       refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1500); };
     }
@@ -650,6 +653,7 @@ function livePitch(sr) {
   const f = rms > 0.004 ? yinOne(liveBuf, sr) : 0;
   const t = (Date.now() - recStart) / 1000;
   live.push({ t, m: f > 0 ? 69 + 12 * Math.log2(f / 440) : NaN, rms });
+  watchOnset(f > 0 && rms > 0.01);
   while (live.length && live[0].t < t - 8) live.shift();
   if (rms < 0.0008) { if (!quietSince) quietSince = Date.now(); if (Date.now() - quietSince > 2500 && !reacq && (recSong || recMode === "sync")) reacquireMic(); } else quietSince = 0;
   $("volTxt").textContent = rms > 0.6 ? "声音太大了，离手机远一点" : "";
@@ -1115,6 +1119,12 @@ function toMono16k(ab, maxSec) {
 // ---------- 原唱 ----------
 const REF = { ab: null, melody: null, kara: null, name: "", ready: null };
 // 去掉人声做伴奏：人声一般在正中间，左右相减就没了；低音也在中间，单独加回来。
+// 伴奏放大一些（去掉人声后会变轻），后面接一个限幅器，防止破音
+function loudOut(c, g) {
+  const gn = c.createGain(); gn.gain.value = g;
+  const cp = c.createDynamicsCompressor(); cp.threshold.value = -10; cp.knee.value = 6; cp.ratio.value = 12; cp.attack.value = 0.003; cp.release.value = 0.2;
+  gn.connect(cp); cp.connect(c.destination); return gn;
+}
 function karaoke(ab) {
   const L = ab.getChannelData(0), R = ab.getChannelData(1), n = ab.length, sr = ab.sampleRate;
   const out = getCtx().createBuffer(2, n, sr), o0 = out.getChannelData(0), o1 = out.getChannelData(1);
@@ -1183,24 +1193,52 @@ function stageUI(state) {
   show("recYt", !!stageSong);
   if (state !== "ready") show("segNote", false);
 }
-// ===== 3-2-1 倒数：先放一下（满足苹果“要手点才能放”），马上停住，倒数完再接着放 =====
-let cdPhase = "";
-function runCountdown(ok) {
-  const cd = $("cd"), N = $("cdN"), T = $("cdTx"); show("cd");
-  const steps = [["3", "准备好"], ["2", "深吸一口气"], ["1", "要开始了"], ["唱", "跟着音乐"]];
-  let i = 0;
-  const step = () => {
-    if (cdPhase !== "run") { show("cd", false); return; }
-    if (i < steps.length) {
-      N.textContent = steps[i][0]; T.textContent = steps[i][1];
-      N.classList.remove("pop"); void N.offsetWidth; N.classList.add("pop");
-      if (i === steps.length - 1) { cdPhase = "go"; ok(); }
-      i++; setTimeout(step, i === steps.length ? 700 : 900);
-    } else show("cd", false);
-  };
-  step();
+// ===== 3-2-1 倒数：在“第一句歌词”前倒数，不是在前奏开头 =====
+// 网上伴奏不知道前奏多长：第一次唱时软件记下他是在视频第几秒开口的，以后就在那之前倒数。
+// 放了 mp3 的歌：知道原唱每句从哪开始，长间奏后的每一句前都倒数。
+let cdPhase = "", cdLast = "", cdRAF = 0, onsetWin = [], onsetDone = false;
+function cdNote() {
+  const s = stageSong; if (!s || mp3Has[s.t]) return;
+  $("readyNote").textContent = introGet() != null ? "戴上耳机点开始。第一句歌词前，屏幕会倒数 3、2、1。"
+    : "第一次唱这首：前奏时先听，歌词出来再唱。唱过一次，下次会在第一句前倒数 3、2、1。";
 }
-function ytGo() { // 视频开始放了 → 开始录，并记下此刻视频播到哪（以后“只练这一句”要靠它对齐）
+function introKey() { return "intro_" + (recYt && recYt.vid || stageVid || ""); }
+function introGet() { try { const a = JSON.parse(localStorage.getItem(introKey()) || "[]"); if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; } catch (e) { return null; } }
+function introSave(v) { try { const a = JSON.parse(localStorage.getItem(introKey()) || "[]"); a.push(Math.round(v * 10) / 10); localStorage.setItem(introKey(), JSON.stringify(a.slice(-3))); } catch (e) {} }
+function entryTimes() { // 返回 [{t: 什么时候开唱（视频/原唱时间）}]
+  if (recMode === "sync") { const ns = getRefNotes() || []; const out = []; let prev = -99; ns.forEach(n => { if (n.t0 - prev > 4) out.push(n.t0); prev = n.t1; }); return out; }
+  if (recSong) { const v = introGet(); return v != null ? [v] : []; }
+  return [];
+}
+function songTime() { return recMode === "sync" ? getCtx().currentTime - refStartAt : ytTime(); }
+function ytTime() { try { return YT_.player.getCurrentTime() || 0; } catch (e) { return 0; } }
+function cdTick() {
+  cdRAF = 0; if ($("stepRec").classList.contains("hide") || $("stageRec").classList.contains("hide")) { show("cd", false); return; }
+  cdRAF = requestAnimationFrame(cdTick);
+  if (ytPending) { show("cd", false); cdLast = ""; return; }
+  const t = songTime(), E = entryTimes(), nx = E.find(e => e - t > -0.7);
+  let key = "";
+  if (nx != null) { const d = nx - t; if (d <= 3.4 && d > 0) key = String(Math.ceil(d)); else if (d <= 0 && d > -0.7) key = "唱"; }
+  if (key === cdLast) return; cdLast = key;
+  if (!key) { show("cd", false); return; }
+  const N = $("cdN"); show("cd");
+  N.textContent = key; $("cdTx").textContent = key === "3" ? "准备好" : key === "2" ? "深吸一口气" : key === "1" ? "准备开口" : "开始唱！";
+  N.classList.remove("pop"); void N.offsetWidth; N.classList.add("pop");
+}
+// 第一次唱网上伴奏：记下他真正开口（连续唱了 1 秒多）是在视频第几秒
+function watchOnset(voiced) {
+  if (onsetDone || !recSong || recMode === "sync" || ytPending) return;
+  const vt = ytTime(); onsetWin.push({ vt, v: voiced }); while (onsetWin.length && onsetWin[0].vt < vt - 1.5) onsetWin.shift();
+  const vs = onsetWin.filter(x => x.v);
+  if (onsetWin.length >= 10 && vs.length / onsetWin.length > 0.7 && vt - vs[0].vt > 1.1) {
+    onsetDone = true; const at = vs[0].vt - 0.2;
+    if (at > 2 && at < 120) introSave(at);
+  }
+}
+function ytLoud() { try { YT_.player.unMute && !mp3Song && YT_.player.unMute(); YT_.player.setVolume && !mp3Song && YT_.player.setVolume(100); } catch (e) {} }
+function ytGo() {
+  ytLoud();
+  onsetWin = []; onsetDone = false; cdLast = ""; if (!cdRAF) cdRAF = requestAnimationFrame(cdTick); // 视频开始放了 → 开始录，并记下此刻视频播到哪（以后“只练这一句”要靠它对齐）
   ytPending = false; chunks = []; recStart = Date.now();
   $("volTxt").textContent = PR ? "" : "开始录音了，跟着唱";
   let t = 0; try { t = YT_.player.getCurrentTime() || 0; } catch (e) {}
@@ -1208,17 +1246,10 @@ function ytGo() { // 视频开始放了 → 开始录，并记下此刻视频播
 }
 function stageVideo() {
   const s = stageSong;
-  const id = stageMode === "k" && s.k ? s.k : s.v; stageVid = id;
+  const id = stageMode === "k" && s.k ? s.k : s.v; stageVid = id; cdNote();
   $("segNote").textContent = !s.k ? "这首歌暂时只有原唱版，跟着歌手一起唱也可以。" : stageMode === "k" ? "只有音乐，没有歌手，屏幕上有歌词。" : "有歌手带着唱，适合还不熟的歌。";
   show("segNote", !mp3Has[s.t]);
   YT_.play($("recYtBox"), id, { autoplay: false, hint: "", onState: st => {
-    if (cdPhase === "await" && st === 1) { // 第一次放起来 → 停住，倒数
-      cdPhase = "run"; try { YT_.player.pauseVideo(); YT_.player.seekTo(0, true); } catch (e) {}
-      runCountdown(() => { try { YT_.player.playVideo(); } catch (e) {}
-        setTimeout(() => { try { if (cdPhase === "go" && YT_.player.getPlayerState() !== 1) { $("volTxt").textContent = "如果视频没动，点一下视频上的播放键"; } } catch (e) {} }, 2000); });
-      return;
-    }
-    if (cdPhase === "run") return;
     if (st === 1 && ytPending && mp3Song) { startMp3(); return; }
     if (st === 1 && ytPending) ytGo();
     if (st === 0 && mp3Song) return; // 有 mp3 时，以 mp3 放完为准
@@ -1250,11 +1281,12 @@ const mp3Has = {};
 function songHasMp3(s) { return !!(s && mp3Has[s.t] && REF.name === s.t && REF.ab); }
 function mp3Off() { try { return +(localStorage.getItem("off_" + (stageSong || mp3Song).t) || 0); } catch (e) { return 0; } }
 function setMp3Off(v) { try { localStorage.setItem("off_" + (stageSong || mp3Song).t, String(v)); } catch (e) {} }
-function startMp3() { // 视频开始放了 → 同时放 mp3、开始录
+function startMp3() {
+  cdLast = ""; setTimeout(() => { if (!cdRAF) cdRAF = requestAnimationFrame(cdTick); }, 100); // 视频开始放了 → 同时放 mp3、开始录
   if (!ytPending || !mp3Song || !REF.ab) return;
   const c = getCtx(), o = mp3Off();
   refSrc = c.createBufferSource(); refSrc.buffer = REF.kara || REF.ab;
-  const gn = c.createGain(); gn.gain.value = 0.9; refSrc.connect(gn); gn.connect(c.destination);
+  const gn = loudOut(c, REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
   startAt = c.currentTime + 0.05; refSrc.start(startAt, Math.max(0, -o)); recRefSkip = Math.max(0, -o); refStartAt = startAt - Math.max(0, -o);
   refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200); };
   (getRefNotes() || []).forEach(n => { n.hit = 0; n.seen = 0; });
@@ -1276,7 +1308,7 @@ function mpUI(state) {
   $("mpSub").textContent = has ? "唱的时候有原唱的音条对着唱。伴奏去掉了人声，视频静音只看歌词。" : "选进来，唱的时候每个音都有音条，对着唱更准。";
   show("seg", !has); show("segNote", !has);
   $("btnMp3").textContent = has ? "换一个" : "从手机选";
-  $("readyNote").textContent = has ? "戴上耳机，点下面的按钮就开始。" : "先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。";
+  $("readyNote").textContent = has ? "戴上耳机，点下面的按钮就开始。" : "先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。"; cdNote();
 }
 async function useMp3(s, blob, save) {
   mpUI("busy"); $("mpProg").style.width = "3%";
@@ -1288,8 +1320,10 @@ async function useMp3(s, blob, save) {
 }
 $("btnMp3").onclick = () => { getCtx(); $("mpFile").click(); };
 $("mpFile").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f && stageSong) useMp3(stageSong, f, true); };
+try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch (e) {}
 $("stageGo").onclick = () => {
-  cdPhase = PR ? "" : "await"; show("cd", false);
+  ytLoud();
+  show("cd", false); cdLast = "";
   try { YT_.player && YT_.player.playVideo(); } catch (e) {}
   startRecording({ yt: stageSong });
 };
