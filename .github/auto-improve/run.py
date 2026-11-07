@@ -31,6 +31,8 @@ RUNS_PER_DAY = int(os.environ.get("RUNS_PER_DAY", "2"))
 MODEL = os.environ.get("MODEL", "claude-sonnet-5-5")
 MIN_RUN, MAX_RUN = 0.5, float(os.environ.get("MAX_RUN_USD", "4"))
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
+# GitHub 定时任务经常延迟或漏跑（11/6-11/7 实测只跑了约 6 成），按实际能跑的次数分预算，免得到期还剩一大截
+RELIABILITY = float(os.environ.get("RUN_RELIABILITY", "0.65"))
 
 
 def sh(*args, check=True):
@@ -73,7 +75,7 @@ def run_budget(spend):
         return 0, "已过截止时间"
     if left < MIN_RUN:
         return 0, f"本月预算已用完（已花 ${spend['total_usd']:.2f} / ${CAP:.2f}）"
-    runs_left = max(1, int(hours_left / 24 * RUNS_PER_DAY))
+    runs_left = max(1, int(hours_left / 24 * RUNS_PER_DAY * RELIABILITY))
     return min(MAX_RUN, max(MIN_RUN, left / runs_left)), f"剩余 ${left:.2f}，还有约 {runs_left} 次运行"
 
 
@@ -86,11 +88,12 @@ SYSTEM = """你是这个 App 的全职工程师兼产品经理，在无人看管
 - 宁可把一件事做到极致，也不要做一堆半成品；不确定的大改动先在 LOG 里写方案，留给老板决定。
 规则：
 - 只在当前目录（这个仓库）里工作。不要改 .github/ 目录。不要 git commit / push（脚本会做）。
-- 绝不部署上线（不要运行 wrangler deploy、railway、eas submit 之类）。改动要等老板审核。
+- 绝不自己部署（不要运行 wrangler deploy、railway、eas submit 之类）。脚本会在测试通过后自动合并到 main——对网页项目这就等于上线，所以每一步都要稳，报告里不要再写"等老板审核"。
 - 绝不打印、写入或泄露任何密钥/环境变量。
 - 不要删除用户数据或大段功能；小步改进，每一步都要能跑。
 - 改完必须运行项目已有的测试；测试失败就修好，修不好就撤回那部分改动。
 - 先读 .auto-improve/LOG.md，看以前做过什么、老板有没有留言（“老板留言”），不要重复。
+- 再看 `git log origin/main --since="2 days ago" --stat` 里不是 auto-improve-bot 的提交：那是老板自己刚做的改动，在它的基础上继续，绝不推翻或改坏。
 - 可以用网络搜索研究竞品和最佳做法，但要把时间主要花在真正让 App 变好的改动上。
 - 结束前在 .auto-improve/LOG.md 末尾追加本次记录（中文大白话）：做了什么、为什么、测试结果、下一步建议。
 - 最后的回复写一份给老板看的简短中文报告（5-10 行）：改了什么、对用户有什么好处、需要老板注意或决定什么。"""
