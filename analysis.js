@@ -563,7 +563,27 @@ const SC = (() => {
   }
   // “连续很稳”计数：准一次 +1，偏一次 -3，换音不算
   function liveSteady(steady, st) { return st === "ok" ? steady + 1 : st && st !== "move" ? Math.max(0, steady - 3) : steady; }
+  // 一句唱完（停下来超过 0.6 秒）马上给这句一个大白话评价（像 K 歌 App 每句弹的评级，但说人话）
+  // ph：{} 状态（会被改写）；每一帧调一次；返回 null 或 {k:"ok"|"off", text}
+  function phraseTrack(ph, now, sing, st) {
+    if (sing) {
+      if (ph.t0 == null || now - ph.last > 0.6) { ph.t0 = now; ph.c = { ok: 0, hi: 0, lo: 0, wob: 0 }; ph.done = false; ph.say = null; }
+      ph.last = now; if (st && st in ph.c) ph.c[st]++;
+      return null;
+    }
+    if (ph.t0 == null) return null;
+    if (!ph.done && now - ph.last >= 0.6) {
+      ph.done = true; const c = ph.c, n = c.ok + c.hi + c.lo + c.wob;
+      if (ph.last - ph.t0 < 1.5 || n < 8) { ph.say = null; return null; } // 太短（哼一下、咳嗽）不评
+      if (c.ok / n >= 0.65) { ph.streak = (ph.streak || 0) + 1; ph.say = { k: "ok", text: ph.streak >= 2 ? "连着 " + ph.streak + " 句都很准 ✨" : "这句很准 ✓" }; }
+      else {
+        ph.streak = 0; const w = c.lo >= c.hi && c.lo >= c.wob ? "lo" : c.hi >= c.wob ? "hi" : "wob";
+        ph.say = { k: "off", text: w === "lo" ? "这句偏低了，下句往上提" : w === "hi" ? "这句偏高了，下句稍往下" : "这句有点晃，下句稳住气" };
+      }
+    }
+    return ph.say;
+  }
 
-  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, phraseTrack, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
 })();
 if (typeof module !== "undefined") module.exports = SC;

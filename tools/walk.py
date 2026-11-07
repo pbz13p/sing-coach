@@ -32,9 +32,13 @@ async def main():
     await pg.screenshot(path=f'{OUT}/04_sing4s.png')
     for k in range(7):  # 第一句前的 3-2-1 倒数（月亮代表我的心 12.9 秒开唱）
       await pg.wait_for_timeout(1000); await pg.screenshot(path=f'{OUT}/04c_cd{k+5}s.png')
-    await pg.wait_for_timeout(7000)
-    await pg.screenshot(path=f'{OUT}/05_sing18s.png')
-    await pg.wait_for_timeout(15000)
+    seen, shot = [], False
+    for i in range(44):  # 15 秒里记下大字提示的变化；第一次出现“这句…”评价就拍一张
+      await pg.wait_for_timeout(500); t = await pg.inner_text('#liveSay')
+      if not seen or seen[-1] != t: seen.append(t)
+      if i == 13: await pg.screenshot(path=f'{OUT}/05_sing18s.png')
+      if t.startswith(('这句偏', '这句有')) and not shot: await pg.screenshot(path=f'{OUT}/05b_phrase.png'); shot = True
+    print('唱歌时的大字提示：', ' → '.join(seen))
     await pg.click('#btnStop'); await pg.wait_for_timeout(500)
     await pg.screenshot(path=f'{OUT}/06_busy.png')
     await pg.wait_for_selector('#result:not(.hide)',timeout=60000); await pg.wait_for_timeout(800)

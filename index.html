@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794058421";
+  var V = "1794089866";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -453,7 +453,7 @@
     <div class="rotHint hide" id="rotHint">伴奏太轻：按手机侧面的音量＋<br>手机横过来，歌词更大</div>
     <div id="stageReady" class="hide">
       <input type="file" id="mpFile" accept="audio/*,.mp3,.m4a,.wav,.aac" class="hide">
-      <div class="note" id="readyNote" style="text-align:center;margin-top:8px">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
+      <div class="note" id="readyNote" style="text-align:center;margin:8px 0 14px;white-space:pre-line;text-wrap:balance">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
       <div class="orbWrap"><button class="orb" id="stageGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">开始唱</span></button></div>
       <div class="mpCard" id="mpCard">
         <div class="mpIco"><svg viewBox="0 0 24 24"><path d="M3 17V9M7 17V6M11 17v-5M15 17V8M19 17v-3"/></svg></div>
@@ -1144,8 +1144,28 @@ const SC = (() => {
   }
   // “连续很稳”计数：准一次 +1，偏一次 -3，换音不算
   function liveSteady(steady, st) { return st === "ok" ? steady + 1 : st && st !== "move" ? Math.max(0, steady - 3) : steady; }
+  // 一句唱完（停下来超过 0.6 秒）马上给这句一个大白话评价（像 K 歌 App 每句弹的评级，但说人话）
+  // ph：{} 状态（会被改写）；每一帧调一次；返回 null 或 {k:"ok"|"off", text}
+  function phraseTrack(ph, now, sing, st) {
+    if (sing) {
+      if (ph.t0 == null || now - ph.last > 0.6) { ph.t0 = now; ph.c = { ok: 0, hi: 0, lo: 0, wob: 0 }; ph.done = false; ph.say = null; }
+      ph.last = now; if (st && st in ph.c) ph.c[st]++;
+      return null;
+    }
+    if (ph.t0 == null) return null;
+    if (!ph.done && now - ph.last >= 0.6) {
+      ph.done = true; const c = ph.c, n = c.ok + c.hi + c.lo + c.wob;
+      if (ph.last - ph.t0 < 1.5 || n < 8) { ph.say = null; return null; } // 太短（哼一下、咳嗽）不评
+      if (c.ok / n >= 0.65) { ph.streak = (ph.streak || 0) + 1; ph.say = { k: "ok", text: ph.streak >= 2 ? "连着 " + ph.streak + " 句都很准 ✨" : "这句很准 ✓" }; }
+      else {
+        ph.streak = 0; const w = c.lo >= c.hi && c.lo >= c.wob ? "lo" : c.hi >= c.wob ? "hi" : "wob";
+        ph.say = { k: "off", text: w === "lo" ? "这句偏低了，下句往上提" : w === "hi" ? "这句偏高了，下句稍往下" : "这句有点晃，下句稳住气" };
+      }
+    }
+    return ph.say;
+  }
 
-  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, phraseTrack, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
 })();
 
 
@@ -1178,7 +1198,7 @@ async function startRecording(opts) {
   } catch (e) { try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} micDenied(e, opts); return false; }
   stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
   chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
-  recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; drawLive.lastSing = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
+  recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; phraseSt = {}; drawLive.lastSing = -9; drawLive.pvAt = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
   if (opts.practice) mp3Song = null;
   ytPending = !!opts.yt;
@@ -1271,7 +1291,7 @@ function getRefNotes() {
   close();
   refNotes = out; refNotesFor = M; return out;
 }
-let liveHits = [], liveCombo = 0;
+let liveHits = [], liveCombo = 0, phraseSt = {};
 function drawLive(now) {
   const cvL = $("live"), dpr = window.devicePixelRatio || 1, W = cvL.clientWidth, H = cvL.clientHeight;
   cvL.width = W * dpr; cvL.height = H * dpr; const g = cvL.getContext("2d"); g.scale(dpr, dpr);
@@ -1314,7 +1334,10 @@ function drawLive(now) {
     const sec = Math.floor(steady * 0.1);
     const el = $("liveSay");
     if (sing) drawLive.lastSing = now;
+    const PV = SC.phraseTrack(phraseSt, now, sing, st === "move" ? null : st); // 一句唱完，马上说这句怎么样
     if (!sing && now - (drawLive.lastSing || -9) < 0.6) { /* 字与字之间的短停顿：不换提示，免得闪 */ }
+    else if (!sing && PV) { if (el.textContent !== PV.text) drawLive.pvAt = now; el.className = "liveSay " + PV.k; el.textContent = PV.text; }
+    else if (sing && now - (drawLive.pvAt || -9) < 1.6) { /* 刚说完“这句怎么样”：留够 1.6 秒让他看清，再说下一句的 */ }
     else if (!sing) { el.className = "liveSay"; el.textContent = rec.length || live.some(p => p.t > now - 3 && !isNaN(p.m)) ? "换气，好的" : "一开口，这里就告诉你稳不稳"; }
     else if (st === "ok") { el.className = "liveSay ok"; el.textContent = sec >= 3 ? "很稳！连续 " + sec + " 秒 ✨" : "很好，音站住了 ✓"; }
     else if (st === "hi") { el.className = "liveSay off"; el.textContent = "有点偏高，稍微往下"; }
@@ -1365,10 +1388,12 @@ function drawLive(now) {
   }
   // 连续唱准 → 鼓励一下
   { const el = $("liveSay"), sing = cur && !isNaN(cur.m) && cur.rms > 0.004 && !ytPending, nx = notes.find(n => n.t0 > rt); let c = "", t;
+    const PV = ytPending ? null : SC.phraseTrack(phraseSt, rt, sing, nowNote && sing ? (hitNow ? "ok" : cur.m - (nowNote.m + sh) > 0 ? "hi" : "lo") : null);
     if (ytPending) t = "音乐开始就唱";
     else if (nowNote && sing) { const d = cur.m - (nowNote.m + sh); if (hitNow) { c = "ok"; t = "✓ 唱准了"; } else { c = "off"; t = d > 0 ? "高了，往下一点 ↓" : "低了，往上一点 ↑"; } }
     else if (nowNote) t = "该唱了，对准金色条";
     else if (nx && nx.t0 - rt < 3.2 && !notes.some(n => n.t1 > rt - 2.5 && n.t1 <= rt)) { c = "cdn"; t = Math.max(1, Math.ceil(nx.t0 - rt)) + "　准备唱"; }
+    else if (PV && !sing) { c = PV.k; t = PV.text; } // 一句唱完，马上说这句怎么样
     else if (nx && nx.t0 - rt < 1.5) t = "准备，马上要唱了";
     else t = notes[0] && rt < notes[0].t0 ? "前奏中，等一下" : "这里不用唱，歇一下";
     el.className = "liveSay " + c; el.textContent = t; }
@@ -1770,8 +1795,8 @@ function stageUI(state) {
 let cdPhase = "", cdLast = "", cdRAF = 0, onsetWin = [], onsetDone = false;
 function cdNote() {
   const s = stageSong; if (!s || mp3Has[s.t]) return;
-  $("readyNote").textContent = introGet() != null ? "戴上耳机点开始。第一句歌词前，屏幕会倒数 3、2、1。"
-    : "第一次唱这首：前奏时先听，歌词出来再唱。唱过一次，下次会在第一句前倒数 3、2、1。";
+  $("readyNote").textContent = introGet() != null ? "戴上耳机，点开始。\n第一句歌词前，屏幕会倒数 3、2、1"
+    : "第一次唱这首：前奏时先听，歌词出来再唱。\n唱过一次，下次会在第一句前倒数 3、2、1";
 }
 // 我一首首看过视频、量出来的“第一句开唱”时间（秒）。量过的歌第一次唱就有倒数。
 const INTRO = {

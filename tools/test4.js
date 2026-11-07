@@ -12,7 +12,7 @@ function voice(notes, o = {}) { // notes: [[midi 或 null, 秒]]
   return x;
 }
 function run(x) { // 返回每一帧 {t, st}
-  const tune = { x: 0, y: 0, n: 0 }, live = [], out = []; let buf = [], steady = 0, maxSteady = 0;
+  const tune = { x: 0, y: 0, n: 0 }, live = [], out = [], ph = {}; let buf = [], steady = 0, maxSteady = 0; out.says = [];
   for (let i = 0; i + hop <= x.length; i += hop) {
     for (let k = 0; k < hop; k++) buf.push(x[i + k]); if (buf.length > 4000) buf = buf.slice(buf.length - 4000);
     const n = buf.length; if (n < 800) continue;
@@ -21,6 +21,7 @@ function run(x) { // 返回每一帧 {t, st}
     live.push({ t, m: f > 0 ? 69 + 12 * Math.log2(f / 440) : NaN, rms }); while (live[0].t < t - 8) live.shift();
     const J = SC.liveJudge(tune, live, t); steady = SC.liveSteady(steady, J.st); maxSteady = Math.max(maxSteady, steady);
     out.push({ t, st: J.st, sing: J.sing, cents: J.cents });
+    const pv = SC.phraseTrack(ph, t, J.sing, J.st === "move" ? null : J.st); if (pv && out.says[out.says.length - 1] !== pv) out.says.push(pv);
   }
   out.maxSteady = maxSteady; return out;
 }
@@ -48,4 +49,10 @@ let bad = 0; const check = (name, ok, info) => { console.log((ok ? "通过 " : "
 { const fr = run(voice([[60, .5], [67, .5], [60, .5], [67, .5], [60, .5], [67, .5]]));
   const wrong = fr.filter(f => f.st === "hi" || f.st === "lo").length;
   check("快速换音（大跳）：换音那一下不算唱错", wrong <= 2, "误判 " + wrong + " 帧"); }
+{ const P = (ns, d = 0) => ns.map(m => [m + d, .8]).concat([[null, 1.2]]);
+  const fr = run(voice([].concat(P([60, 62, 64, 65, 67]), P([65, 64, 62, 60], -.45), P([62, 64, 65, 67]), P([67, 65, 64, 62]), [[64, .7], [null, 1.2]], P([60, 62, 64], .45))));
+  const t = fr.says.map(v => v.text);
+  check("每句唱完马上评价：准 / 偏低 / 准 / 连着 2 句准 / （哼一下不评）/ 偏高", t.length === 5 && /很准/.test(t[0]) && /偏低/.test(t[1]) && /很准/.test(t[2]) && /连着 2 句/.test(t[3]) && /偏高/.test(t[4]), t.join(" | ")); }
+{ const fr = run(voice([].concat([60, 62, 64, 62].map(m => [m, .8]), [[null, .4]], [64, 65].map(m => [m, .8]), [[null, 1.2]])));
+  check("字和字之间短停顿（0.4 秒）不算一句", fr.says.length === 1, fr.says.map(v => v.text).join(" | ")); }
 console.log(bad ? "有 " + bad + " 项失败" : "全部通过"); process.exit(bad ? 1 : 0);
