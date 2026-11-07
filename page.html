@@ -155,6 +155,37 @@
   .mpBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#c9a86c,#f3d892);transition:width .3s}
   .nudge{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0 0;font-size:13px;color:var(--mist)}
   .nudge .btn{width:auto;min-height:36px;padding:0 12px;font-size:14px}
+  /* 3-2-1 倒数：盖在视频上，不挡点击 */
+  #recYt{position:relative}
+  .cd{position:absolute;inset:0;z-index:5;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:14px;background:radial-gradient(circle at 50% 45%,rgba(10,16,30,.55),rgba(6,10,20,.88));backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  .cd b{font-family:var(--serif,serif);font-size:min(30vw,150px);line-height:1;font-weight:600;
+    background:linear-gradient(180deg,#fff6dc,#e8c97a 60%,#b8955a);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 28px rgba(232,201,122,.45))}
+  .cd b.pop{animation:cdPop .9s cubic-bezier(.2,.9,.25,1) both}
+  .cd span{margin-top:10px;font-size:19px;letter-spacing:.12em;color:rgba(244,239,230,.85)}
+  @keyframes cdPop{0%{transform:scale(1.9);opacity:0}25%{opacity:1}100%{transform:scale(1);opacity:1}}
+  @media (prefers-reduced-motion:reduce){.cd b.pop{animation:none}}
+  .liveSay.cdn{color:#f3d892;font-size:30px}
+  .rotHint{text-align:center;font-size:13px;color:var(--mist);margin:8px 0 0;opacity:.8}
+  /* 唱的时候视频贴满卡片两边，歌词更大 */
+  #stepRec:has(#stageRec:not(.hide)){overflow:hidden}
+  #stepRec:has(#stageRec:not(.hide)) #recYt{margin:0 -16px}
+  #stepRec:has(#stageRec:not(.hide)) #recYt .ytFrame{border-radius:0;border-left:0;border-right:0}
+  /* 手机横过来：左边大视频看歌词，右边看音准 */
+  @media (orientation:landscape) and (max-height:560px){
+    body.singing .wrap{max-width:none!important;padding:0 max(8px,env(safe-area-inset-right)) 0 max(8px,env(safe-area-inset-left))!important;margin:0!important}
+    body.singing .wrap>*:not(#stepRec){display:none!important}
+    body.singing #stepRec{display:grid!important;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:0 16px;margin:0;padding:10px 12px;border-radius:0;border:0;min-height:100vh;align-items:center}
+    body.singing #stepRec>*{grid-column:2}
+    body.singing #stepRec>#recYt{grid-column:1;grid-row:1 / span 9;margin:0!important;align-self:center}
+    body.singing #stepRec>#recYt .ytFrame{border-radius:12px;border:1px solid var(--line)}
+    body.singing #stageBack,body.singing #stepRec h2,body.singing #rotHint,body.singing #liveNote,body.singing #volTxt,body.singing #nudge span{display:none!important}
+    body.singing #recT{font-size:15px;margin:0;white-space:nowrap}
+    body.singing .liveSay{font-size:18px;min-height:24px;margin:2px 0 6px}
+    body.singing #live{height:150px!important}
+    body.singing #btnStop{min-height:46px;margin-top:8px}
+  }
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -403,7 +434,9 @@
       <button class="on" data-m="k" role="radio" aria-checked="true">伴奏</button><button data-m="o" role="radio" aria-checked="false">原唱带唱</button>
     </div>
     <div class="note hide" id="segNote"></div>
-    <div id="recYt" class="hide"><div id="recYtBox"></div></div>
+    <div id="recYt" class="hide"><div id="recYtBox"></div>
+      <div class="cd hide" id="cd" aria-live="assertive"><b id="cdN">3</b><span id="cdTx">准备好</span></div></div>
+    <div class="rotHint hide" id="rotHint">手机横过来，歌词更大</div>
     <div id="stageReady" class="hide">
       <input type="file" id="mpFile" accept="audio/*,.mp3,.m4a,.wav,.aac" class="hide">
       <div class="note" id="readyNote" style="text-align:center;margin-top:8px">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
@@ -661,7 +694,7 @@ function drawLive(now) {
   const notes = recMode === "sync" ? getRefNotes() : null;
   if (!notes || !notes.length) {
     // 没有原唱的音（网上伴奏）：每一刻告诉他“音稳不稳、站没站在音上”
-    const sing = cur && !isNaN(cur.m) && cur.rms > 0.004;
+    const sing = cur && !isNaN(cur.m) && cur.rms > 0.004 && !ytPending;
     if (sing) { const ph = 2 * Math.PI * (cur.m - Math.round(cur.m)); tune.x += Math.cos(ph); tune.y += Math.sin(ph); tune.n++; }
     const off = tune.n > 20 ? Math.atan2(tune.y, tune.x) / (2 * Math.PI) : 0;
     const rec = live.filter(p => p.t > now - 0.4 && !isNaN(p.m) && p.rms > 0.004);
@@ -756,9 +789,11 @@ function drawLive(now) {
     g.fillStyle = hitNow ? "#fff3cf" : "#f4efe6"; g.beginPath(); g.arc(nowX, y, 6.5, 0, 7); g.fill();
   }
   // 连续唱准 → 鼓励一下
-  { const el = $("liveSay"), sing = cur && !isNaN(cur.m) && cur.rms > 0.004, nx = notes.find(n => n.t0 > rt); let c = "", t;
-    if (nowNote && sing) { const d = cur.m - (nowNote.m + sh); if (hitNow) { c = "ok"; t = "✓ 唱准了"; } else { c = "off"; t = d > 0 ? "高了，往下一点 ↓" : "低了，往上一点 ↑"; } }
+  { const el = $("liveSay"), sing = cur && !isNaN(cur.m) && cur.rms > 0.004 && !ytPending, nx = notes.find(n => n.t0 > rt); let c = "", t;
+    if (ytPending) t = "音乐开始就唱";
+    else if (nowNote && sing) { const d = cur.m - (nowNote.m + sh); if (hitNow) { c = "ok"; t = "✓ 唱准了"; } else { c = "off"; t = d > 0 ? "高了，往下一点 ↓" : "低了，往上一点 ↑"; } }
     else if (nowNote) t = "该唱了，对准金色条";
+    else if (nx && nx.t0 - rt < 3.2 && !notes.some(n => n.t1 > rt - 2.5 && n.t1 <= rt)) { c = "cdn"; t = Math.max(1, Math.ceil(nx.t0 - rt)) + "　准备唱"; }
     else if (nx && nx.t0 - rt < 1.5) t = "准备，马上要唱了";
     else t = notes[0] && rt < notes[0].t0 ? "前奏中，等一下" : "这里不用唱，歇一下";
     el.className = "liveSay " + c; el.textContent = t; }
@@ -785,6 +820,7 @@ function drawLive(now) {
   document.addEventListener("visibilitychange", sync);
 })();
 $("btnStop").onclick = () => {
+  cdPhase = ""; show("cd", false); document.body.classList.remove("singing");
   show("stepRec", false); clearInterval(recTimer);
   if (recSong) YT_.stop(); stageSong = null; ytPending = false;
   if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
@@ -1137,13 +1173,32 @@ let pendingSong = "";
 })();
 // ---------- 唱歌舞台：选歌 → 放伴奏 → 跟着唱 ----------
 let stageSong = null, stageMode = "k", warmStream = null;
-function stageUI(state) { // ready | rec | plain
+function stageUI(state) {
+  document.body.classList.toggle("singing", state === "rec");
+  show("rotHint", state === "rec" && !!stageSong); // ready | rec | plain
   show("seg", state === "ready" && !!stageSong && !mp3Has[stageSong.t]);
   show("stageReady", state === "ready");
   show("stageRec", state !== "ready");
   show("recDot", state !== "ready");
   show("recYt", !!stageSong);
   if (state !== "ready") show("segNote", false);
+}
+// ===== 3-2-1 倒数：先放一下（满足苹果“要手点才能放”），马上停住，倒数完再接着放 =====
+let cdPhase = "";
+function runCountdown(ok) {
+  const cd = $("cd"), N = $("cdN"), T = $("cdTx"); show("cd");
+  const steps = [["3", "准备好"], ["2", "深吸一口气"], ["1", "要开始了"], ["唱", "跟着音乐"]];
+  let i = 0;
+  const step = () => {
+    if (cdPhase !== "run") { show("cd", false); return; }
+    if (i < steps.length) {
+      N.textContent = steps[i][0]; T.textContent = steps[i][1];
+      N.classList.remove("pop"); void N.offsetWidth; N.classList.add("pop");
+      if (i === steps.length - 1) { cdPhase = "go"; ok(); }
+      i++; setTimeout(step, i === steps.length ? 700 : 900);
+    } else show("cd", false);
+  };
+  step();
 }
 function ytGo() { // 视频开始放了 → 开始录，并记下此刻视频播到哪（以后“只练这一句”要靠它对齐）
   ytPending = false; chunks = []; recStart = Date.now();
@@ -1157,6 +1212,13 @@ function stageVideo() {
   $("segNote").textContent = !s.k ? "这首歌暂时只有原唱版，跟着歌手一起唱也可以。" : stageMode === "k" ? "只有音乐，没有歌手，屏幕上有歌词。" : "有歌手带着唱，适合还不熟的歌。";
   show("segNote", !mp3Has[s.t]);
   YT_.play($("recYtBox"), id, { autoplay: false, hint: "", onState: st => {
+    if (cdPhase === "await" && st === 1) { // 第一次放起来 → 停住，倒数
+      cdPhase = "run"; try { YT_.player.pauseVideo(); YT_.player.seekTo(0, true); } catch (e) {}
+      runCountdown(() => { try { YT_.player.playVideo(); } catch (e) {}
+        setTimeout(() => { try { if (cdPhase === "go" && YT_.player.getPlayerState() !== 1) { $("volTxt").textContent = "如果视频没动，点一下视频上的播放键"; } } catch (e) {} }, 2000); });
+      return;
+    }
+    if (cdPhase === "run") return;
     if (st === 1 && ytPending && mp3Song) { startMp3(); return; }
     if (st === 1 && ytPending) ytGo();
     if (st === 0 && mp3Song) return; // 有 mp3 时，以 mp3 放完为准
@@ -1227,10 +1289,12 @@ async function useMp3(s, blob, save) {
 $("btnMp3").onclick = () => { getCtx(); $("mpFile").click(); };
 $("mpFile").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f && stageSong) useMp3(stageSong, f, true); };
 $("stageGo").onclick = () => {
+  cdPhase = PR ? "" : "await"; show("cd", false);
   try { YT_.player && YT_.player.playVideo(); } catch (e) {}
   startRecording({ yt: stageSong });
 };
 function cancelRec() {
+  cdPhase = ""; show("cd", false); document.body.classList.remove("singing");
   clearInterval(recTimer); ytPending = false;
   if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
   try { proc && proc.disconnect(); srcNode && srcNode.disconnect(); } catch (e) {}
