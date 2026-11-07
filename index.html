@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794040491";
+  var V = "1794058421";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -170,7 +170,7 @@
   @keyframes cdPop{0%{transform:scale(1.9);opacity:0}25%{opacity:1}100%{transform:scale(1);opacity:1}}
   @media (prefers-reduced-motion:reduce){.cd b.pop{animation:none}}
   .liveSay.cdn{color:#f3d892;font-size:30px}
-  .rotHint{text-align:center;font-size:13px;color:var(--mist);margin:8px 0 0;opacity:.8}
+  .rotHint{text-align:center;font-size:14px;line-height:1.55;color:var(--mist);margin:8px 0 0;opacity:.85}
   /* 唱的时候视频贴满卡片两边，歌词更大 */
   #stepRec:has(#stageRec:not(.hide)){overflow:hidden}
   #stepRec:has(#stageRec:not(.hide)) #recYt{margin:0 -16px}
@@ -188,7 +188,19 @@
     body.singing .liveSay{font-size:18px;min-height:24px;margin:2px 0 6px}
     body.singing #live{height:150px!important}
     body.singing #btnStop{min-height:46px;margin-top:8px}
+    body.singing .cd{top:20px;bottom:84px;flex-direction:row;gap:14px}
+    body.singing .cd b{font-size:min(22vh,88px)}
+    body.singing .cd span{margin:0;font-size:22px}
   }
+  /* 被打断（锁屏/来电/耳机/麦克风没开）：一句大白话 + 大按钮 */
+  .intr{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,9,18,.78);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+  .intrCard{width:100%;max-width:360px;max-height:100%;overflow:auto;text-align:center;padding:26px 22px 14px;border-radius:26px;background:linear-gradient(180deg,#1b2740,#111a2c);border:1px solid rgba(216,191,143,.28);box-shadow:0 30px 60px -20px rgba(0,0,0,.7)}
+  .intrIco{width:56px;height:56px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;background:rgba(216,191,143,.12)}
+  .intrIco svg{width:28px;height:28px;stroke:var(--champ)}
+  .intr h3{margin:0 0 8px;font:600 24px/1.3 var(--serif);color:var(--pearl);letter-spacing:.04em}
+  .intr p{margin:0 0 10px;font-size:17px;line-height:1.65;color:#d9d3c4}
+  .intr p b{color:var(--champ);font-weight:600}
+  @media (max-height:560px){.intrCard{padding:16px 18px 8px}.intrIco{display:none}.intr .btn{min-height:50px;margin:8px 0}}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -438,7 +450,7 @@
     </div>
     <div class="note hide" id="segNote"></div>
     <div id="recYt" class="hide"><div id="recYtBox"></div></div>
-    <div class="rotHint hide" id="rotHint">伴奏太轻就按手机侧面的音量＋　·　手机横过来，歌词更大</div>
+    <div class="rotHint hide" id="rotHint">伴奏太轻：按手机侧面的音量＋<br>手机横过来，歌词更大</div>
     <div id="stageReady" class="hide">
       <input type="file" id="mpFile" accept="audio/*,.mp3,.m4a,.wav,.aac" class="hide">
       <div class="note" id="readyNote" style="text-align:center;margin-top:8px">先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。</div>
@@ -548,6 +560,14 @@
   </div>
 </div>
 
+
+<div id="intr" class="intr hide" role="alertdialog" aria-modal="true" aria-labelledby="intrT">
+  <div class="intrCard">
+    <div class="intrIco"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></div>
+    <h3 id="intrT"></h3><p id="intrP"></p>
+    <button class="btn gold" id="intrA"></button><button class="btn ghost" id="intrB"></button>
+  </div>
+</div>
 
 <div id="histSheet" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="histTitle">
   <div class="sheetBg" id="histBg"></div>
@@ -1075,7 +1095,57 @@ const SC = (() => {
   }
   const fmtT = s => { s = Math.max(0, s); const mm = Math.floor(s / 60), ss = Math.floor(s % 60); return mm + ":" + String(ss).padStart(2, "0"); };
 
-  return { analyze, summarize, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+  // ===== 唱的时候（实时）：听最近一小段，判断“准 / 偏高 / 偏低 / 晃 / 正在换音” =====
+  // 实时音高：YIN，只看缓冲区最后一小段。x 是 16k 左右的采样，返回频率 Hz（0＝没听到音）
+  function yinOne(x, sr, end) {
+    const W = 400, tMin = Math.floor(sr / 900), tMax = Math.ceil(sr / 70);
+    if (end == null) end = x.length;
+    if (end < W + tMax + 2) return 0;
+    const o = end - W - tMax - 2, cm = new Float64Array(tMax + 2); let run = 0;
+    for (let tau = 1; tau <= tMax + 1; tau++) { let s = 0; for (let j = 0; j < W; j++) { const df = x[o + j] - x[o + j + tau]; s += df * df; } run += s; cm[tau] = run ? s * tau / run : 1; }
+    for (let tau = tMin; tau <= tMax; tau++) if (cm[tau] < 0.15) {
+      while (tau < tMax && cm[tau + 1] < cm[tau]) tau++;
+      // 抛物线插值：整数延迟在高音区一格就差 30 多音分，插值后才分得清“偏高/偏低”
+      const a0 = cm[tau - 1], b0 = cm[tau], c0 = cm[tau + 1], den = a0 - 2 * b0 + c0;
+      const dt = den > 0 ? Math.max(-0.5, Math.min(0.5, 0.5 * (a0 - c0) / den)) : 0;
+      return sr / (tau + dt);
+    }
+    return 0;
+  }
+  // 手机每 85 毫秒才给一次声音，正好和颤音（每秒 5~6 下）“撞拍”，只看最后一点会总落在颤音同一侧。
+  // 所以在最近约 0.18 秒（一个颤音来回）里等距取 6 个点，去掉跑八度的，取平均。
+  function yinAvg(x, sr) {
+    const step = Math.round(sr * 0.03), ms = [];
+    for (let k = 0; k < 6; k++) { const f = yinOne(x, sr, x.length - k * step); if (f > 0) ms.push(69 + 12 * Math.log2(f / 440)); }
+    if (ms.length < 3) return 0;
+    const b = ms.slice().sort((p, q) => p - q), md = b[b.length >> 1], keep = ms.filter(m => Math.abs(m - md) < 1);
+    const m = keep.reduce((p, q) => p + q, 0) / keep.length;
+    return 440 * Math.pow(2, (m - 69) / 12);
+  }
+  // tune：{x,y,n} 记着他整体的“调”偏多少（会被改写）；live：[{t, m(midi 或 NaN), rms}]；now：现在第几秒
+  // 返回 { sing 正在出声, st: null|"ok"|"hi"|"lo"|"wob"|"move", cents 偏了多少音分 }
+  function liveJudge(tune, live, now) {
+    const cur = live.length ? live[live.length - 1] : null;
+    const sing = !!(cur && !isNaN(cur.m) && cur.rms > 0.004);
+    if (sing) { const ph = 2 * Math.PI * (cur.m - Math.round(cur.m)); tune.x += Math.cos(ph); tune.y += Math.sin(ph); tune.n++; }
+    const off = tune.n > 20 ? Math.atan2(tune.y, tune.x) / (2 * Math.PI) : 0;
+    const rec = live.filter(p => p.t > now - 0.4 && !isNaN(p.m) && p.rms > 0.004);
+    let st = null, cents = 0;
+    if (sing && rec.length >= 4) {
+      // 用中位数（不怕颤音、不怕个别错帧）；前后半段差得多＝正在换音，不算错
+      const med = a => { const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; };
+      const ms = rec.map(p => p.m), mid = med(ms), h = ms.length >> 1;
+      const mad = med(ms.map(v => Math.abs(v - mid)));
+      const d = mid - off; cents = (d - Math.round(d)) * 100;
+      st = Math.abs(med(ms.slice(0, h)) - med(ms.slice(h))) > 0.6 ? "move"
+         : mad > 0.4 ? "wob" : Math.abs(cents) < 25 ? "ok" : cents > 0 ? "hi" : "lo";
+    }
+    return { sing, st, cents, recN: rec.length };
+  }
+  // “连续很稳”计数：准一次 +1，偏一次 -3，换音不算
+  function liveSteady(steady, st) { return st === "ok" ? steady + 1 : st && st !== "move" ? Math.max(0, steady - 3) : steady; }
+
+  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
 })();
 
 
@@ -1105,7 +1175,8 @@ async function startRecording(opts) {
     if (warmStream && warmStream.getAudioTracks().some(t => t.readyState === "live")) stream = warmStream;
     else stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     warmStream = null;
-  } catch (e) { show("micMsg"); show("stepRec", false); show("stepIn"); try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} return false; }
+  } catch (e) { try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} micDenied(e, opts); return false; }
+  stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
   chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
   recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; drawLive.lastSing = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
@@ -1140,7 +1211,7 @@ async function startRecording(opts) {
   c.onstatechange = () => { if (c.state !== "running" && !$("stepRec").classList.contains("hide")) c.resume().catch(() => {}); };
   proc.onaudioprocess = ev => {
     lastProc = Date.now();
-    if (ytPending) return;
+    if (ytPending || recPaused) return;
     if (ev.playbackTime + ev.inputBuffer.duration <= startAt) return;
     let d = ev.inputBuffer.getChannelData(0);
     if (ev.playbackTime < startAt) d = d.subarray(Math.floor((startAt - ev.playbackTime) * c.sampleRate));
@@ -1151,25 +1222,17 @@ async function startRecording(opts) {
   };
   if (!ytPending) recStart = Date.now();
   show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
+  recTimer = setInterval(() => { if (recPaused) return; if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
     if (PR && !ytPending) { let vt = 0; try { vt = YT_.player.getCurrentTime(); } catch (e) {} if (vt >= PR.end || s > PR.end - PR.a + 6) $("btnStop").click(); } }, 250);
   window.scrollTo({ top: 0, behavior: "smooth" });
   return true;
-}
-function yinOne(x, sr) {
-  const W = 400, tMin = Math.floor(sr / 900), tMax = Math.ceil(sr / 70);
-  if (x.length < W + tMax + 2) return 0;
-  const o = x.length - W - tMax - 2, cm = new Float64Array(tMax + 2); let run = 0;
-  for (let tau = 1; tau <= tMax + 1; tau++) { let s = 0; for (let j = 0; j < W; j++) { const df = x[o + j] - x[o + j + tau]; s += df * df; } run += s; cm[tau] = run ? s * tau / run : 1; }
-  for (let tau = tMin; tau <= tMax; tau++) if (cm[tau] < 0.15) { while (tau < tMax && cm[tau + 1] < cm[tau]) tau++; return sr / tau; }
-  return 0;
 }
 let quietSince = 0, lastProc = 0, refStartAt = 0, reacq = false, startAt = 0, mp3Song = null, recRefSkip = 0, tune = { x: 0, y: 0, n: 0 }, steady = 0;
 function livePitch(sr) {
   const n = liveBuf.length; if (n < 800) return;
   let e = 0; for (let i = n - 400; i < n; i++) e += liveBuf[i] * liveBuf[i];
   const rms = Math.sqrt(e / 400);
-  const f = rms > 0.004 ? yinOne(liveBuf, sr) : 0;
+  const f = rms > 0.004 ? SC.yinAvg(liveBuf, sr) : 0;
   const t = (Date.now() - recStart) / 1000;
   live.push({ t, m: f > 0 ? 69 + 12 * Math.log2(f / 440) : NaN, rms });
   watchOnset(f > 0 && rms > 0.01);
@@ -1188,6 +1251,7 @@ async function reacquireMic() {
     try { srcNode.disconnect(); } catch (e) {}
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = s2; srcNode = c.createMediaStreamSource(stream); srcNode.connect(proc);
+    s2.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
   } catch (e) {}
   setTimeout(() => { reacq = false; quietSince = 0; }, 4000);
 }
@@ -1217,22 +1281,10 @@ function drawLive(now) {
   const notes = recMode === "sync" ? getRefNotes() : null;
   if (!notes || !notes.length) {
     // 没有原唱的音（网上伴奏）：每一刻告诉他“音稳不稳、站没站在音上”
-    const sing = cur && !isNaN(cur.m) && cur.rms > 0.004 && !ytPending;
-    if (sing) { const ph = 2 * Math.PI * (cur.m - Math.round(cur.m)); tune.x += Math.cos(ph); tune.y += Math.sin(ph); tune.n++; }
-    const off = tune.n > 20 ? Math.atan2(tune.y, tune.x) / (2 * Math.PI) : 0;
-    const rec = live.filter(p => p.t > now - 0.4 && !isNaN(p.m) && p.rms > 0.004);
-    let st = null, cents = 0;
-    if (sing && rec.length >= 4) {
-      // 用中位数（不怕颤音、不怕个别错帧）；前后半段差得多＝正在换音，不算错
-      const med = a => { const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; };
-      const ms = rec.map(p => p.m), mid = med(ms), h = ms.length >> 1;
-      const mad = med(ms.map(v => Math.abs(v - mid)));
-      const d = mid - off; cents = (d - Math.round(d)) * 100;
-      st = Math.abs(med(ms.slice(0, h)) - med(ms.slice(h))) > 0.6 ? "move"
-         : mad > 0.4 ? "wob" : Math.abs(cents) < 25 ? "ok" : cents > 0 ? "hi" : "lo";
-    }
+    const J = ytPending ? { sing: false, st: null, cents: 0, recN: 0 } : SC.liveJudge(tune, live, now);
+    const sing = J.sing, st = J.st, cents = J.cents, rec = { length: J.recN }; // 判断逻辑在 analysis.js（有自动测试）
     if (cur) cur.st = st === "move" ? null : st;
-    if (st === "ok") steady += 1; else if (st && st !== "move") steady = Math.max(0, steady - 3);
+    steady = SC.liveSteady(steady, st);
     // —— 上面：像调音表一样的横条，中间绿色＝站在音上 ——
     const cx = W / 2, ty = 34, tw = Math.min(W - 40, 330), x0 = cx - tw / 2;
     const tg = g.createLinearGradient(x0, 0, x0 + tw, 0);
@@ -1879,6 +1931,50 @@ function cancelRec() {
   try { proc && proc.disconnect(); srcNode && srcNode.disconnect(); } catch (e) {}
   chunks = [];
 }
+// ===== 被打断了：锁屏、来电话、耳机拔了、麦克风没开 —— 不白屏、不卡死，给一句大白话和大按钮 =====
+let recPaused = false, hiddenAt = 0;
+function isRecording() { return !$("stepRec").classList.contains("hide") && !$("stageRec").classList.contains("hide") && !!proc; }
+function intrShow(t, p, a, b) {
+  $("intrT").textContent = t; $("intrP").innerHTML = p;
+  $("intrA").textContent = a[0]; $("intrA").onclick = () => { show("intr", false); a[1](); };
+  show("intrB", !!b); if (b) { $("intrB").textContent = b[0]; $("intrB").onclick = () => { show("intr", false); b[1](); }; }
+  show("intr"); setTimeout(() => { try { $("intrA").focus(); } catch (e) {} }, 50);
+}
+function recRestart() { // 从头再唱：回到“开始唱”那一步
+  recPaused = false; const song = stageSong, pr = PR && PR.x;
+  cancelRec(); try { YT_.stop(); } catch (e) {}
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (pr) { startPractice(pr); return; }
+  if (song && SONGS.indexOf(song) >= 0) { openStage(SONGS.indexOf(song)); return; }
+  stageSong = null; show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0 });
+}
+function recInterrupt(kind) {
+  if (recPaused || !isRecording()) return;
+  recPaused = true; hiddenAt = 0;
+  try { YT_.player && YT_.player.pauseVideo(); } catch (e) {}
+  if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
+  show("cd", false);
+  const secs = chunks.reduce((a, c) => a + c.length, 0) / getCtx().sampleRate;
+  const t = kind === "mic" ? "麦克风断开了" : "刚才被打断了";
+  const why = kind === "mic" ? "可能是耳机拔了或换了。" : "可能是锁了屏，或者来了电话。";
+  if (secs >= 12 && !PR) intrShow(t, why + "<br>刚才唱的 <b>" + (secs < 60 ? Math.round(secs) + " 秒" : Math.floor(secs / 60) + " 分 " + Math.round(secs % 60) + " 秒") + "</b> 已经留好了。", ["看刚才唱得怎么样", () => { recPaused = false; $("btnStop").click(); }], ["从头再唱", recRestart]);
+  else intrShow(t, why + "<br>没关系，再来一遍。", [PR ? "再唱这一句" : "从头再唱", recRestart], ["先不唱了", () => { recPaused = false; $("stageBack").click(); }]);
+}
+function micDenied(e, opts) {
+  const busy = e && (e.name === "NotReadableError" || e.name === "AbortError"), none = e && e.name === "NotFoundError";
+  const p = none ? "没找到麦克风。拔掉耳机，或者换一副耳机试试。"
+    : busy ? "麦克风正被别的软件用着（比如在打电话）。挂掉电话、关掉别的软件再试。"
+    : "唱歌要用麦克风听您唱。<br>请点网址左边的 <b>「大小」</b>，再点 <b>「网站设置」</b>，把 <b>麦克风</b> 改成 <b>「允许」</b>。";
+  cancelRec(); stageUI("ready"); if (!opts.yt) { show("stepRec", false); show("stepIn"); }
+  if (PR) { show("stepRec", false); }
+  intrShow(none || busy ? "麦克风用不了" : "麦克风还没打开", p, ["再试一次", () => { if (PR && PR.x) startPractice(PR.x); else if (opts.yt) $("stageGo").click(); else $("btnRec").click(); }],
+    ["先不唱了", () => { if (PR) $("prBack").click(); else if (opts.yt) $("stageBack").click(); }]);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { if (isRecording() && !recPaused && !ytPending) hiddenAt = Date.now(); return; }
+  if (hiddenAt && Date.now() - hiddenAt > 1200) recInterrupt("hide");
+  hiddenAt = 0;
+});
 $("stageBack").onclick = () => {
   cancelRec(); YT_.stop(); stageSong = null;
   if (PR) { if (stream) stream.getTracks().forEach(t => t.stop()); show("stepRec", false); $("prBack").click(); return; }

@@ -514,6 +514,56 @@ const SC = (() => {
   }
   const fmtT = s => { s = Math.max(0, s); const mm = Math.floor(s / 60), ss = Math.floor(s % 60); return mm + ":" + String(ss).padStart(2, "0"); };
 
-  return { analyze, summarize, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+  // ===== 唱的时候（实时）：听最近一小段，判断“准 / 偏高 / 偏低 / 晃 / 正在换音” =====
+  // 实时音高：YIN，只看缓冲区最后一小段。x 是 16k 左右的采样，返回频率 Hz（0＝没听到音）
+  function yinOne(x, sr, end) {
+    const W = 400, tMin = Math.floor(sr / 900), tMax = Math.ceil(sr / 70);
+    if (end == null) end = x.length;
+    if (end < W + tMax + 2) return 0;
+    const o = end - W - tMax - 2, cm = new Float64Array(tMax + 2); let run = 0;
+    for (let tau = 1; tau <= tMax + 1; tau++) { let s = 0; for (let j = 0; j < W; j++) { const df = x[o + j] - x[o + j + tau]; s += df * df; } run += s; cm[tau] = run ? s * tau / run : 1; }
+    for (let tau = tMin; tau <= tMax; tau++) if (cm[tau] < 0.15) {
+      while (tau < tMax && cm[tau + 1] < cm[tau]) tau++;
+      // 抛物线插值：整数延迟在高音区一格就差 30 多音分，插值后才分得清“偏高/偏低”
+      const a0 = cm[tau - 1], b0 = cm[tau], c0 = cm[tau + 1], den = a0 - 2 * b0 + c0;
+      const dt = den > 0 ? Math.max(-0.5, Math.min(0.5, 0.5 * (a0 - c0) / den)) : 0;
+      return sr / (tau + dt);
+    }
+    return 0;
+  }
+  // 手机每 85 毫秒才给一次声音，正好和颤音（每秒 5~6 下）“撞拍”，只看最后一点会总落在颤音同一侧。
+  // 所以在最近约 0.18 秒（一个颤音来回）里等距取 6 个点，去掉跑八度的，取平均。
+  function yinAvg(x, sr) {
+    const step = Math.round(sr * 0.03), ms = [];
+    for (let k = 0; k < 6; k++) { const f = yinOne(x, sr, x.length - k * step); if (f > 0) ms.push(69 + 12 * Math.log2(f / 440)); }
+    if (ms.length < 3) return 0;
+    const b = ms.slice().sort((p, q) => p - q), md = b[b.length >> 1], keep = ms.filter(m => Math.abs(m - md) < 1);
+    const m = keep.reduce((p, q) => p + q, 0) / keep.length;
+    return 440 * Math.pow(2, (m - 69) / 12);
+  }
+  // tune：{x,y,n} 记着他整体的“调”偏多少（会被改写）；live：[{t, m(midi 或 NaN), rms}]；now：现在第几秒
+  // 返回 { sing 正在出声, st: null|"ok"|"hi"|"lo"|"wob"|"move", cents 偏了多少音分 }
+  function liveJudge(tune, live, now) {
+    const cur = live.length ? live[live.length - 1] : null;
+    const sing = !!(cur && !isNaN(cur.m) && cur.rms > 0.004);
+    if (sing) { const ph = 2 * Math.PI * (cur.m - Math.round(cur.m)); tune.x += Math.cos(ph); tune.y += Math.sin(ph); tune.n++; }
+    const off = tune.n > 20 ? Math.atan2(tune.y, tune.x) / (2 * Math.PI) : 0;
+    const rec = live.filter(p => p.t > now - 0.4 && !isNaN(p.m) && p.rms > 0.004);
+    let st = null, cents = 0;
+    if (sing && rec.length >= 4) {
+      // 用中位数（不怕颤音、不怕个别错帧）；前后半段差得多＝正在换音，不算错
+      const med = a => { const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; };
+      const ms = rec.map(p => p.m), mid = med(ms), h = ms.length >> 1;
+      const mad = med(ms.map(v => Math.abs(v - mid)));
+      const d = mid - off; cents = (d - Math.round(d)) * 100;
+      st = Math.abs(med(ms.slice(0, h)) - med(ms.slice(h))) > 0.6 ? "move"
+         : mad > 0.4 ? "wob" : Math.abs(cents) < 25 ? "ok" : cents > 0 ? "hi" : "lo";
+    }
+    return { sing, st, cents, recN: rec.length };
+  }
+  // “连续很稳”计数：准一次 +1，偏一次 -3，换音不算
+  function liveSteady(steady, st) { return st === "ok" ? steady + 1 : st && st !== "move" ? Math.max(0, steady - 3) : steady; }
+
+  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
 })();
 if (typeof module !== "undefined") module.exports = SC;
