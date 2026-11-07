@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794007537";
+  var V = "1794032835";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -178,6 +178,8 @@
   .prSub{font-size:17px;line-height:1.6;color:rgba(244,239,230,.7);margin-top:8px}
   .prSub b{color:var(--pearl)}
   #prMini .mini{margin-top:16px}
+  .miniKey{margin-top:8px;font-size:15px;color:var(--mist);text-align:center}
+  .miniKey i{display:inline-block;width:16px;height:5px;border-radius:3px;margin:0 5px 3px 6px;vertical-align:middle}
   .phPr{background:var(--champ);color:#16233b}
   .ring{flex:none;width:124px;height:124px;border-radius:50%;display:grid;place-items:center}
   .ring b{font:600 46px/1 var(--serif);color:var(--pearl)}
@@ -339,6 +341,7 @@
   .ph.compact{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 18px}
   .ph.compact .phNo{font:500 18px/1.3 var(--serif);flex:none}
   .ph.compact .phOk{flex:1;color:var(--good);font-size:18px;font-weight:600}
+  .ph.compact .phOk small{display:block;margin-top:2px;color:var(--mist);font-size:15px;font-weight:400}
   .ph.compact .phPlay{flex:none;width:auto;min-height:46px;padding:0 16px;margin:0}
   .ph .phTxt b{color:var(--pearl)}
   .ph .btn.small{min-height:44px;font-size:16px}
@@ -1068,7 +1071,7 @@ async function startRecording(opts) {
     warmStream = null;
   } catch (e) { show("micMsg"); show("stepRec", false); show("stepIn"); try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} return false; }
   chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
-  recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
+  recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; drawLive.lastSing = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
   if (opts.practice) mp3Song = null;
   ytPending = !!opts.yt;
@@ -1176,21 +1179,23 @@ function drawLive(now) {
   const cur = live.length ? live[live.length - 1] : null;
   const notes = recMode === "sync" ? getRefNotes() : null;
   if (!notes || !notes.length) {
-    $("liveSay").textContent = "";
     // 没有原唱的音（网上伴奏）：每一刻告诉他“音稳不稳、站没站在音上”
     const sing = cur && !isNaN(cur.m) && cur.rms > 0.004;
     if (sing) { const ph = 2 * Math.PI * (cur.m - Math.round(cur.m)); tune.x += Math.cos(ph); tune.y += Math.sin(ph); tune.n++; }
     const off = tune.n > 20 ? Math.atan2(tune.y, tune.x) / (2 * Math.PI) : 0;
-    const rec = live.filter(p => p.t > now - 0.6 && !isNaN(p.m) && p.rms > 0.004);
+    const rec = live.filter(p => p.t > now - 0.4 && !isNaN(p.m) && p.rms > 0.004);
     let st = null, cents = 0;
     if (sing && rec.length >= 4) {
-      const ms = rec.map(p => p.m), mean = ms.reduce((x, y) => x + y, 0) / ms.length;
-      const sd = Math.sqrt(ms.reduce((x, y) => x + (y - mean) * (y - mean), 0) / ms.length);
-      const d = mean - off; cents = (d - Math.round(d)) * 100;
-      st = sd > 0.35 ? "move" : sd > 0.18 ? "wob" : Math.abs(cents) < 22 ? "ok" : cents > 0 ? "hi" : "lo";
+      // 用中位数（不怕颤音、不怕个别错帧）；前后半段差得多＝正在换音，不算错
+      const med = a => { const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; };
+      const ms = rec.map(p => p.m), mid = med(ms), h = ms.length >> 1;
+      const mad = med(ms.map(v => Math.abs(v - mid)));
+      const d = mid - off; cents = (d - Math.round(d)) * 100;
+      st = Math.abs(med(ms.slice(0, h)) - med(ms.slice(h))) > 0.6 ? "move"
+         : mad > 0.4 ? "wob" : Math.abs(cents) < 25 ? "ok" : cents > 0 ? "hi" : "lo";
     }
-    if (cur) cur.st = st;
-    if (st === "ok") steady += 1; else if (st) steady = Math.max(0, steady - 3);
+    if (cur) cur.st = st === "move" ? null : st;
+    if (st === "ok") steady += 1; else if (st && st !== "move") steady = Math.max(0, steady - 3);
     // —— 上面：像调音表一样的横条，中间绿色＝站在音上 ——
     const cx = W / 2, ty = 34, tw = Math.min(W - 40, 330), x0 = cx - tw / 2;
     const tg = g.createLinearGradient(x0, 0, x0 + tw, 0);
@@ -1219,7 +1224,9 @@ function drawLive(now) {
     // —— 大字：一句话 ——
     const sec = Math.floor(steady * 0.1);
     const el = $("liveSay");
-    if (!sing) { el.className = "liveSay"; el.textContent = rec.length || live.some(p => p.t > now - 3 && !isNaN(p.m)) ? "换气，好的" : "一开口，这里就告诉你稳不稳"; }
+    if (sing) drawLive.lastSing = now;
+    if (!sing && now - (drawLive.lastSing || -9) < 0.6) { /* 字与字之间的短停顿：不换提示，免得闪 */ }
+    else if (!sing) { el.className = "liveSay"; el.textContent = rec.length || live.some(p => p.t > now - 3 && !isNaN(p.m)) ? "换气，好的" : "一开口，这里就告诉你稳不稳"; }
     else if (st === "ok") { el.className = "liveSay ok"; el.textContent = sec >= 3 ? "很稳！连续 " + sec + " 秒 ✨" : "很好，音站住了 ✓"; }
     else if (st === "hi") { el.className = "liveSay off"; el.textContent = "有点偏高，稍微往下"; }
     else if (st === "lo") { el.className = "liveSay off"; el.textContent = "有点偏低，稍微往上"; }
@@ -1400,7 +1407,7 @@ function phraseInfo(f, idx) {
   const mid = (f.t0 + f.t1) / 2, avg = a => a.length ? a.reduce((x, z) => x + z.dev, 0) / a.length : 0;
   const h1 = avg(ns.filter(z => z.t0 < mid)), h2 = avg(ns.filter(z => z.t0 >= mid));
   let tip;
-  if (level === "good") tip = tail.length || late.length ? "不错，句尾再托住一点" : "很准";
+  if (level === "good") tip = tail.length ? "句尾再托住一点" : late.length ? "稍慢了一点" : early.length ? "稍快了一点" : "很准";
   else if (wrong.length) tip = "有个音唱成别的了，先听原唱再唱";
   else if (h2 < -25 && h2 < h1 - 15) tip = "后半句低了一点，往上提";
   else if (h2 > 25 && h2 > h1 + 15) tip = "后半句高了一点，放松往下";
@@ -1486,7 +1493,7 @@ function drawPhList() {
       : `${x.praise.length ? `<p class="phTxt good">做得好：${x.praise[0]}。</p>` : ""}<p class="phTxt">要注意：${x.probs.slice(0, 2).map(q => q[1]).join(" ")}</p>${x.probs.length ? teachSvg(x.probs[0][0]) : ""}`;
     const canRef = R.refMap && REF.ab && REF.name === R.refName;
     if (x.level === "good") return `<div class="ph lv-good compact" style="--c:${col}">
-      <span class="phNo">第 ${x.idx + 1} 句</span><span class="phOk">✓ ${x.tip}</span>
+      <span class="phNo">第 ${x.idx + 1} 句</span><span class="phOk">✓ 很准${x.tip !== "很准" ? `<small>${x.tip}</small>` : ""}</span>
       <button class="btn small ghost phPlay" data-ph="${x.idx}" aria-label="听第 ${x.idx + 1} 句"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听</button></div>`;
     return `<div class="ph lv-${x.level}" style="--c:${col}">
       <div class="phHd"><span class="phNo">第 ${x.idx + 1} 句</span><span class="phT">${SC.fmtT(x.f.t0)}</span><span class="phLv">${lbl} · ${x.score}</span></div>
@@ -1846,7 +1853,7 @@ function renderPractice() {
     $("prSub").innerHTML = info.score > before ? `比之前的 ${before} 分<b>进步了 ${info.score - before} 分</b>，真棒！`
       : info.level === "good" ? "很稳，可以回去唱整首了。" : info.probs.length ? info.probs[0][1] : "";
     PR.best = Math.max(before, info.score);
-    $("prMini").innerHTML = miniSvg(info); show("prListen");
+    $("prMini").innerHTML = miniSvg(info) + `<div class="miniKey">每一道是一个字：<i style="background:var(--good)"></i>准　<i style="background:var(--mid)"></i>偏了</div>`; show("prListen");
     $("prListen").onclick = () => playFrom(Math.max(0, info.f.t0 - 0.3), info.f.t1 + 0.5);
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
