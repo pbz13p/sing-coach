@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794039917";
+  var V = "1794040491";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -1729,6 +1729,20 @@ const INTRO = {
   IDqK40Wb_Gs: 19.2, // 茉莉花
   bCEmEC1bTM0: 28.6, // 送别
   jEapLqsyeKc: 24.0, // 涛声依旧
+  ii0seUMXQuM: 39.5, // 康定情歌
+  "1T7HwGJC0TM": 36.0, // 难忘今宵
+  S0e32PppTos: 33.0, // 军港之夜
+  sWe14DpUG10: 36.8, // 恰似你的温柔
+  "1lJF78qe12I": 28.5, // 时间都去哪儿了
+  "7lINXQUJgNA": 40.2, // 我和我的祖国
+  UHomujM_AYA: 19.8, // 弯弯的月亮
+  zJVRTdyly3Y: 18.8, // 好人一生平安
+  qTk45g03SUg: 50.0, // 母亲
+  pZTHe8wnMXw: 82.5, // 我爱你，塞北的雪（前奏很长）
+  QL2CfgENUTc: 35.0, // 但愿人长久
+  "17riCFmmpEo": 20.0, // 朋友
+  fx9twtl7LBI: 32.5, // 天路
+  pB5dGKeA_0M: 48.5, // 一剪梅
 }; // 第一个字开始变色的那一刻
 function introKey() { return "intro2_" + (recYt && recYt.vid || stageVid || ""); }
 function introGet() { const k = recYt && recYt.vid || stageVid; if (INTRO[k] != null) return INTRO[k]; try { const a = JSON.parse(localStorage.getItem(introKey()) || "[]"); if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; } catch (e) { return null; } }
