@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794039483";
+  var V = "1794039496";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -1722,7 +1722,7 @@ function cdNote() {
     : "第一次唱这首：前奏时先听，歌词出来再唱。唱过一次，下次会在第一句前倒数 3、2、1。";
 }
 // 我一首首看过视频、量出来的“第一句开唱”时间（秒）。量过的歌第一次唱就有倒数。
-const INTRO = { MlnbnqtL0mM: 33 };
+const INTRO = { MlnbnqtL0mM: 34.2 }; // 第一个字开始变色的那一刻
 function introKey() { return "intro2_" + (recYt && recYt.vid || stageVid || ""); }
 function introGet() { const k = recYt && recYt.vid || stageVid; if (INTRO[k] != null) return INTRO[k]; try { const a = JSON.parse(localStorage.getItem(introKey()) || "[]"); if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[b.length >> 1]; } catch (e) { return null; } }
 function introSave(v) { try { const a = JSON.parse(localStorage.getItem(introKey()) || "[]"); a.push(Math.round(v * 10) / 10); localStorage.setItem(introKey(), JSON.stringify(a.slice(-3))); } catch (e) {} }
@@ -1732,14 +1732,17 @@ function entryTimes() { // 返回 [{t: 什么时候开唱（视频/原唱时间�
   return [];
 }
 function songTime() { return recMode === "sync" ? getCtx().currentTime - refStartAt : ytTime(); }
-function ytTime() { try { return YT_.player.getCurrentTime() || 0; } catch (e) { return 0; } }
+const ytClk = { ct: -1, at: 0 };
+function ytTime() { try { const p = YT_.player, ct = p.getCurrentTime() || 0;
+  if (ct !== ytClk.ct) { ytClk.ct = ct; ytClk.at = performance.now(); }
+  return p.getPlayerState() === 1 ? ct + Math.min(0.5, (performance.now() - ytClk.at) / 1000) : ct; } catch (e) { return 0; } }
 function cdTick() {
   cdRAF = 0; if ($("stepRec").classList.contains("hide") || $("stageRec").classList.contains("hide")) { show("cd", false); return; }
   cdRAF = requestAnimationFrame(cdTick);
   if (ytPending) { show("cd", false); cdLast = ""; return; }
-  const t = songTime(), E = entryTimes(), nx = E.find(e => e - t > -0.7);
+  const t = songTime(), E = entryTimes(), nx = E.find(e => e - t > -1);
   let key = "";
-  if (nx != null) { const d = nx - t; if (d <= 3.4 && d > 0) key = String(Math.ceil(d)); else if (d <= 0 && d > -0.7) key = "唱"; }
+  if (nx != null) { const d = nx - t; if (d <= 3 && d > 0) key = String(Math.ceil(d)); else if (d <= 0 && d > -1) key = "唱"; }
   if (key === cdLast) return; cdLast = key;
   if (!key) { show("cd", false); return; }
   const N = $("cdN"); show("cd");
