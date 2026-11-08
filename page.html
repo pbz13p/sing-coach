@@ -1143,6 +1143,13 @@ async function renderCompare(res) {
   worse.slice(0, 2).forEach(([k, y, x]) => h += row(`<span class="cmpDn">多了</span>`, `${ISSUE_TXT[k]}：上一遍 ${y} 处，这一遍 ${x} 处，下一遍注意这个。`));
   down.forEach(([x, y]) => h += row(`<span class="cmpDn">退步</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）上一遍 ${y.score} 分，这一遍 ${x.score} 分。`));
   if (!better.length && !up.length && !stuck.length && !worse.length && !down.length) h += `<p class="cmpL" style="color:var(--mist);font-size:15px;margin:0">各句跟上一遍都差不多。</p>`;
+  // 这首歌一路唱下来的分数
+  const takes = same.slice(me >= 0 ? me : 0).reverse().slice(-6);
+  if (takes.length >= 3) h += `<div class="cmpRow"><i>一路下来</i><span>${takes.map((t, k) => `<b style="color:${t.id === res.histId ? "var(--champ)" : "var(--pearl)"}">${t.score}</b>`).join(" → ")}${takes[takes.length - 1].score > takes[0].score ? "，越唱越好。" : "。"}</span></div>`;
+  // 下一遍只盯一件事（老人家一次记一件就够）
+  const NEXT = { "高": "唱高的地方，嘴放松、气别往上顶，声音往下放一点", "低": "唱低的地方，眉毛抬一抬、笑着唱，声音自然就往上走", "错音": "唱错音的那句，先点「听原唱」听三遍，跟着哼准了再唱", "勾": "每句开口，先在心里想好那个音，直接唱到位，别从下面滑上去", "尾掉": "每句最后一个字，多留一口气托住，唱完再换气", "抖": "长音的时候，肚子轻轻撑住，气匀着出，别使劲挤", "长音往下": "长音唱到后面要想着「往上提」，别让它塌下来", "长音往上": "长音唱到后面放松，别越唱越使劲", "调外": "跑调的地方，先跟伴奏哼一遍，找准了再唱", "慢": "进歌的地方，看着歌词变色就开口，宁可早一点", "快": "别抢，等歌词变色了再唱，跟着伴奏的鼓点走" };
+  const topK = Object.keys(ic).filter(k => NEXT[k]).sort((p, q) => ic[q] - ic[p])[0];
+  if (topK && ic[topK] >= 2) h += `<p class="cmpL" style="margin:12px 0 0;padding:12px 14px;border-radius:14px;background:rgba(216,191,143,.08);border:1px solid rgba(216,191,143,.25)"><b>下一遍只盯一件事：</b>${NEXT[topK]}。</p>`;
   $("cmpBody").innerHTML = h; show("cmpCard");
 }
 async function loadHist(id) {
