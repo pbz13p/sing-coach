@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794120143";
+  var V = "1794127393";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -211,6 +211,11 @@
   .cmpL b{color:var(--champ);font-weight:600}
   .cmpRow{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);font-size:15.5px;line-height:1.55}
   .cmpRow i{font-style:normal;flex:none;width:58px;color:var(--mist);font-size:14px}
+  .acap{margin:14px 0 22px}
+  .acapTx b{display:block;font-size:19px;color:var(--pearl);margin-bottom:4px}
+  .acapTx span{display:block;font-size:15px;line-height:1.6;color:var(--mist)}
+  .acap input{width:100%;box-sizing:border-box;margin:14px 0 12px;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25);color:var(--pearl);font-size:17px}
+  .acap input::placeholder{color:rgba(244,239,230,.4)}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -421,14 +426,19 @@
     <div class="lrow"><span class="ln" id="lastName"></span><span class="ls" id="lastScore"></span></div>
     <button class="btn gold" id="lastGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>再唱一遍</button>
   </div>
-  <h2 class="pick">选一首歌，点一下就开始</h2>
+  <div class="card acap">
+    <div class="acapTx"><b>不放音乐，直接清唱</b><span>任何歌都行。对着手机唱，唱完一样打分、点评，能一遍遍练、一遍遍比。</span></div>
+    <input type="text" id="acapName" placeholder="歌名，比如：我的祖国" autocomplete="off">
+    <button class="btn gold" id="btnAcap"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>开始清唱</button>
+  </div>
+  <h2 class="pick">或者选一首歌，跟着伴奏唱</h2>
   <div id="songList"></div>
 
+
   <details class="card more">
-    <summary>用我自己的伴奏 / 清唱 / 录好的歌</summary>
+    <summary>用我自己的伴奏 / 录好的歌</summary>
     <div class="moreBody">
-      <h3>不放音乐，直接清唱</h3>
-      <div class="orbWrap"><button class="orb" id="btnRec"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">清唱</span><span class="sx" id="recSub"></span></button></div>
+      <div class="orbWrap hide"><button class="orb" id="btnRec"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span class="tx">清唱</span><span class="sx" id="recSub"></span></button></div>
       <div id="earTip" class="msg hide" style="margin:0 0 6px">已选了原唱文件：点上面的按钮会在耳机里放原唱，<b>请戴上耳机</b>。</div>
       <h3>已经录好的歌</h3>
       <button class="btn" id="btnFile"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>选手机里录好的歌</button>
@@ -1206,7 +1216,15 @@ $("file").onchange = e => { const f = e.target.files[0]; if (f) handleBlob(f); e
 
 let recSong = "", recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
 let ytPending = false, stageVid = "", recYt = null, PR = null; // PR：正在“只练这一句”
-$("btnRec").onclick = () => startRecording({});
+let lastKind = "";
+function startAcap() {
+  const n = $("acapName").value.trim(); $("song").value = n; try { localStorage.setItem("acapName", n); } catch (e) {}
+  lastKind = "acap"; lastStage = -1; stageSong = null;
+  return startRecording({});
+}
+$("btnRec").onclick = startAcap;
+$("btnAcap").onclick = startAcap;
+try { $("acapName").value = localStorage.getItem("acapName") || ""; } catch (e) {}
 async function startRecording(opts) {
   err(""); show("micMsg", false);
   const c = getCtx();
@@ -1673,7 +1691,7 @@ async function openHist() {
   aud.pause();
   const list = await histAll();
   $("histList").innerHTML = list.length ? list.map(h => `<div class="hItem" data-id="${h.id}">
-      <button class="hMain"><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "未命名"}</span><span class="by">${fmtDate(h.t)}</span></span><span class="hScore" style="--c:${h.score >= 80 ? "var(--good)" : h.score >= 65 ? "var(--mid)" : "var(--bad)"}">${h.score}</span><span class="hPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <button class="hMain"><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "清唱（没写歌名）"}</span><span class="by">${fmtDate(h.t)}</span></span><span class="hScore" style="--c:${h.score >= 80 ? "var(--good)" : h.score >= 65 ? "var(--mid)" : "var(--bad)"}">${h.score}</span><span class="hPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
       <button class="hDel" aria-label="删除这条">删除</button></div>`).join("")
     : '<p class="note" style="padding:20px 0">还没有记录。唱完一首，会自动存在这里。</p>';
   { const wk = list.filter(h => Date.now() - h.t < 7 * 864e5);
@@ -1695,9 +1713,9 @@ const ISSUE_TXT = { "高": "唱高了", "低": "唱低了", "错音": "唱错音
 function issueCount(res) { const c = {}; (res.notes || []).forEach(z => (z.issues || []).forEach(k => { if (ISSUE_TXT[k]) c[k] = (c[k] || 0) + 1; })); return c; }
 async function renderCompare(res) {
   show("cmpCard", false);
-  const song = res.histSong || $("song").value.trim(); if (!song || PR) return;
+  const song = res.histSong != null ? res.histSong : $("song").value.trim(); if (PR) return;
   let list; try { list = await histAll(); } catch (e) { return; }
-  const same = list.filter(h => h.song === song);
+  const same = song ? list.filter(h => h.song === song) : list.filter(h => !h.song && Math.abs(h.t - (res.histId || Date.now())) < 3 * 3600e3);
   const me = same.findIndex(h => h.id === res.histId), prevM = me >= 0 ? same[me + 1] : same.find(h => h.id !== res.histId);
   if (!prevM) return;
   const pv = await DB.get("h_" + prevM.id); if (!pv || !pv.res || R !== res) return;
@@ -1764,10 +1782,11 @@ async function renderLast() {
   try {
     const l = await histAll(); const h = l[0];
     const i = h ? SONGS.findIndex(x => x.t === h.song) : -1;
-    show("lastCard", i >= 0);
-    if (i < 0) return;
-    $("lastName").textContent = h.song; $("lastScore").textContent = h.score + " 分";
-    $("lastGo").onclick = () => openStage(i);
+    const acap = h && i < 0 && h.mode === "self";
+    show("lastCard", i >= 0 || acap);
+    if (i < 0 && !acap) return;
+    $("lastName").textContent = (h.song || "清唱") + (acap ? "（清唱）" : ""); $("lastScore").textContent = h.score + " 分";
+    $("lastGo").onclick = () => { if (i >= 0) openStage(i); else { $("acapName").value = h.song || ""; startAcap(); } };
   } catch (e) {}
 }
 renderLast();
@@ -1969,7 +1988,7 @@ function stageVideo() {
 }
 let lastStage = -1, ytStall = 0;
 function openStage(i) {
-  lastStage = i; show("intr", false); recPaused = false;
+  lastStage = i; lastKind = "song"; show("intr", false); recPaused = false;
   $("stageBack").textContent = "‹ 换一首歌";
   stageSong = SONGS[i]; stageMode = stageSong.k ? "k" : "o";
   { const s = stageSong; mpUI(); if (REF.name === s.t && REF.ab) { mp3Has[s.t] = true; mpUI(); } else DB.get("ref_" + s.t).then(v => { if (v && v.blob && stageSong === s) useMp3(s, v.blob, false); }); }
@@ -2435,6 +2454,7 @@ $("btnPlay").onclick = () => aud.paused ? playFrom(aud.currentTime > 0 && aud.cu
 cv.addEventListener("click", e => { if (!R) return; const r = cv.getBoundingClientRect(); const t = viewStart + (e.clientX - r.left - 44) / (r.width - 50) * VIEW; playFrom(t - 0.3); });
 
 $("again").onclick = () => {
+  if (lastKind === "acap" && R && !R.histView) { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); err(""); $("acapName").value = $("song").value; startAcap(); return; }
   if (lastStage >= 0 && R && !R.histView) { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); err(""); openStage(lastStage); return; }
   $("btnHome").onclick();
 };
