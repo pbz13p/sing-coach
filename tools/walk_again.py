@@ -1,6 +1,6 @@
 # 唱两遍同一首歌：第一遍唱完 → 点"再唱一遍" → 第二遍唱完，看"跟上一遍比"卡片
 # 用法同 walk.py：python3 tools/walk_again.py shots
-import asyncio, sys, os
+import asyncio, sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from walk import YT_STUB, async_playwright
 OUT=sys.argv[1] if len(sys.argv)>1 else 'shots'; os.makedirs(OUT,exist_ok=True)
@@ -18,11 +18,14 @@ async def main():
     await pg.route('**/*',route)
     await pg.goto('http://localhost:8765/index.html'); await pg.wait_for_timeout(1200)
     await pg.click('#songList button[data-i="0"]'); await pg.wait_for_timeout(1500)
-    for k in range(2):
+    stats = []
+    for k in range(int(os.environ.get('TAKES', 3))):
       await pg.click('#stageGo'); await pg.wait_for_timeout(int(os.environ.get('SING', 26))*1000)
-      await pg.click('#btnStop')
-      await pg.wait_for_selector('#result:not(.hide)',timeout=60000); await pg.wait_for_timeout(1500)
-      if k == 0:
+      await pg.click('#btnStop'); t0 = time.time()
+      await pg.wait_for_selector('#result:not(.hide)',timeout=60000); dt = time.time() - t0; await pg.wait_for_timeout(1500)
+      heap = await pg.evaluate('performance.memory ? Math.round(performance.memory.usedJSHeapSize/1e6) : -1')
+      print(f'第 {k+1} 遍：出结果 {dt:.1f} 秒，内存 {heap} MB'); stats.append((dt, heap))
+      if k < int(os.environ.get('TAKES', 3)) - 1:
         await pg.click('#again'); await pg.wait_for_timeout(1500)
         await pg.screenshot(path=f'{OUT}/a1_again_stage.png')
     vis = await pg.is_visible('#cmpCard')
@@ -32,6 +35,7 @@ async def main():
       await pg.screenshot(path=f'{OUT}/a2_compare.png')
       print(await pg.inner_text('#cmpCard'))
     await pg.evaluate('window.scrollTo(0,0)'); await pg.screenshot(path=f'{OUT}/a3_result2.png')
+    if len(stats) >= 3 and (stats[-1][1] > stats[0][1] + 40 or stats[-1][0] > stats[0][0] * 2 + 2): logs.append('连唱越来越慢/越占内存：' + str(stats))
     print('\n'.join(logs) or '无报错')
     await b.close()
 asyncio.run(main())

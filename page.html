@@ -96,8 +96,8 @@
   #stepRec h2{font-size:22px;margin:0 0 10px;justify-content:center}
   #stepRec .linkBack{margin:0 0 6px}
   #stepRec .seg button{padding:10px 4px;font-size:15px}
-  #stepRec #segNote{text-align:center;margin:0 0 8px;font-size:14px}
-  #stepRec #stageReady .note{font-size:15px;margin-top:6px!important}
+  #stepRec #segNote{text-align:center;margin:0 0 8px;font-size:15px}
+  #stepRec #stageReady .note{font-size:16px;line-height:1.55;color:#c9cfdb;margin-top:6px!important}
   #stepRec .orbWrap{padding:12px 0 4px}
   #stepRec .orb{width:132px;height:132px}
   #stepRec .orb::after{inset:-14px}
@@ -301,7 +301,7 @@
   .histBtn{margin:-18px auto 26px;display:flex}
   .linkBtn{all:unset;display:block;margin:14px auto 2px;font-size:15px;color:var(--mist);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:center}
   .yt{margin:0 0 12px}
-  .ytFrame{position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+  .ytFrame{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
   .ytFrame>*{position:absolute;inset:0;width:100%;height:100%}
   .ytMsg{margin-top:8px;text-align:center}
   .msg a{color:var(--champ)}
@@ -1132,17 +1132,17 @@ async function renderCompare(res) {
   const pv = await DB.get("h_" + prevM.id); if (!pv || !pv.res || R !== res) return;
   const P = pv.res, a = res.stats, b = P.stats, nth = me >= 0 ? same.length - me : same.length + 1;
   $("cmpH").textContent = "第 " + nth + " 遍 · 跟上一遍比";
-  const arrow = (d, unit, good) => d === 0 ? `<em class="cmpEq">一样</em>` : `<em class="${(d > 0) === good ? "cmpUp" : "cmpDn"}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)}${unit}</em>`;
-  const dS = a.score - b.score, dA = Math.round(a.accuracy * 100) - Math.round(b.accuracy * 100);
+  const arrow = (d, unit, good, eq) => Math.abs(d) <= (eq || 0) ? `<em class="cmpEq">${d ? "差不多" : "一样"}</em>` : `<em class="${(d > 0) === good ? "cmpUp" : "cmpDn"}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)}${unit}</em>`;
+  const dS = a.score - b.score, acc = x => Math.round((x.accSoft != null ? x.accSoft : x.accuracy) * 100), dA = acc(a) - acc(b);
   const ic = issueCount(res), ip = issueCount(P), tot = o => Object.values(o).reduce((x, y) => x + y, 0);
   const dI = tot(ic) - tot(ip);
-  $("cmpTop").innerHTML = `<div><span>总分</span><b>${a.score}</b>${arrow(dS, " 分", true)}</div><div><span>唱准的比例</span><b>${Math.round(a.accuracy * 100)}%</b>${arrow(dA, "%", true)}</div><div><span>小毛病</span><b>${tot(ic)} 处</b>${arrow(dI, " 处", false)}</div>`;
+  $("cmpTop").innerHTML = `<div><span>总分</span><b>${a.score}</b>${arrow(dS, " 分", true, 2)}</div><div><span>唱准的比例</span><b>${acc(a)}%</b>${arrow(dA, "%", true, 2)}</div><div><span>小毛病</span><b>${tot(ic)} 处</b>${arrow(dI, " 处", false, 1)}</div>`;
   // 一句话总评
   let head;
   if (dS >= 8) head = `比上一遍<b>进步了 ${dS} 分</b>，练习有效果，照这个方法继续。`;
   else if (dS >= 3) head = `比上一遍<b>好了 ${dS} 分</b>，在慢慢变好。`;
   else if (dS > -3 && a.score >= 85) head = `跟上一遍<b>一样稳</b>，已经唱得很好了。想再往上，就练下面剩下的那几处小地方。`;
-  else if (dS > -3) head = `跟上一遍<b>差不多</b>。分数没动，说明老问题还在，下面这几处要专门练，光多唱一遍不容易改过来。`;
+  else if (dS > -3) head = `跟上一遍<b>差不多</b>。分数变化不大，说明老问题还在，下面这几处要专门练，光多唱一遍不容易改过来。`;
   else head = `比上一遍<b>低了 ${-dS} 分</b>。可能是累了，或者这次注意力在别的地方。歇一会儿，喝口水再唱。`;
   // 逐项：哪些毛病少了、哪些多了
   const better = [], worse = [];
@@ -1725,7 +1725,7 @@ function render(fromHist) {
   $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
   $("keyLine").textContent = (withRef ? `跟原唱比 · ` : ``) + `唱了 ${SC.fmtT(R.duration)}`;
-  $("tAcc").textContent = Math.round(s.accuracy * 100) + "%";
+  $("tAcc").textContent = Math.round((s.accSoft != null ? s.accSoft : s.accuracy) * 100) + "%";
   $("tStab").textContent = s.unstableRate < 0.15 ? "稳" : s.unstableRate < 0.35 ? "还行" : "晃";
   if (withRef) {
     $("tStabL").textContent = "唱错的音"; $("tStab").textContent = s.wrongCount + " 个";

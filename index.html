@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794127501";
+  var V = "1794146435";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -96,8 +96,8 @@
   #stepRec h2{font-size:22px;margin:0 0 10px;justify-content:center}
   #stepRec .linkBack{margin:0 0 6px}
   #stepRec .seg button{padding:10px 4px;font-size:15px}
-  #stepRec #segNote{text-align:center;margin:0 0 8px;font-size:14px}
-  #stepRec #stageReady .note{font-size:15px;margin-top:6px!important}
+  #stepRec #segNote{text-align:center;margin:0 0 8px;font-size:15px}
+  #stepRec #stageReady .note{font-size:16px;line-height:1.55;color:#c9cfdb;margin-top:6px!important}
   #stepRec .orbWrap{padding:12px 0 4px}
   #stepRec .orb{width:132px;height:132px}
   #stepRec .orb::after{inset:-14px}
@@ -301,7 +301,7 @@
   .histBtn{margin:-18px auto 26px;display:flex}
   .linkBtn{all:unset;display:block;margin:14px auto 2px;font-size:15px;color:var(--mist);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:center}
   .yt{margin:0 0 12px}
-  .ytFrame{position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+  .ytFrame{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
   .ytFrame>*{position:absolute;inset:0;width:100%;height:100%}
   .ytMsg{margin-top:8px;text-align:center}
   .msg a{color:var(--champ)}
@@ -921,12 +921,19 @@ const SC = (() => {
     }
     spots.sort((a, b) => a.t0 - b.t0);
 
-    const stabScore = 1 - Math.min(1, unstableRate * 1.2);
-    const score = Math.round(100 * (0.6 * accuracy + 0.15 * (okish / totDur) + 0.15 * stabScore + 0.1 * (1 - flatEndRate)));
+    // 稳不稳也用平滑的：抖动 16 音分以内不扣，到 30 音分算“晃”
+    const shaky = sustain.length ? sustain.reduce((s, z) => s + Math.max(0, Math.min(1, (z.sd - 16) / 14)), 0) / sustain.length : 0;
+    const stabScore = 1 - Math.min(1, shaky * 1.2);
+    // 总分用平滑的“准度分”：偏 20 音分以内算满分，到 50 音分慢慢降到 0。
+    // 以前按 25/40 音分一刀切，唱得差不多的两遍会因为几个音刚好跨线而差十来分（老人看“跟上一遍比”会糊涂）。
+    const soft = notes.reduce((s, z) => s + (z.wrong ? 0 : Math.max(0, Math.min(1, (50 - Math.abs(z.dev)) / 30))) * z.dur, 0) / totDur;
+    const endSoft = multiPh.length ? multiPh.reduce((s, f) => { const l = f.notes[f.notes.length - 1];
+      return s + (l.dur <= 0.3 ? 0 : l.tailDrop ? 1 : Math.max(0, Math.min(1, (-l.dev - 20) / 30))); }, 0) / multiPh.length : 0;
+    const score = Math.round(100 * (0.75 * soft + 0.15 * stabScore + 0.1 * (1 - endSoft)));
 
     res.phrases = phrases; res.spots = spots;
     res.stats = {
-        score, accuracy, okRate: okish / totDur, meanDev, meanAbs, hiDev, loDev,
+        score, accuracy, accSoft: soft, okRate: okish / totDur, meanDev, meanAbs, hiDev, loDev,
         hiCutName: noteName(hiCut), range: [noteName(pct(absList, 0.05)), noteName(pct(absList, 0.95))],
         scoopRate, unstableRate, vibratoRate, driftNoteCount: driftNotes.length,
         flatEndRate, weakEndRate, songDrift, outKeyCount: outKey.length,
@@ -1721,17 +1728,17 @@ async function renderCompare(res) {
   const pv = await DB.get("h_" + prevM.id); if (!pv || !pv.res || R !== res) return;
   const P = pv.res, a = res.stats, b = P.stats, nth = me >= 0 ? same.length - me : same.length + 1;
   $("cmpH").textContent = "第 " + nth + " 遍 · 跟上一遍比";
-  const arrow = (d, unit, good) => d === 0 ? `<em class="cmpEq">一样</em>` : `<em class="${(d > 0) === good ? "cmpUp" : "cmpDn"}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)}${unit}</em>`;
-  const dS = a.score - b.score, dA = Math.round(a.accuracy * 100) - Math.round(b.accuracy * 100);
+  const arrow = (d, unit, good, eq) => Math.abs(d) <= (eq || 0) ? `<em class="cmpEq">${d ? "差不多" : "一样"}</em>` : `<em class="${(d > 0) === good ? "cmpUp" : "cmpDn"}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)}${unit}</em>`;
+  const dS = a.score - b.score, acc = x => Math.round((x.accSoft != null ? x.accSoft : x.accuracy) * 100), dA = acc(a) - acc(b);
   const ic = issueCount(res), ip = issueCount(P), tot = o => Object.values(o).reduce((x, y) => x + y, 0);
   const dI = tot(ic) - tot(ip);
-  $("cmpTop").innerHTML = `<div><span>总分</span><b>${a.score}</b>${arrow(dS, " 分", true)}</div><div><span>唱准的比例</span><b>${Math.round(a.accuracy * 100)}%</b>${arrow(dA, "%", true)}</div><div><span>小毛病</span><b>${tot(ic)} 处</b>${arrow(dI, " 处", false)}</div>`;
+  $("cmpTop").innerHTML = `<div><span>总分</span><b>${a.score}</b>${arrow(dS, " 分", true, 2)}</div><div><span>唱准的比例</span><b>${acc(a)}%</b>${arrow(dA, "%", true, 2)}</div><div><span>小毛病</span><b>${tot(ic)} 处</b>${arrow(dI, " 处", false, 1)}</div>`;
   // 一句话总评
   let head;
   if (dS >= 8) head = `比上一遍<b>进步了 ${dS} 分</b>，练习有效果，照这个方法继续。`;
   else if (dS >= 3) head = `比上一遍<b>好了 ${dS} 分</b>，在慢慢变好。`;
   else if (dS > -3 && a.score >= 85) head = `跟上一遍<b>一样稳</b>，已经唱得很好了。想再往上，就练下面剩下的那几处小地方。`;
-  else if (dS > -3) head = `跟上一遍<b>差不多</b>。分数没动，说明老问题还在，下面这几处要专门练，光多唱一遍不容易改过来。`;
+  else if (dS > -3) head = `跟上一遍<b>差不多</b>。分数变化不大，说明老问题还在，下面这几处要专门练，光多唱一遍不容易改过来。`;
   else head = `比上一遍<b>低了 ${-dS} 分</b>。可能是累了，或者这次注意力在别的地方。歇一会儿，喝口水再唱。`;
   // 逐项：哪些毛病少了、哪些多了
   const better = [], worse = [];
@@ -2314,7 +2321,7 @@ function render(fromHist) {
   $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
   $("keyLine").textContent = (withRef ? `跟原唱比 · ` : ``) + `唱了 ${SC.fmtT(R.duration)}`;
-  $("tAcc").textContent = Math.round(s.accuracy * 100) + "%";
+  $("tAcc").textContent = Math.round((s.accSoft != null ? s.accSoft : s.accuracy) * 100) + "%";
   $("tStab").textContent = s.unstableRate < 0.15 ? "稳" : s.unstableRate < 0.35 ? "还行" : "晃";
   if (withRef) {
     $("tStabL").textContent = "唱错的音"; $("tStab").textContent = s.wrongCount + " 个";

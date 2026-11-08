@@ -314,12 +314,19 @@ const SC = (() => {
     }
     spots.sort((a, b) => a.t0 - b.t0);
 
-    const stabScore = 1 - Math.min(1, unstableRate * 1.2);
-    const score = Math.round(100 * (0.6 * accuracy + 0.15 * (okish / totDur) + 0.15 * stabScore + 0.1 * (1 - flatEndRate)));
+    // 稳不稳也用平滑的：抖动 16 音分以内不扣，到 30 音分算“晃”
+    const shaky = sustain.length ? sustain.reduce((s, z) => s + Math.max(0, Math.min(1, (z.sd - 16) / 14)), 0) / sustain.length : 0;
+    const stabScore = 1 - Math.min(1, shaky * 1.2);
+    // 总分用平滑的“准度分”：偏 20 音分以内算满分，到 50 音分慢慢降到 0。
+    // 以前按 25/40 音分一刀切，唱得差不多的两遍会因为几个音刚好跨线而差十来分（老人看“跟上一遍比”会糊涂）。
+    const soft = notes.reduce((s, z) => s + (z.wrong ? 0 : Math.max(0, Math.min(1, (50 - Math.abs(z.dev)) / 30))) * z.dur, 0) / totDur;
+    const endSoft = multiPh.length ? multiPh.reduce((s, f) => { const l = f.notes[f.notes.length - 1];
+      return s + (l.dur <= 0.3 ? 0 : l.tailDrop ? 1 : Math.max(0, Math.min(1, (-l.dev - 20) / 30))); }, 0) / multiPh.length : 0;
+    const score = Math.round(100 * (0.75 * soft + 0.15 * stabScore + 0.1 * (1 - endSoft)));
 
     res.phrases = phrases; res.spots = spots;
     res.stats = {
-        score, accuracy, okRate: okish / totDur, meanDev, meanAbs, hiDev, loDev,
+        score, accuracy, accSoft: soft, okRate: okish / totDur, meanDev, meanAbs, hiDev, loDev,
         hiCutName: noteName(hiCut), range: [noteName(pct(absList, 0.05)), noteName(pct(absList, 0.95))],
         scoopRate, unstableRate, vibratoRate, driftNoteCount: driftNotes.length,
         flatEndRate, weakEndRate, songDrift, outKeyCount: outKey.length,
