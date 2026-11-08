@@ -201,6 +201,16 @@
   .intr p{margin:0 0 10px;font-size:17px;line-height:1.65;color:#d9d3c4}
   .intr p b{color:var(--champ);font-weight:600}
   @media (max-height:560px){.intrCard{padding:16px 18px 8px}.intrIco{display:none}.intr .btn{min-height:50px;margin:8px 0}}
+  .cmpTop{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 12px}
+  .cmpTop>div{padding:10px 6px;border-radius:14px;background:rgba(255,255,255,.04);text-align:center}
+  .cmpTop b{display:block;font-size:22px;font-weight:700;color:var(--pearl)}
+  .cmpTop span{font-size:13px;color:var(--mist)}
+  .cmpTop em{display:block;font-style:normal;font-size:14px;font-weight:600;margin-top:2px}
+  .cmpUp{color:var(--good)}.cmpDn{color:var(--bad)}.cmpEq{color:var(--mist)}
+  .cmpL{margin:0 0 10px;font-size:16.5px;line-height:1.7;color:#e6e0d2}
+  .cmpL b{color:var(--champ);font-weight:600}
+  .cmpRow{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);font-size:15.5px;line-height:1.55}
+  .cmpRow i{font-style:normal;flex:none;width:58px;color:var(--mist);font-size:14px}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -511,6 +521,12 @@
       </div>
     </div>
 
+    <div class="card hide" id="cmpCard">
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/></svg><span id="cmpH">跟上一遍比</span></h2>
+      <div class="cmpTop" id="cmpTop"></div>
+      <div id="cmpBody"></div>
+    </div>
+
     <div class="card">
       <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>每一句唱得怎么样</h2>
       <div class="phSum" id="phSum"></div>
@@ -587,7 +603,11 @@ const $ = id => document.getElementById(id);
 const NOTE_ICO = '<svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>';
 const show = (id, on = true) => $(id).classList.toggle("hide", !on);
 let actx = null, R = null, audioURL = null, viewStart = 0, VIEW = 10, stopAt = null, raf = 0;
-const getCtx = () => { if (!actx) { const C = window.AudioContext || window.webkitAudioContext; actx = new C(); } return actx; };
+const getCtx = () => {
+  if (!actx || actx.state === "closed") { const C = window.AudioContext || window.webkitAudioContext; actx = new C(); }
+  if (actx.state !== "running") actx.resume().catch(() => {}); // 苹果手机录完一遍后常变成 interrupted，要叫醒
+  return actx;
+};
 
 function err(t) { $("err").innerHTML = t; show("err", !!t); }
 
@@ -602,7 +622,7 @@ async function startRecording(opts) {
   err(""); show("micMsg", false);
   const c = getCtx();
   try {
-    if (c.state === "suspended") await c.resume();
+    if (c.state !== "running") { try { await Promise.race([c.resume(), new Promise(r => setTimeout(r, 800))]); } catch (e) {} }
     if (warmStream && warmStream.getAudioTracks().some(t => t.readyState === "live")) stream = warmStream;
     else stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     warmStream = null;
@@ -1074,15 +1094,67 @@ async function openHist() {
 }
 function closeHist() { show("histSheet", false); document.body.style.overflow = ""; }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// ===== 跟上一遍比：同一首歌的上一次记录，逐项、逐句告诉他哪里进步了、哪里还没改过来 =====
+const ISSUE_TXT = { "高": "唱高了", "低": "唱低了", "错音": "唱错音", "勾": "起音往上勾", "尾掉": "句尾往下掉", "抖": "长音发抖", "长音往下": "长音越唱越低", "长音往上": "长音越唱越高", "调外": "跑出调外", "慢": "进得慢", "快": "抢拍" };
+function issueCount(res) { const c = {}; (res.notes || []).forEach(z => (z.issues || []).forEach(k => { if (ISSUE_TXT[k]) c[k] = (c[k] || 0) + 1; })); return c; }
+async function renderCompare(res) {
+  show("cmpCard", false);
+  const song = res.histSong || $("song").value.trim(); if (!song || PR) return;
+  let list; try { list = await histAll(); } catch (e) { return; }
+  const same = list.filter(h => h.song === song);
+  const me = same.findIndex(h => h.id === res.histId), prevM = me >= 0 ? same[me + 1] : same.find(h => h.id !== res.histId);
+  if (!prevM) return;
+  const pv = await DB.get("h_" + prevM.id); if (!pv || !pv.res || R !== res) return;
+  const P = pv.res, a = res.stats, b = P.stats, nth = me >= 0 ? same.length - me : same.length + 1;
+  $("cmpH").textContent = "第 " + nth + " 遍 · 跟上一遍比";
+  const arrow = (d, unit, good) => d === 0 ? `<em class="cmpEq">一样</em>` : `<em class="${(d > 0) === good ? "cmpUp" : "cmpDn"}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)}${unit}</em>`;
+  const dS = a.score - b.score, dA = Math.round(a.accuracy * 100) - Math.round(b.accuracy * 100);
+  const ic = issueCount(res), ip = issueCount(P), tot = o => Object.values(o).reduce((x, y) => x + y, 0);
+  const dI = tot(ic) - tot(ip);
+  $("cmpTop").innerHTML = `<div><span>总分</span><b>${a.score}</b>${arrow(dS, " 分", true)}</div><div><span>唱准的比例</span><b>${Math.round(a.accuracy * 100)}%</b>${arrow(dA, "%", true)}</div><div><span>小毛病</span><b>${tot(ic)} 处</b>${arrow(dI, " 处", false)}</div>`;
+  // 一句话总评
+  let head;
+  if (dS >= 8) head = `比上一遍<b>进步了 ${dS} 分</b>，练习有效果，照这个方法继续。`;
+  else if (dS >= 3) head = `比上一遍<b>好了 ${dS} 分</b>，在慢慢变好。`;
+  else if (dS > -3 && a.score >= 85) head = `跟上一遍<b>一样稳</b>，已经唱得很好了。想再往上，就练下面剩下的那几处小地方。`;
+  else if (dS > -3) head = `跟上一遍<b>差不多</b>。分数没动，说明老问题还在，下面这几处要专门练，光多唱一遍不容易改过来。`;
+  else head = `比上一遍<b>低了 ${-dS} 分</b>。可能是累了，或者这次注意力在别的地方。歇一会儿，喝口水再唱。`;
+  // 逐项：哪些毛病少了、哪些多了
+  const better = [], worse = [];
+  Object.keys(ISSUE_TXT).forEach(k => { const x = ic[k] || 0, y = ip[k] || 0; if (y - x >= 2) better.push([k, y, x]); else if (x - y >= 2) worse.push([k, y, x]); });
+  better.sort((p, q) => (q[1] - q[2]) - (p[1] - p[2])); worse.sort((p, q) => (q[2] - q[1]) - (p[2] - p[1]));
+  // 逐句：按时间对上上一遍同一句
+  const cur = (res.phrases || []).filter(f => f.t1 - f.t0 >= 1 && f.notes.length >= 2).map(phraseInfo);
+  const old = (P.phrases || []).filter(f => f.t1 - f.t0 >= 1 && f.notes.length >= 2).map(phraseInfo);
+  const pairs = [];
+  if (res.mode === P.mode || res.yt) cur.forEach(x => {
+    let best = null, ov = 0;
+    old.forEach(y => { const o = Math.min(x.f.t1, y.f.t1) - Math.max(x.f.t0, y.f.t0); if (o > ov) { ov = o; best = y; } });
+    if (best && ov > 0.5 * Math.min(x.f.t1 - x.f.t0, best.f.t1 - best.f.t0)) pairs.push([x, best, x.score - best.score]);
+  });
+  const up = pairs.filter(p => p[2] >= 12).sort((p, q) => q[2] - p[2]).slice(0, 2);
+  const down = pairs.filter(p => p[2] <= -12).sort((p, q) => p[2] - q[2]).slice(0, 2);
+  const stuck = pairs.filter(p => p[0].level === "bad" && p[1].level === "bad").slice(0, 2);
+  let h = `<p class="cmpL">${head}</p>`;
+  const row = (tag, txt) => `<div class="cmpRow"><i>${tag}</i><span>${txt}</span></div>`;
+  better.slice(0, 2).forEach(([k, y, x]) => h += row(`<span class="cmpUp">改好了</span>`, `${ISSUE_TXT[k]}：上一遍 ${y} 处，这一遍 ${x} 处。`));
+  up.forEach(([x, y, d]) => h += row(`<span class="cmpUp">进步</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）从 ${y.score} 分到 <b>${x.score} 分</b>。`));
+  stuck.forEach(([x]) => h += row(`<span class="cmpDn">还没改</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）两遍都没唱好：${x.tip}。${res.yt ? "可以在下面「逐句点评」里点这句的「只练这一句」。" : ""}`));
+  worse.slice(0, 2).forEach(([k, y, x]) => h += row(`<span class="cmpDn">多了</span>`, `${ISSUE_TXT[k]}：上一遍 ${y} 处，这一遍 ${x} 处，下一遍注意这个。`));
+  down.forEach(([x, y]) => h += row(`<span class="cmpDn">退步</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）上一遍 ${y.score} 分，这一遍 ${x.score} 分。`));
+  if (!better.length && !up.length && !stuck.length && !worse.length && !down.length) h += `<p class="cmpL" style="color:var(--mist);font-size:15px;margin:0">各句跟上一遍都差不多。</p>`;
+  $("cmpBody").innerHTML = h; show("cmpCard");
+}
 async function loadHist(id) {
   const v = await DB.get("h_" + id);
   if (!v || !v.res) { err("这条记录打不开了。"); closeHist(); return; }
   closeHist();
-  R = v.res; R.histId = id;
+  R = v.res; R.histId = id; R.histView = true;
+  { const m = (await histAll()).find(h => h.id === id); R.histSong = m ? m.song : ""; }
   if (audioURL) URL.revokeObjectURL(audioURL);
   audioURL = URL.createObjectURL(v.blob); $("aud").src = audioURL;
   show("stepIn", false); err("");
-  render(true);
+  render(true); renderCompare(R);
 }
 $("btnHist").onclick = openHist;
 async function renderLast() {
@@ -1289,7 +1361,9 @@ function stageVideo() {
     if (st === 0 && !$("stageRec").classList.contains("hide") && !$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200);
   } });
 }
+let lastStage = -1;
 function openStage(i) {
+  lastStage = i; show("intr", false); recPaused = false;
   $("stageBack").textContent = "‹ 换一首歌";
   stageSong = SONGS[i]; stageMode = stageSong.k ? "k" : "o";
   { const s = stageSong; mpUI(); if (REF.name === s.t && REF.ab) { mp3Has[s.t] = true; mpUI(); } else DB.get("ref_" + s.t).then(v => { if (v && v.blob && stageSong === s) useMp3(s, v.blob, false); }); }
@@ -1460,7 +1534,7 @@ async function runAnalysis(ab, blob, mode) {
     $("aud").src = audioURL;
     if (PR) { renderPractice(); return; }
     render();
-    histSave(R, keep);
+    { const r0 = R; histSave(R, keep).then(() => renderCompare(r0)); }
 }
 function fail(e) {
     const m = e.message;
@@ -1736,7 +1810,11 @@ aud.onpause = () => $("btnPlay").lastChild.textContent = "听我唱的";
 $("btnPlay").onclick = () => aud.paused ? playFrom(aud.currentTime > 0 && aud.currentTime < R.duration - 0.5 ? aud.currentTime : viewStart) : aud.pause();
 cv.addEventListener("click", e => { if (!R) return; const r = cv.getBoundingClientRect(); const t = viewStart + (e.clientX - r.left - 44) / (r.width - 50) * VIEW; playFrom(t - 0.3); });
 
-$("btnHome").onclick = $("again").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("again").onclick = () => {
+  if (lastStage >= 0 && R && !R.histView) { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); err(""); openStage(lastStage); return; }
+  $("btnHome").onclick();
+};
+$("btnHome").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
 // ---------- AI 老师 ----------
 let sample = null;
