@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794146435";
+  var V = "1794177476";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -1226,7 +1226,7 @@ let ytPending = false, stageVid = "", recYt = null, PR = null; // PR：正在“
 let lastKind = "";
 function startAcap() {
   const n = $("acapName").value.trim(); $("song").value = n; try { localStorage.setItem("acapName", n); } catch (e) {}
-  lastKind = "acap"; lastStage = -1; stageSong = null;
+  lastKind = "acap"; lastStage = -1; stageSong = null; $("stageBack").textContent = "‹ 返回";
   return startRecording({});
 }
 $("btnRec").onclick = startAcap;
@@ -1237,8 +1237,8 @@ async function startRecording(opts) {
   const c = getCtx();
   try {
     if (c.state !== "running") { try { await Promise.race([c.resume(), new Promise(r => setTimeout(r, 800))]); } catch (e) {} }
-    if (warmStream && warmStream.getAudioTracks().some(t => t.readyState === "live")) stream = warmStream;
-    else stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    if (warmStream && warmStream.getAudioTracks().some(t => t.readyState === "live" && !t.muted)) stream = warmStream; // 放久了被系统静音的不要用
+    else { if (warmStream) warmStream.getTracks().forEach(t => t.stop()); stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
     warmStream = null;
   } catch (e) { try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} micDenied(e, opts); return false; }
   stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
@@ -1255,7 +1255,7 @@ async function startRecording(opts) {
   } else if (opts.yt) {
     $("volTxt").textContent = "音乐一开始就自动录音。如果视频没动，点一下视频上的播放键。";
     try { if (YT_.player && YT_.player.getPlayerState() === 1) ytGo(); } catch (e) {}
-  } else { stageSong = null; YT_.stop(); $("recTitle").textContent = REF.name ? "跟着原唱唱" : "正在录音（清唱）"; }
+  } else { stageSong = null; YT_.stop(); const an = $("song").value.trim(); $("recTitle").textContent = REF.name ? "跟着原唱唱" : an ? "清唱《" + an + "》" : "正在录音（清唱）"; }
   stageUI(opts.yt ? "rec" : "plain"); show("liveNote", false); show("nudge", !!mp3Song);
   if (!opts.yt && REF.name) {
     $("recSub").textContent = "原唱准备中…";
@@ -2136,7 +2136,9 @@ document.addEventListener("visibilitychange", () => {
 });
 $("stageBack").onclick = () => {
   cancelRec(); YT_.stop(); stageSong = null;
-  if (PR) { if (stream) stream.getTracks().forEach(t => t.stop()); show("stepRec", false); $("prBack").click(); return; }
+  // 离开唱歌页就把麦克风关掉：iPhone 顶上的橙点不会一直亮，下次进来重新拿一个“醒着”的麦克风
+  [stream, warmStream].forEach(m => { if (m) m.getTracks().forEach(t => t.stop()); }); stream = null; warmStream = null;
+  if (PR) { show("stepRec", false); $("prBack").click(); return; }
   show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0, behavior: "smooth" });
 };
 $("btnRef").onclick = $("btnRefChange").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
@@ -2320,7 +2322,8 @@ function render(fromHist) {
   $("ring").firstElementChild.style.cssText = "background:#121e33;width:116px;height:116px;border-radius:50%;display:grid;place-content:center";
   $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
-  $("keyLine").textContent = (withRef ? `跟原唱比 · ` : ``) + `唱了 ${SC.fmtT(R.duration)}`;
+  const selfNm = !withRef && !R.histView && lastKind === "acap" && $("song").value.trim();
+  $("keyLine").innerHTML = (withRef ? `跟原唱比 · ` : selfNm ? `<span style="display:block">《${esc(selfNm)}》清唱</span>` : ``) + `唱了 ${SC.fmtT(R.duration)}`;
   $("tAcc").textContent = Math.round((s.accSoft != null ? s.accSoft : s.accuracy) * 100) + "%";
   $("tStab").textContent = s.unstableRate < 0.15 ? "稳" : s.unstableRate < 0.35 ? "还行" : "晃";
   if (withRef) {

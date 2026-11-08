@@ -17,24 +17,32 @@ async def main():
       else: await r.abort()
     await pg.route('**/*',route)
     await pg.goto('http://localhost:8765/index.html'); await pg.wait_for_timeout(1200)
-    await pg.click('#songList button[data-i="0"]'); await pg.wait_for_timeout(1500)
+    ACAP = os.environ.get('ACAP') == '1'  # ACAP=1：走清唱（带歌名）这条路
+    if ACAP:
+      await pg.fill('#acapName', '我的祖国'); await pg.screenshot(path=f'{OUT}/c0_acap_home.png')
+      await pg.click('#btnAcap'); await pg.wait_for_timeout(1500)
+    else:
+      await pg.click('#songList button[data-i="0"]'); await pg.wait_for_timeout(1500)
+    pre = 'c' if ACAP else 'a'
     stats = []
     for k in range(int(os.environ.get('TAKES', 3))):
-      await pg.click('#stageGo'); await pg.wait_for_timeout(int(os.environ.get('SING', 26))*1000)
+      await pg.screenshot(path=f'{OUT}/{pre}_take{k+1}_start.png')
+      if not ACAP: await pg.click('#stageGo')
+      await pg.wait_for_timeout(int(os.environ.get('SING', 26))*1000)
       await pg.click('#btnStop'); t0 = time.time()
       await pg.wait_for_selector('#result:not(.hide)',timeout=60000); dt = time.time() - t0; await pg.wait_for_timeout(1500)
       heap = await pg.evaluate('performance.memory ? Math.round(performance.memory.usedJSHeapSize/1e6) : -1')
       print(f'第 {k+1} 遍：出结果 {dt:.1f} 秒，内存 {heap} MB'); stats.append((dt, heap))
       if k < int(os.environ.get('TAKES', 3)) - 1:
         await pg.click('#again'); await pg.wait_for_timeout(1500)
-        await pg.screenshot(path=f'{OUT}/a1_again_stage.png')
+        await pg.screenshot(path=f'{OUT}/{pre}1_again_stage.png')
     vis = await pg.is_visible('#cmpCard')
     print('跟上一遍比卡片：', '有' if vis else '没有')
     if vis:
       await pg.locator('#cmpCard').scroll_into_view_if_needed(); await pg.wait_for_timeout(400)
-      await pg.screenshot(path=f'{OUT}/a2_compare.png')
+      await pg.screenshot(path=f'{OUT}/{pre}2_compare.png')
       print(await pg.inner_text('#cmpCard'))
-    await pg.evaluate('window.scrollTo(0,0)'); await pg.screenshot(path=f'{OUT}/a3_result2.png')
+    await pg.evaluate('window.scrollTo(0,0)'); await pg.screenshot(path=f'{OUT}/{pre}3_result2.png')
     if len(stats) >= 3 and (stats[-1][1] > stats[0][1] + 40 or stats[-1][0] > stats[0][0] * 2 + 2): logs.append('连唱越来越慢/越占内存：' + str(stats))
     print('\n'.join(logs) or '无报错')
     await b.close()

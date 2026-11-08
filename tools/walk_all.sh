@@ -10,3 +10,4 @@ python3 tools/walk_intr.py shots | tail -3
 python3 tools/walk_mp3.py shots | tail -1
 python3 tools/walk_again.py shots | tail -1
 python3 tools/walk_noyt.py shots | tail -1
+python3 tools/walk_mic.py shots | tail -1

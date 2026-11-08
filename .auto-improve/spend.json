@@ -1,6 +1,6 @@
 {
- "total_usd": 9.2379,
- "total_tokens": 17240788,
+ "total_usd": 10.5895,
+ "total_tokens": 18969817,
  "runs": [
   {
    "at": "2026-11-06T13:11+00:00",
@@ -49,6 +49,12 @@
    "usd": 1.8778,
    "tokens": 2598953,
    "status": "error_max_budget_usd"
+  },
+  {
+   "at": "2026-11-08T22:40+00:00",
+   "usd": 1.3516,
+   "tokens": 1729029,
+   "status": "success"
   }
  ]
 }
