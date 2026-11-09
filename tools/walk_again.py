@@ -44,6 +44,13 @@ async def main():
       print(await pg.inner_text('#cmpCard'))
     await pg.evaluate('window.scrollTo(0,0)'); await pg.screenshot(path=f'{OUT}/{pre}3_result2.png')
     if len(stats) >= 3 and (stats[-1][1] > stats[0][1] + 40 or stats[-1][0] > stats[0][0] * 2 + 2): logs.append('连唱越来越慢/越占内存：' + str(stats))
+    if not ACAP:  # 唱过的歌回到首页要排在最前面，并写"唱过 N 次"
+      await pg.reload(); await pg.wait_for_timeout(1500)
+      first=await pg.inner_text('#songList .song:first-child')
+      print('首页第一首：', first.replace('\n',' '))
+      if '唱过' not in first: logs.append('唱过的歌没有排到最前面')
+      await pg.locator('#songList').scroll_into_view_if_needed(); await pg.evaluate('window.scrollBy(0,-120)'); await pg.wait_for_timeout(300)
+      await pg.screenshot(path=f'{OUT}/{pre}4_home_sung.png')
     print('\n'.join(logs) or '无报错')
     await b.close()
 asyncio.run(main())
