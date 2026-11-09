@@ -5,7 +5,7 @@ const base = [[0,.5],[2,.5],[4,.5],[5,.5],[7,.8],[4,.5],[2,.5],[0,1.0],[null,.5]
 const mel = base.concat(base.map(([d, s]) => [d == null ? null : d + (d === 12 ? -3 : 0), s])); // 两段，约 30 秒
 // take: seed 决定这一遍的“自然误差”；err: {音序号: 偏差(半音)}；dev: 每个音随机偏差上限（半音）
 function take(o) {
-  o = Object.assign({ seed: 1, dev: .08, jit: .04, base: 55, lead: .5, err: {}, noise: .004, vib: 0 }, o);
+  o = Object.assign({ seed: 1, dev: .08, jit: .04, base: 55, lead: .5, err: {}, noise: .004, vib: 0, amp: 1, bleed: 0 }, o);
   let seed = o.seed * 7919 + 13; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - .5; };
   const total = mel.reduce((s, m) => s + m[1], 0) + o.lead + 1, x = new Float32Array(Math.floor(total * sr));
   let t = o.lead, ph = 0, ni = -1; const truth = [];
@@ -15,9 +15,11 @@ function take(o) {
     truth.push([t, t + dur, o.base + d]);
     for (let s = s0; s < s1; s++) { const tt = (s - s0) / sr, midi = o.base + d + off + o.vib * Math.sin(2 * Math.PI * 5.5 * tt);
       ph += 2 * Math.PI * 440 * Math.pow(2, (midi - 69) / 12) / sr;
-      const env = Math.min(1, tt / .04, (dur - tt) / .03); x[s] = env * .3 * (Math.sin(ph) + .5 * Math.sin(2 * ph) + .3 * Math.sin(3 * ph) + .15 * Math.sin(4 * ph)); }
+      const env = Math.min(1, tt / .04, (dur - tt) / .03); x[s] = env * .3 * o.amp * (Math.sin(ph) + .5 * Math.sin(2 * ph) + .3 * Math.sin(3 * ph) + .15 * Math.sin(4 * ph)); }
     t += dur; }
   for (let s = 0; s < x.length; s++) x[s] += o.noise * rnd();
+  if (o.bleed) for (let s = 0; s < x.length; s++) { const tt = s / sr, ch = Math.floor(tt / 2) % 2 ? [53, 57, 60] : [48, 52, 55]; // 外放伴奏漏进麦克风：两个和弦轮流
+    for (const m of ch) x[s] += o.bleed * Math.sin(2 * Math.PI * 440 * Math.pow(2, (m - 69) / 12) * tt) / 3; }
   x.truth = truth; x.total = total; return x;
 }
 // 原唱旋律（20ms 一帧），按标准节奏
@@ -40,6 +42,11 @@ const spread = a => Math.max(...a) - Math.min(...a);
     check(tag + "唱得一般（每个音随便偏 ±35 音分）的 6 遍：都在平均分 ±3 分内", mid.every(v => Math.abs(v - mm) <= 3), mid.join(" ") + "（平均 " + mm.toFixed(1) + "）");
     const vib = []; for (let s = 1; s <= 4; s++) vib.push(await score(take({ seed: s, vib: .3 }), withRef));
     check(tag + "带颤音唱得差不多的 4 遍：分数差距在 3 分内", spread(vib) <= 3, vib.join(" "));
+    // 真实情况：离手机远近不同（声音大小）、屋里有点杂音，同一种唱法分数不能乱跳
+    const env = []; for (const v of [{}, { amp: .3 }, { amp: 1.6 }, { noise: .03 }, { amp: .4, noise: .02 }]) env.push(await score(take(Object.assign({ seed: 3, dev: .35 }, v)), withRef));
+    check(tag + "离手机远近不同、屋里有点杂音：分数差距在 3 分内", spread(env) <= 3, env.join(" "));
+    const bl = []; for (const v of [0, .03, .06]) bl.push(await score(take({ seed: 3, dev: .35, bleed: v }), withRef));
+    check(tag + "没戴耳机、伴奏漏进麦克风一点：分数差距在 3 分内", spread(bl) <= 3, bl.join(" "));
     const lead = []; for (const l of [.3, .45, .62]) lead.push(await score(take({ seed: 2, lead: withRef ? .5 : l }), withRef));
     check(tag + "开口早晚差一点：分数差距在 3 分内", spread(lead) <= 3, lead.join(" "));
     const good = Math.round(same.reduce((s, v) => s + v, 0) / same.length);

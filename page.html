@@ -373,9 +373,9 @@
   .histBtn:focus-visible{outline:2px solid var(--champ);outline-offset:3px}
   .lastCard{background:var(--ink2);border:1px solid rgba(216,191,143,.25);border-radius:24px;padding:20px;margin:0 0 26px}
   .lastCard .lk{font-size:15px;color:var(--mist)}
-  .lastCard .lrow{display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 6px}
+  .lastCard .lrow{display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 14px;gap:12px}
   .lastCard .ln{font:600 26px/1.3 var(--serif)}
-  .lastCard .ls{font-size:18px;color:var(--good)}
+  .lastCard .ls{font-size:18px;color:var(--good);white-space:nowrap}
   .lastCard .btn{min-height:60px;margin:8px 0 0;font-size:20px;font-weight:700;letter-spacing:.04em}
   h2.pick{font:500 19px/1.4 -apple-system,"PingFang SC",sans-serif;letter-spacing:0;margin:0 0 12px}
   #songList .song{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:18px;margin:0 0 12px}
@@ -787,7 +787,7 @@ function drawLive(now) {
     if (!sing && now - (drawLive.lastSing || -9) < 0.6) { /* 字与字之间的短停顿：不换提示，免得闪 */ }
     else if (!sing && PV) { if (el.textContent !== PV.text) drawLive.pvAt = now; el.className = "liveSay " + PV.k; el.textContent = PV.text; }
     else if (sing && now - (drawLive.pvAt || -9) < 1.6) { /* 刚说完“这句怎么样”：留够 1.6 秒让他看清，再说下一句的 */ }
-    else if (!sing) { el.className = "liveSay"; el.textContent = rec.length || live.some(p => p.t > now - 3 && !isNaN(p.m)) ? "换气，好的" : "一开口，这里就告诉你稳不稳"; }
+    else if (!sing) { el.className = "liveSay"; el.textContent = rec.length || live.some(p => p.t > now - 3 && !isNaN(p.m)) ? "换气，好的" : "一开口，这里告诉您稳不稳"; }
     else if (st === "ok") { el.className = "liveSay ok"; el.textContent = sec >= 3 ? "很稳！连续 " + sec + " 秒 ✨" : "很好，音站住了 ✓"; }
     else if (st === "hi") { el.className = "liveSay off"; el.textContent = "有点偏高，稍微往下"; }
     else if (st === "lo") { el.className = "liveSay off"; el.textContent = "有点偏低，稍微往上"; }
@@ -1094,6 +1094,8 @@ async function histSave(res, blob) {
     await DB.put("hist", list);
     drop.forEach(d => DB.del("h_" + d.id));
     res.histId = id;
+    // Safari 对一阵子没打开的网站会清掉存的东西；请求“长期保存”，免得爸妈的练唱记录和存的原唱突然没了
+    try { if (navigator.storage && navigator.storage.persist && !histSave.asked) { histSave.asked = true; navigator.storage.persist().catch(() => {}); } } catch (e) {}
     renderLast();
   } catch (e) {}
 }
@@ -1140,7 +1142,8 @@ async function renderCompare(res) {
   // 一句话总评
   let head;
   if (dS >= 8) head = `比上一遍<b>进步了 ${dS} 分</b>，练习有效果，照这个方法继续。`;
-  else if (dS >= 3) head = `比上一遍<b>好了 ${dS} 分</b>，在慢慢变好。`;
+  else if (dS >= 3) { const sq = me >= 0 ? same.slice(me) : [], dip = sq.length >= 3 && sq[2].score > sq[1].score; // 上一遍是掉下去的：说“找回状态”，别说“慢慢变好”
+    head = `比上一遍<b>好了 ${dS} 分</b>，${dip ? "又找回状态了" : "在慢慢变好"}。`; }
   else if (dS > -3 && a.score >= 85) head = `跟上一遍<b>一样稳</b>，已经唱得很好了。想再往上，就练下面剩下的那几处小地方。`;
   else if (dS > -3) head = `跟上一遍<b>差不多</b>。分数变化不大，说明老问题还在，下面这几处要专门练，光多唱一遍不容易改过来。`;
   else head = `比上一遍<b>低了 ${-dS} 分</b>。可能是累了，或者这次注意力在别的地方。歇一会儿，喝口水再唱。`;
@@ -1167,7 +1170,7 @@ async function renderCompare(res) {
   stuck.forEach(([x]) => h += row(`<span class="cmpDn">还没改</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）两遍都没唱好：${x.tip}。${res.yt ? "可以在下面「逐句点评」里点这句的「只练这一句」。" : ""}`));
   worse.slice(0, 2).forEach(([k, y, x]) => h += row(`<span class="cmpDn">多了</span>`, `${ISSUE_TXT[k]}：上一遍 ${y} 处，这一遍 ${x} 处，下一遍注意这个。`));
   down.forEach(([x, y]) => h += row(`<span class="cmpDn">退步</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）上一遍 ${y.score} 分，这一遍 ${x.score} 分。`));
-  if (!better.length && !up.length && !stuck.length && !worse.length && !down.length) h += `<p class="cmpL" style="color:var(--mist);font-size:15px;margin:0">各句跟上一遍都差不多。</p>`;
+  if (!better.length && !up.length && !stuck.length && !worse.length && !down.length) h += `<p class="cmpL" style="color:var(--mist);font-size:15px;margin:0 0 8px">各句跟上一遍都差不多。</p>`;
   // 这首歌一路唱下来的分数
   const takes = same.slice(me >= 0 ? me : 0).reverse().slice(-6);
   if (takes.length >= 3) h += `<div class="cmpRow"><i>一路下来</i><span>${takes.map((t, k) => `<b style="color:${t.id === res.histId ? "var(--champ)" : "var(--pearl)"}">${t.score}</b>`).join(" → ")}${takes[takes.length - 1].score > takes[0].score ? "，越唱越好。" : "。"}</span></div>`;
@@ -1564,7 +1567,7 @@ async function handleBlob(blob) {
 function handlePCM(raw, sr, mode) {
   const ab = { sampleRate: sr, length: raw.length, duration: raw.length / sr, numberOfChannels: 1, getChannelData: () => raw };
   err(""); show("result", false); show("stepBusy"); $("prog").style.width = "3%";
-  runAnalysis(ab, null, mode).catch(fail);
+  runAnalysis(ab, null, mode).catch(e => fail(e, true));
 }
 async function runAnalysis(ab, blob, mode) {
     const tooLong = ab.duration > 360;
@@ -1591,10 +1594,16 @@ async function runAnalysis(ab, blob, mode) {
     render();
     { const r0 = R; histSave(R, keep).then(() => renderCompare(r0)); }
 }
-function fail(e) {
+function fail(e, fromRec) {
     const m = e.message;
     if (PR && (m === "short" || m === "few")) { PR.miss = true; renderPractice(); return; }
     show("stepBusy", false); show("stepIn");
+    if (fromRec && (m === "short" || m === "few")) { // 刚唱完却没听到：用大卡片说清楚，别悄悄回首页
+      const i = recSong ? SONGS.findIndex(x => x.t === recSong) : -1; err(""); window.scrollTo(0, 0);
+      intrShow("没听清您的歌声", recSong ? "手机可能离得远，<br>或者伴奏声音太大。<br>拿近一点、戴上耳机再唱。" : "手机可能离得远，<br>或者声音小了点。<br>把手机拿到胸前，放开声音唱。",
+        ["再唱一遍", () => { if (i >= 0) openStage(i); else startAcap(); }], ["先不唱了", () => {}]);
+      return;
+    }
     err(m === "decode" ? "这个文件打不开 😅。可以换个方式录：用手机<b>录像</b>，或者苹果“语音备忘录”、安卓“录音机”录成 m4a，再选文件。"
       : m === "short" || m === "few" ? "没听到足够的歌声。请离手机近一点、唱长一点（至少 20～30 秒），最好清唱再试一次。"
       : "出了点问题：" + m);
