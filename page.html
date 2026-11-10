@@ -12,8 +12,10 @@
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
       t = (t || "").trim(); if (!t || t === V) return;
+      // 只在首页时更新：正在唱、正在看结果、正在练一句时锁屏回来，绝不刷新（不然刚唱的结果就没了）
+      var busy = ["stepRec", "stepBusy", "result", "practice"].some(function (id) { var el = document.getElementById(id); return el && !el.classList.contains("hide"); });
+      if (busy) return;
       try { if (sessionStorage.getItem("sc_rl") === t) return; sessionStorage.setItem("sc_rl", t); } catch (e) {}
-      var busy = document.getElementById("stepRec"); if (busy && !busy.classList.contains("hide")) return;
       location.replace(location.pathname + "?v=" + t);
     }).catch(function () {});
   }
@@ -191,6 +193,16 @@
     body.singing .cd{top:20px;bottom:84px;flex-direction:row;gap:14px}
     body.singing .cd b{font-size:min(22vh,88px)}
     body.singing .cd span{margin:0;font-size:22px}
+  }
+  /* 横屏清唱：一屏放下，"唱完了"不用滚就看得到 */
+  @media (orientation:landscape) and (max-height:560px){
+    body:not(.singing) #stepRec{padding-top:10px;padding-bottom:12px}
+    body:not(.singing) #stepRec h2{font-size:18px;margin:0 0 2px}
+    body:not(.singing) #stepRec .rec{margin:0}
+    body:not(.singing) #stepRec .liveSay{font-size:18px;min-height:24px;margin:2px 0 4px;padding:6px 10px}
+    body:not(.singing) #stepRec #live{height:110px!important}
+    body:not(.singing) #stepRec #volTxt,body:not(.singing) #stepRec #liveNote{display:none!important}
+    body:not(.singing) #stepRec #btnStop{min-height:50px;margin-top:8px}
   }
   /* 被打断（锁屏/来电/耳机/麦克风没开）：一句大白话 + 大按钮 */
   .intr{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,9,18,.78);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}

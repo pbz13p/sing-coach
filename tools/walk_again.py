@@ -7,7 +7,7 @@ OUT=sys.argv[1] if len(sys.argv)>1 else 'shots'; os.makedirs(OUT,exist_ok=True)
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream','--use-file-for-fake-audio-capture='+os.path.abspath('tools/sing.wav'),'--autoplay-policy=no-user-gesture-required'])
-    ctx=await b.new_context(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True,permissions=['microphone'])
+    ctx=await b.new_context(viewport={'width':int(os.environ.get('W',390)),'height':int(os.environ.get('H',844))},device_scale_factor=1,is_mobile=True,has_touch=True,permissions=['microphone'])
     pg=await ctx.new_page(); logs=[]
     pg.on('pageerror',lambda e: logs.append('PAGEERROR '+str(e)))
     async def route(r):
