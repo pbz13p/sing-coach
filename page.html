@@ -204,6 +204,26 @@
     body:not(.singing) #stepRec #volTxt,body:not(.singing) #stepRec #liveNote{display:none!important}
     body:not(.singing) #stepRec #btnStop{min-height:50px;margin-top:8px}
   }
+  /* 横屏"选好歌、还没开始唱"：左边视频，右边按钮，大圆按钮不用滚就看得到 */
+  @media (orientation:landscape) and (max-height:560px){
+    body:not(.singing) .wrap:has(#stageReady:not(.hide)){max-width:min(860px,100%)}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide)){display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:0 20px;align-items:center;padding:10px 16px 12px}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide))>*{grid-column:2}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide))>#recYt{grid-column:1;grid-row:1 / span 8;margin:0!important;align-self:center}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide))>#recYt .ytFrame{max-width:none}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide))>#rotHint{display:none}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide))>#stageBack{grid-column:1;grid-row:1;justify-self:start;align-self:start}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide))>#recYt{grid-row:2 / span 8}
+    body:not(.singing) #stepRec #stageReady .note{margin:6px 0 8px!important;font-size:15px}
+    body:not(.singing) .wrap:has(#stageReady:not(.hide)){padding-top:max(10px,env(safe-area-inset-top));padding-bottom:16px}
+    body:not(.singing) #stepRec:has(#stageReady:not(.hide)) h2{margin:0 0 6px}
+    body:not(.singing) #stepRec #stageReady .orbWrap{padding:20px 0 18px}
+    body:not(.singing) #stepRec #stageReady .orb{width:108px;height:108px}
+    body:not(.singing) #stepRec #stageReady .orb::after{inset:-14px}
+    body:not(.singing) #stepRec #stageReady .orb .ico{width:30px;height:30px;margin:0 auto 4px}
+    body:not(.singing) #stepRec #stageReady .orb .tx{font-size:19px;white-space:nowrap}
+    body:not(.singing) #stepRec #stageReady .mpCard{margin-top:10px}
+  }
   /* 被打断（锁屏/来电/耳机/麦克风没开）：一句大白话 + 大按钮 */
   .intr{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,9,18,.78);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
   .intrCard{width:100%;max-width:360px;max-height:100%;overflow:auto;text-align:center;padding:26px 22px 14px;border-radius:26px;background:linear-gradient(180deg,#1b2740,#111a2c);border:1px solid rgba(216,191,143,.28);box-shadow:0 30px 60px -20px rgba(0,0,0,.7)}
