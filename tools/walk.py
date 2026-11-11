@@ -25,6 +25,7 @@ async def main():
     await pg.route('**/*',route)
     await pg.goto('http://localhost:8765/index.html'); await pg.wait_for_timeout(1200)
     await pg.screenshot(path=f'{OUT}/01_home.png')
+    assert await pg.evaluate('document.getElementById("lastCard").classList.contains("hide")'), '第一次打开不该出现空的“上次唱的”卡片'
     await pg.screenshot(path=f'{OUT}/02_home_full.png',full_page=True)
     await pg.click('#songList button[data-i="0"]'); await pg.wait_for_timeout(1500)
     await pg.screenshot(path=f'{OUT}/03_stage.png')

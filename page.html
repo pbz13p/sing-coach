@@ -644,7 +644,7 @@
 (() => {
 const $ = id => document.getElementById(id);
 const NOTE_ICO = '<svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>';
-const show = (id, on = true) => $(id).classList.toggle("hide", !on);
+const show = (id, ...on) => $(id).classList.toggle("hide", on.length ? !on[0] : false); // 传了第二个参数就按真假来（undefined 当"不显示"），不传才是"显示"
 let actx = null, R = null, audioURL = null, viewStart = 0, VIEW = 10, stopAt = null, raf = 0;
 const getCtx = () => {
   if (!actx || actx.state === "closed") { const C = window.AudioContext || window.webkitAudioContext; actx = new C(); }
@@ -1230,7 +1230,7 @@ async function renderLast() {
     const l = await histAll(); const h = l[0];
     { const cnt = {}; l.forEach((x, k) => { if (!x.song) return; const c = cnt[x.song] || (cnt[x.song] = { n: 0, at: l.length - k }); c.n++; }); buildSongs(cnt); }
     const i = h ? SONGS.findIndex(x => x.t === h.song) : -1;
-    const acap = h && i < 0 && h.mode === "self";
+    const acap = !!(h && i < 0 && h.mode === "self");
     show("lastCard", i >= 0 || acap);
     if (i < 0 && !acap) return;
     $("lastName").textContent = (h.song || "清唱") + (acap ? "（清唱）" : ""); $("lastScore").textContent = h.score + " 分";
