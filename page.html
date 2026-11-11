@@ -351,6 +351,8 @@
   .hTxt{display:flex;flex-direction:column;min-width:0}
   .hTxt .nm{font:600 18px/1.4 var(--serif);color:var(--pearl);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hTxt .by{font-size:14px;color:var(--mist)}
+  .hTrend{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px;color:var(--champ)}
+  .hTrend svg{width:56px;height:20px;flex:none;overflow:visible}
   .hDel{all:unset;cursor:pointer;font-size:14px;color:var(--mist);padding:10px 4px 10px 12px}
   .hDel[data-sure="1"]{color:var(--bad)}
 
@@ -404,7 +406,8 @@
   .hbL{font-size:14px;color:var(--champ)}
   .histBtn:focus-visible{outline:2px solid var(--champ);outline-offset:3px}
   .lastCard{background:var(--ink2);border:1px solid rgba(216,191,143,.25);border-radius:24px;padding:20px;margin:0 0 26px}
-  .lastCard .lk{font-size:15px;color:var(--mist)}
+  .lastCard .lk{font-size:15px;color:var(--mist);display:flex;justify-content:space-between;gap:12px}
+  .lastCard .streak{color:var(--champ);font-weight:600;letter-spacing:.04em}
   .lastCard .lrow{display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 14px;gap:12px}
   .lastCard .ln{font:600 26px/1.3 var(--serif)}
   .lastCard .ls{font-size:18px;color:var(--good);white-space:nowrap}
@@ -455,7 +458,7 @@
 
   <div id="stepIn">
   <div class="lastCard hide" id="lastCard">
-    <div class="lk">上次唱的</div>
+    <div class="lk"><span>上次唱的</span><span class="streak hide" id="lastStreak"></span></div>
     <div class="lrow"><span class="ln" id="lastName"></span><span class="ls" id="lastScore"></span></div>
     <button class="btn gold" id="lastGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>再唱一遍</button>
   </div>
@@ -579,6 +582,7 @@
     <div class="actions">
       <button class="btn gold main hide" id="btnWorst"><span id="worstVerb">听</span>第 <span id="worstNo"></span> 句（最需要练）</button>
       <button class="btn gold main" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
+      <button class="btn sec" id="btnShare"><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>发给家人听</button>
       <button class="btn sec" id="btnHome">回到歌单</button>
       <button class="btn sec hide" id="btnHist2">看全部练唱记录</button>
     </div>
@@ -1136,8 +1140,9 @@ function fmtDate(t) { const d = new Date(t); const p = n => String(n).padStart(2
 async function openHist() {
   aud.pause();
   const list = await histAll();
+  const seen = {};
   $("histList").innerHTML = list.length ? list.map(h => `<div class="hItem" data-id="${h.id}">
-      <button class="hMain"><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "清唱（没写歌名）"}</span><span class="by">${fmtDate(h.t)}</span></span><span class="hScore" style="--c:${h.score >= 80 ? "var(--good)" : h.score >= 65 ? "var(--mid)" : "var(--bad)"}">${h.score}</span><span class="hPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <button class="hMain"><span class="hTxt"><span class="nm">${h.song ? esc(h.song) : "清唱（没写歌名）"}</span><span class="by">${fmtDate(h.t)}</span>${trendHtml(list, h, seen)}</span><span class="hScore" style="--c:${h.score >= 80 ? "var(--good)" : h.score >= 65 ? "var(--mid)" : "var(--bad)"}">${h.score}</span><span class="hPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
       <button class="hDel" aria-label="删除这条">删除</button></div>`).join("")
     : '<p class="note" style="padding:20px 0">还没有记录。唱完一首，会自动存在这里。</p>';
   { const wk = list.filter(h => Date.now() - h.t < 7 * 864e5);
@@ -1151,6 +1156,17 @@ async function openHist() {
     const l = (await histAll()).filter(h => h.id !== id); await DB.put("hist", l); DB.del("h_" + id); openHist();
   });
   show("histSheet"); document.body.style.overflow = "hidden"; $("histClose").focus();
+}
+// 进步看得见：每首歌最新那条下面画最近几次分数的小折线，再说一句跟上次比
+function trendHtml(list, h, seen) {
+  if (!h.song || seen[h.song]) return ""; seen[h.song] = 1;
+  const sc = list.filter(x => x.song === h.song).slice(0, 6).reverse().map(x => x.score);
+  if (sc.length < 2) return "";
+  const d = sc[sc.length - 1] - sc[sc.length - 2], lo = Math.min(...sc), hi = Math.max(...sc), rg = Math.max(hi - lo, 10);
+  const pts = sc.map((v, i) => [i * 56 / (sc.length - 1), 18 - (v - lo) / rg * 16]);
+  const last = pts[pts.length - 1];
+  const txt = d > 0 ? `比上次多 ${d} 分` : d < 0 ? `比上次少 ${-d} 分，再来` : "跟上次一样";
+  return `<span class="hTrend"><svg viewBox="0 0 56 20" aria-hidden="true"><polyline points="${pts.map(p => p.map(n => n.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="currentColor"/></svg>${txt}</span>`;
 }
 function closeHist() { show("histSheet", false); document.body.style.overflow = ""; }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -1225,6 +1241,15 @@ async function loadHist(id) {
   render(true); renderCompare(R);
 }
 $("btnHist").onclick = openHist;
+// 连续练了几天：从今天（今天还没唱就从昨天）往前数，每天至少唱过一次才算
+function streakDays(l, now) {
+  const key = t => { const d = new Date(t); return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate(); };
+  const days = new Set(l.map(x => key(x.t || x.id)));
+  const d = new Date(now || Date.now()); d.setHours(12, 0, 0, 0);
+  if (!days.has(key(d))) d.setDate(d.getDate() - 1);
+  let n = 0; while (days.has(key(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
 async function renderLast() {
   try {
     const l = await histAll(); const h = l[0];
@@ -1233,6 +1258,7 @@ async function renderLast() {
     const acap = !!(h && i < 0 && h.mode === "self");
     show("lastCard", i >= 0 || acap);
     if (i < 0 && !acap) return;
+    { const n = streakDays(l); show("lastStreak", n >= 2); $("lastStreak").textContent = "已连续练 " + n + " 天"; }
     $("lastName").textContent = (h.song || "清唱") + (acap ? "（清唱）" : ""); $("lastScore").textContent = h.score + " 分";
     $("lastGo").onclick = () => { if (i >= 0) openStage(i); else { $("acapName").value = h.song || ""; startAcap(); } };
   } catch (e) {}
@@ -1916,6 +1942,21 @@ $("again").onclick = () => {
   if (lastKind === "acap" && R && !R.histView) { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); err(""); $("acapName").value = $("song").value; startAcap(); return; }
   if (lastStage >= 0 && R && !R.histView) { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); err(""); openStage(lastStage); return; }
   $("btnHome").onclick();
+};
+// 唱完一键发给家人：用手机自带的分享（微信能直接发），带上录音和一句话；不支持带文件就只发文字
+$("btnShare").onclick = async () => {
+  if (!R || !audioURL) return;
+  const name = ($("song").value.trim() || R.refName || "").replace(/\.[a-z0-9]+$/i, "");
+  const text = "我唱了" + (name ? "《" + name + "》" : "一首歌") + "，" + R.stats.score + " 分，听听我唱得怎么样～";
+  const btn = $("btnShare"), lbl = btn.lastChild, old = lbl.textContent;
+  try {
+    const b = await (await fetch(audioURL)).blob();
+    const t = b.type || "audio/wav", ext = /mp4|aac|m4a/.test(t) ? "m4a" : /webm/.test(t) ? "webm" : /ogg/.test(t) ? "ogg" : "wav";
+    const f = new File([b], (name || "我唱的歌") + "." + ext, { type: t });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], text, title: text });
+    else if (navigator.share) await navigator.share({ text, title: text });
+    else { const a = document.createElement("a"); a.href = audioURL; a.download = f.name; a.click(); lbl.textContent = "录音已保存到手机"; setTimeout(() => lbl.textContent = old, 2500); }
+  } catch (e) { if (e && e.name !== "AbortError") { lbl.textContent = "没发出去，再点一次试试"; setTimeout(() => lbl.textContent = old, 2500); } }
 };
 $("btnHome").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
 

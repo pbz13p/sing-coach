@@ -45,6 +45,7 @@ async def main():
     await pg.wait_for_selector('#result:not(.hide)',timeout=60000); await pg.wait_for_timeout(800)
     await pg.screenshot(path=f'{OUT}/07_result.png')
     await pg.screenshot(path=f'{OUT}/08_result_full.png',full_page=True)
+    await pg.locator('#btnShare').locator('..').screenshot(path=f'{OUT}/08b_actions.png'); assert await pg.is_visible('#btnShare'), '结果页缺“发给家人听”'
     if await pg.is_visible('#btnWorst'):  # 只练这一句
       await pg.click('#btnWorst'); await pg.wait_for_timeout(3000)
       await pg.screenshot(path=f'{OUT}/07b_practice_sing.png')
