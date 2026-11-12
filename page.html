@@ -71,6 +71,8 @@
   .btn.ghost{background:transparent}
   /* 结果页：只留一个金色主按钮；"再唱一遍"和每句的"听这一句"改成描边，不抢眼 */
   #btnWorst:not(.hide) + #again,.phListen{background:transparent;color:var(--champ);border:1px solid rgba(216,191,143,.5);box-shadow:none}
+  /* 首页唱过以后："再唱一遍"是唯一主按钮；清唱按钮先描边，打了歌名或选了自己的歌再变金色 */
+  #lastCard:not(.hide) + .acap:has(#acapName:placeholder-shown):has(#acapSong.hide) #btnAcap{background:transparent;color:var(--champ);border:1px solid rgba(216,191,143,.5);box-shadow:none}
   .btn:disabled{opacity:.45}
   .btn.small{min-height:48px;font-size:17px;width:auto;padding:0 20px;margin:0 0 4px}
   .btn .ico{width:20px;height:20px}
