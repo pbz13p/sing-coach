@@ -269,6 +269,31 @@
   .acap.own #acapName{display:none}
   .acap.own #btnAcap{margin-top:14px}
   .acap input::placeholder{color:rgba(244,239,230,.4)}
+  .focusBan{margin:2px 0 10px;padding:10px 14px;border-radius:14px;font-size:15px;line-height:1.55;color:#efe7d6;
+    background:rgba(216,191,143,.08);border:1px solid rgba(216,191,143,.25)}
+  .focusBan b{color:var(--champ)}
+  .liveWrap{position:relative}
+  .pauseCard{position:absolute;inset:8px;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:16px 18px;border-radius:18px;
+    background:rgba(10,16,30,.94);border:1px solid rgba(216,191,143,.35);box-shadow:0 10px 40px rgba(0,0,0,.4);animation:pcIn .35s ease both}
+  .pauseCard b{font-size:21px;color:var(--pearl)}
+  .pauseCard p{margin:0;font-size:16px;line-height:1.6;color:#e1dacb}
+  .pcBtns{display:flex;gap:10px;margin-top:8px}.pcBtns .btn{flex:1;min-height:48px;font-size:16px}
+  @keyframes pcIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.pauseCard{animation:none}}
+  .cmpAB{display:flex;gap:10px;margin:12px 0 4px}.cmpAB .btn{flex:1;min-height:46px;font-size:15.5px}
+  .cele{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 45%,rgba(44,36,14,.95),rgba(5,8,16,.97) 75%);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:celeIn .4s ease both;cursor:pointer}
+  .cele canvas{position:absolute;inset:0;width:100%;height:100%}
+  .celeTx{position:relative;text-align:center;padding:0 28px;max-width:420px}
+  .celeIco{font-size:64px;line-height:1;margin-bottom:10px;animation:celePop .7s .15s cubic-bezier(.2,.9,.25,1.3) both}
+  .celeTx b{display:block;font-family:var(--serif,serif);font-size:min(10vw,44px);font-weight:900;line-height:1.25;
+    background:linear-gradient(180deg,#fffaf0,#ffe39a 55%,#d9a94e);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 4px 22px rgba(255,214,120,.45));animation:celePop .7s .25s cubic-bezier(.2,.9,.25,1.2) both}
+  .celeTx span{display:block;margin-top:12px;font-size:19px;line-height:1.6;color:#f3ecdc;animation:celeIn .5s .6s both}
+  .celeTx em{display:block;margin-top:26px;font-style:normal;font-size:14px;color:rgba(244,239,230,.5);animation:celeIn .5s 1.4s both}
+  @keyframes celeIn{from{opacity:0}to{opacity:1}}
+  @keyframes celePop{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){.cele,.celeIco,.celeTx b,.celeTx span,.celeTx em{animation:none}}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
   .msg b{color:var(--champ)}
@@ -550,8 +575,13 @@
     <div id="stageRec">
       <div class="cd hide" id="cd" aria-live="assertive"><b id="cdN">3</b><span id="cdTx">准备好</span></div>
       <div class="rec" id="recT">0:00</div>
+      <div class="focusBan hide" id="focusBan"></div>
       <div id="liveSay" class="liveSay"></div>
-      <canvas id="live" style="height:230px"></canvas>
+      <div class="liveWrap"><canvas id="live" style="height:230px"></canvas>
+        <div class="pauseCard hide" id="pauseCard" role="status">
+          <b id="pcT">歇一会儿？</b><p id="pcP"></p>
+          <div class="pcBtns" id="pcBtns"><button class="btn small" id="pcGo">接着唱</button><button class="btn small gold" id="pcEnd">唱完了，看点评</button></div>
+        </div></div>
       <div class="note" id="volTxt" style="text-align:center;margin-top:6px">请开始唱…</div>
       <div class="note hide" id="liveNote" style="text-align:center;margin-top:4px;font-size:13px;opacity:.7">这里看的是每个音有没有唱稳、站在音上，唱完会告诉你哪几处要练。想边唱边对着原唱的音，在这首歌里点「从手机选」。</div>
       <div class="nudge hide" id="nudge"><span>歌词对不上？</span><button class="btn small" id="nudgeE">歌词慢了</button><button class="btn small" id="nudgeL">歌词快了</button></div>
@@ -662,6 +692,9 @@
   </div>
 </div>
 
+<div id="cele" class="cele hide" aria-live="polite"><canvas id="celeCv"></canvas>
+  <div class="celeTx"><div class="celeIco" id="celeIco"></div><b id="celeT"></b><span id="celeS"></span><em>点一下继续</em></div></div>
+
 <div id="histSheet" class="sheet hide" role="dialog" aria-modal="true" aria-labelledby="histTitle">
   <div class="sheetBg" id="histBg"></div>
   <div class="sheetPanel">
@@ -695,8 +728,14 @@ $("file").onchange = e => { const f = e.target.files[0]; if (f) handleBlob(f); e
 let recSong = "", recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
 let ytPending = false, stageVid = "", recYt = null, PR = null; // PR：正在“只练这一句”
 let lastKind = "";
+let nextFocus = null; // {song, n, score, text}
 function startAcap() {
-  const n = $("acapName").value.trim(); $("song").value = n; try { localStorage.setItem("acapName", n); } catch (e) {}
+  const n = $("acapName").value.trim();
+  setTimeout(() => {
+    const f = nextFocus, ok = f && f.song === n && n;
+    show("focusBan", !!ok);
+    if (ok) $("focusBan").innerHTML = `第 <b>${f.n + 1}</b> 遍 · 上一遍 ${f.score} 分${f.text ? `<br>这一遍记住：${f.text}` : "。放松，按自己的感觉唱。"}`;
+  }, 0); $("song").value = n; try { localStorage.setItem("acapName", n); } catch (e) {}
   lastKind = "acap"; lastStage = -1; stageSong = null; $("stageBack").textContent = "‹ 返回";
   return startRecording({});
 }
@@ -713,7 +752,7 @@ async function startRecording(opts) {
     warmStream = null;
   } catch (e) { try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} micDenied(e, opts); return false; }
   stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
-  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
+  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null; pauseReset();
   recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; phraseSt = {}; drawLive.lastSing = -9; drawLive.pvAt = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
   const useOwn = !opts.yt && !opts.practice && REF.own && !!REF.name && $("song").value.trim() === REF.name;
@@ -773,11 +812,35 @@ function livePitch(sr) {
   const t = (Date.now() - recStart) / 1000;
   live.push({ t, m: f > 0 ? 69 + 12 * Math.log2(f / 440) : NaN, rms });
   watchOnset(f > 0 && rms > 0.01);
+  pauseWatch(t, f > 0 && rms > 0.006);
   while (live.length && live[0].t < t - 8) live.shift();
   if (rms < 0.0008) { if (!quietSince) quietSince = Date.now(); if (Date.now() - quietSince > 2500 && !reacq && (recSong || recMode === "sync")) reacquireMic(); } else quietSince = 0;
   $("volTxt").textContent = rms > 0.6 ? "声音太大了，离手机远一点" : "";
   drawLive(t);
 }
+// ===== 清唱停下来了：温和地问一句，不打断录音 =====
+// 唱过以后静了 8 秒 → "歇一会儿？"；一直没开口 12 秒 → "还没听到声音"；静了 45 秒 → 帮他停下来看点评。
+let pz = { lastV: -1, snooze: 0, shown: "" };
+function pauseReset() { pz = { lastV: -1, snooze: 0, shown: "" }; show("pauseCard", false); }
+function pauseShow(kind, t) {
+  if (pz.shown === kind) return; pz.shown = kind;
+  const T = $("pcT"), P = $("pcP");
+  if (kind === "none") { T.textContent = "还没听到您唱"; P.textContent = "准备好了就开口唱，不着急，我一直在听。如果已经在唱了，把手机拿近一点。"; $("pcGo").textContent = "好，我开始唱"; $("pcEnd").textContent = "先不唱了"; }
+  else if (kind === "rest") { T.textContent = "歇一会儿？"; P.textContent = "忘词了、换口气都没关系，想好了接着唱就行，录音还开着。要是已经唱完了，就看看点评。"; $("pcGo").textContent = "接着唱"; $("pcEnd").textContent = "唱完了，看点评"; }
+  else { T.textContent = "我先帮您停一下"; P.textContent = "好一阵没听到声音了。马上给您看刚才唱得怎么样，想再唱随时点「再唱一遍」。"; }
+  show("pcBtns", kind !== "auto"); show("pauseCard");
+}
+function pauseWatch(t, voiced) {
+  if (recMode !== "self" || recSong || PR || ytPending || recPaused) { if (pz.shown) pauseReset(); return; }
+  if (voiced) { pz.lastV = t; if (pz.shown && pz.shown !== "auto") { pz.shown = ""; show("pauseCard", false); } return; }
+  if (t < pz.snooze) return;
+  const quiet = pz.lastV < 0 ? t : t - pz.lastV;
+  if (pz.lastV < 0 && t > 12) pauseShow("none", t);
+  else if (pz.lastV >= 0 && quiet > 45 && pz.shown !== "auto") { pauseShow("auto", t); setTimeout(() => { if (isRecording() && pz.shown === "auto") $("btnStop").click(); }, 2500); }
+  else if (pz.lastV >= 0 && quiet > 8 && quiet <= 45) pauseShow("rest", t);
+}
+$("pcGo").onclick = () => { pz.snooze = (Date.now() - recStart) / 1000 + 15; pz.shown = ""; show("pauseCard", false); };
+$("pcEnd").onclick = () => { if (pz.lastV < 0) { pauseReset(); $("stageBack").click(); } else { pauseReset(); $("btnStop").click(); } };
 // 苹果手机放视频时，有时会把麦克风“静音”。听不到声音就重新接一次麦克风。
 async function reacquireMic() {
   reacq = true;
@@ -937,6 +1000,7 @@ function drawLive(now) {
   document.addEventListener("visibilitychange", sync);
 })();
 $("btnStop").onclick = () => {
+  pauseReset();
   cdPhase = ""; show("cd", false); document.body.classList.remove("singing");
   show("stepRec", false); clearInterval(recTimer);
   if (recSong) YT_.stop(); stageSong = null; ytPending = false;
@@ -1204,7 +1268,90 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 // ===== 跟上一遍比：同一首歌的上一次记录，逐项、逐句告诉他哪里进步了、哪里还没改过来 =====
 const ISSUE_TXT = { "高": "唱高了", "低": "唱低了", "错音": "唱错音", "勾": "起音往上勾", "尾掉": "句尾往下掉", "抖": "长音发抖", "长音往下": "长音越唱越低", "长音往上": "长音越唱越高", "调外": "跑出调外", "慢": "进得慢", "快": "抢拍" };
 function issueCount(res) { const c = {}; (res.notes || []).forEach(z => (z.issues || []).forEach(k => { if (ISSUE_TXT[k]) c[k] = (c[k] || 0) + 1; })); return c; }
+// 两遍放在一起听：耳朵听得出差别，比看分数直观
+let cmpBlobs = [], abAud = null, abUrl = "", lastBlob = null;
+function curBlob(res) { return res.blob || lastBlob || null; }
+function cmpBlobOk(res) { return !!curBlob(res); }
+function abPlay(i) {
+  aud.pause(); const b = cmpBlobs[i]; if (!b) return;
+  if (abAud && !abAud.paused && abAud.dataset.i == i) { abAud.pause(); return; }
+  if (abUrl) URL.revokeObjectURL(abUrl); abUrl = URL.createObjectURL(b);
+  if (!abAud) abAud = new Audio(); abAud.src = abUrl; abAud.dataset.i = i; abAud.play().catch(() => {});
+  $("abPrev").textContent = i === 0 ? "❚❚ 正在放上一遍" : "▶ 听上一遍"; $("abCur").textContent = i === 1 ? "❚❚ 正在放这一遍" : "▶ 听这一遍";
+  abAud.onended = abAud.onpause = () => { if ($("abPrev")) { $("abPrev").textContent = "▶ 听上一遍"; $("abCur").textContent = "▶ 听这一遍"; } };
+}
+// ===== 唱完了：满屏庆祝，六种效果轮着来，话按这一遍的情况说 =====
+const CELE_FX = ["fireworks", "confetti", "stars", "balloons", "petals", "ribbons"];
+window.__celeRun = (fx) => celeRun(fx); // 只给自动测试用
+async function celebrate(res) {
+  if (PR || !res || res.histView) return;
+  let list = []; try { list = await histAll(); } catch (e) {}
+  const song = res.histSong != null ? res.histSong : $("song").value.trim();
+  const same = song ? list.filter(h => h.song === song) : [];
+  const n = Math.max(1, same.length), prev = same[1], sc = res.stats.score;
+  const best = same.length > 1 && same.slice(1).every(h => h.score < sc);
+  const d = prev ? sc - prev.score : 0, dur = res.duration || 0;
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  let ico, t, sub;
+  if (best && d > 0) { ico = "🏆"; t = "新纪录！"; sub = `这是您唱《${song}》最好的一遍，${sc} 分，比以前都高。`; }
+  else if (d >= 5) { ico = "📈"; t = pick(["进步了！", "越唱越好了！"]); sub = `比上一遍多了 ${d} 分，练习真的有用。`; }
+  else if (sc >= 90) { ico = "🌟"; t = pick(["唱得真好听！", "太棒了！"]); sub = `${sc} 分，音准稳稳当当，可以唱给家里人听了。`; }
+  else if (n >= 4) { ico = "💪"; t = pick(["这股认真劲儿真棒！", "坚持就是本事！"]); sub = `这首歌已经练了 ${n} 遍，一遍比一遍熟。`; }
+  else if (n === 1 && dur > 60) { ico = "🎉"; t = "完整唱完一首，了不起！"; sub = "唱完就是最好的开始，看看下面的点评，下一遍更好。"; }
+  else if (d > -3 && prev) { ico = "👏"; t = pick(["唱完啦，辛苦了！", "又唱完一遍！"]); sub = "每唱一遍，嗓子和耳朵都在变熟，看看这遍好在哪儿。"; }
+  else { ico = "🎵"; t = pick(["唱完啦，太好了！", "唱得真用心！"]); sub = "敢开口就赢了一半，看看下面老师怎么说。"; }
+  $("celeIco").textContent = ico; $("celeT").textContent = t; $("celeS").textContent = sub;
+  let last = ""; try { last = localStorage.getItem("celeFx") || ""; } catch (e) {}
+  const fx = best ? "fireworks" : pick(CELE_FX.filter(x => x !== last)); try { localStorage.setItem("celeFx", fx); } catch (e) {}
+  show("cele"); const stop = celeRun(fx);
+  const done = () => { stop(); show("cele", false); $("cele").onclick = null; clearTimeout(celebrate.tm); };
+  $("cele").onclick = done; celebrate.tm = setTimeout(done, 5200);
+}
+function celeRun(fx) {
+  const cv = $("celeCv"), dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr; const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
+  const R = Math.random, P = [], GOLD = ["#ffe39a", "#f3d892", "#ffd166", "#fff3c4"], COL = ["#ffe39a", "#ff8fa3", "#8fe3bb", "#9ec5ff", "#ffb86b", "#e6b3ff"];
+  let t0 = performance.now(), raf = 0, nextBurst = 0;
+  const burst = (x, y, col) => { for (let i = 0; i < 110; i++) { const a = R() * 6.283, v = 1.5 + R() * 5; P.push({ k: "spark", x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, col: col || COL[i % COL.length], r: 2 + R() * 2.2 }); } };
+  const spawn = el => {
+    if (fx === "confetti") for (let i = 0; i < 4; i++) P.push({ k: "rect", x: R() * W, y: -20, vx: R() * 2 - 1, vy: 2 + R() * 3, rot: R() * 6, vr: R() * .3 - .15, w: 7 + R() * 6, h: 4 + R() * 4, col: COL[Math.floor(R() * COL.length)], life: 1 });
+    if (fx === "stars") for (let i = 0; i < 2; i++) P.push({ k: "star", x: R() * W, y: -20, vx: R() - .5, vy: 1.5 + R() * 2.5, rot: R() * 6, vr: R() * .1 - .05, r: 6 + R() * 9, col: GOLD[Math.floor(R() * 4)], life: 1 });
+    if (fx === "balloons" && R() < .4) P.push({ k: "balloon", x: R() * W, y: H + 40, vx: 0, vy: -(3 + R() * 2.5), ph: R() * 6, r: 18 + R() * 12, col: COL[Math.floor(R() * COL.length)], life: 1 });
+    if (fx === "petals") for (let i = 0; i < 2; i++) P.push({ k: "petal", x: R() * W, y: -20, vx: 0, vy: 1.2 + R() * 1.6, ph: R() * 6, rot: R() * 6, vr: R() * .06 - .03, r: 7 + R() * 6, col: ["#ffb3c6", "#ff8fa3", "#ffd6e0", "#ffc8a2"][Math.floor(R() * 4)], life: 1 });
+    if (fx === "ribbons" && R() < .35) P.push({ k: "ribbon", x: R() * W, y: -40, vy: 2.2 + R() * 2, ph: R() * 6, col: COL[Math.floor(R() * COL.length)], life: 1, len: 60 + R() * 60 });
+    if (fx === "fireworks" && el > nextBurst) { nextBurst = el + 250 + R() * 280; burst(W * (.15 + R() * .7), H * (.12 + R() * .4)); }
+  };
+  const starPath = (r) => { g.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, q = i % 2 ? r * .45 : r; g.lineTo(Math.cos(a) * q, Math.sin(a) * q); } g.closePath(); };
+  const step = now => {
+    const el = now - t0; g.clearRect(0, 0, W, H);
+    if (el < 3800) spawn(el);
+    for (let i = P.length - 1; i >= 0; i--) {
+      const p = P[i];
+      if (p.k === "spark") { p.vy += .06; p.vx *= .985; p.vy *= .985; p.x += p.vx; p.y += p.vy; p.life -= .009;
+        g.globalAlpha = Math.max(0, p.life); g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 7); g.fill(); }
+      else if (p.k === "balloon") { p.y += p.vy; p.ph += .03; p.x += Math.sin(p.ph) * .6; g.globalAlpha = .92; g.fillStyle = p.col;
+        g.beginPath(); g.ellipse(p.x, p.y, p.r * .82, p.r, 0, 0, 7); g.fill(); g.strokeStyle = "rgba(255,255,255,.5)"; g.lineWidth = 1; g.beginPath(); g.moveTo(p.x, p.y + p.r); g.quadraticCurveTo(p.x + 6, p.y + p.r + 20, p.x, p.y + p.r + 40); g.stroke();
+        g.fillStyle = "rgba(255,255,255,.35)"; g.beginPath(); g.ellipse(p.x - p.r * .3, p.y - p.r * .35, p.r * .16, p.r * .26, -.5, 0, 7); g.fill(); if (p.y < -80) p.life = 0; }
+      else if (p.k === "ribbon") { p.y += p.vy; p.ph += .08; g.globalAlpha = .9; g.strokeStyle = p.col; g.lineWidth = 4; g.lineCap = "round"; g.beginPath();
+        for (let j = 0; j <= 12; j++) { const yy = p.y - j * p.len / 12, xx = p.x + Math.sin(p.ph + j * .6) * 10; j ? g.lineTo(xx, yy) : g.moveTo(xx, yy); } g.stroke(); if (p.y - p.len > H) p.life = 0; }
+      else { p.y += p.vy; p.x += p.vx + (p.k === "petal" ? Math.sin((p.ph += .04)) * .9 : 0); p.rot += p.vr; g.globalAlpha = .95; g.fillStyle = p.col;
+        g.save(); g.translate(p.x, p.y); g.rotate(p.rot);
+        if (p.k === "rect") g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        else if (p.k === "star") { starPath(p.r); g.shadowColor = p.col; g.shadowBlur = 12; g.fill(); }
+        else { g.beginPath(); g.ellipse(0, 0, p.r, p.r * .55, 0, 0, 7); g.fill(); }
+        g.restore(); if (p.y > H + 30) p.life = 0; }
+      if (p.life <= 0) P.splice(i, 1);
+    }
+    g.globalAlpha = 1; g.shadowBlur = 0;
+    if (el < 6000) raf = requestAnimationFrame(step);
+  };
+  if (fx === "fireworks") { burst(W * .5, H * .28, null); burst(W * .25, H * .18, null); burst(W * .78, H * .22, null); }
+  raf = requestAnimationFrame(step);
+  return () => cancelAnimationFrame(raf);
+}
 async function renderCompare(res) {
+  if (abAud) abAud.pause();
   show("cmpCard", false);
   const song = res.histSong != null ? res.histSong : $("song").value.trim(); if (PR) return;
   let list; try { list = await histAll(); } catch (e) { return; }
@@ -1244,6 +1391,17 @@ async function renderCompare(res) {
   const down = pairs.filter(p => p[2] <= -12).sort((p, q) => p[2] - q[2]).slice(0, 2);
   const stuck = pairs.filter(p => p[0].level === "bad" && p[1].level === "bad").slice(0, 2);
   let h = `<p class="cmpL">${head}</p>`;
+  if (res.mode === "self" && P.mode === "self") {
+    // 清唱没有伴奏，最常见的三件事：起调高低、越唱越低、唱多长
+    const k1 = res.key && res.key.majorTonic, k0 = P.key && P.key.majorTonic;
+    if (k1 != null && k0 != null && k1 !== k0 && (res.keyConf || 0) > 0.6 && (P.keyConf || 0) > 0.6) { const d = SC.wrap12 ? SC.wrap12(k1 - k0) : k1 - k0; h += `<p class="cmpL" style="font-size:15.5px">这一遍起的调比上一遍<b>${d > 0 ? "高" : "低"}了 ${Math.abs(Math.round(d))} 个半音</b>（${res.keyName} ↔ 上一遍 ${P.keyName}）。清唱时调子不一样很正常，但想一遍遍比，最好每次用同一个调：开口前先轻轻哼一下第一个音。</p>`; }
+    const dr1 = a.songDrift || 0, dr0 = b.songDrift || 0;
+    if (Math.abs(dr0) > 30 && Math.abs(dr1) < Math.abs(dr0) - 15) h += `<p class="cmpL" style="font-size:15.5px"><b>越唱越${dr0 < 0 ? "低" : "高"}的毛病好多了</b>：上一遍唱到后面差了 ${Math.round(Math.abs(dr0))} 音分，这一遍 ${Math.round(Math.abs(dr1))} 音分。</p>`;
+    else if (Math.abs(dr1) > 30) h += `<p class="cmpL" style="font-size:15.5px">这一遍唱到后面<b>比开头${dr1 < 0 ? "低" : "高"}了一点</b>（${Math.round(Math.abs(dr1))} 音分）。清唱没人带着，越唱越${dr1 < 0 ? "低" : "高"}很常见，${dr1 < 0 ? "后半首记得多吸口气、把声音往上提" : "后半首放松，别越唱越使劲"}。</p>`;
+    const L1 = res.duration, L0 = P.duration;
+    if (L0 && L1 && (L1 < L0 * 0.6 || L0 < L1 * 0.6)) h += `<p class="cmpL" style="font-size:15px;color:var(--mist)">这一遍唱了 ${SC.fmtT(L1)}，上一遍 ${SC.fmtT(L0)}，长度差得多，分数只能大概比。</p>`;
+  }
+  if (pv.blob && cmpBlobOk(res)) h += `<div class="cmpAB"><button class="btn small" id="abPrev">▶ 听上一遍</button><button class="btn small" id="abCur">▶ 听这一遍</button></div>`;
   const row = (tag, txt) => `<div class="cmpRow"><i>${tag}</i><span>${txt}</span></div>`;
   better.slice(0, 2).forEach(([k, y, x]) => h += row(`<span class="cmpUp">改好了</span>`, `${ISSUE_TXT[k]}：上一遍 ${y} 处，这一遍 ${x} 处。`));
   up.forEach(([x, y, d]) => h += row(`<span class="cmpUp">进步</span>`, `第 ${x.idx + 1} 句（${SC.fmtT(x.f.t0)}）从 ${y.score} 分到 <b>${x.score} 分</b>。`));
@@ -1257,14 +1415,16 @@ async function renderCompare(res) {
   // 下一遍只盯一件事（老人家一次记一件就够）
   const NEXT = { "高": "唱高的地方，嘴放松、气别往上顶，声音往下放一点", "低": "唱低的地方，眉毛抬一抬、笑着唱，声音自然就往上走", "错音": "唱错音的那句，先点「听原唱」听三遍，跟着哼准了再唱", "勾": "每句开口，先在心里想好那个音，直接唱到位，别从下面滑上去", "尾掉": "每句最后一个字，多留一口气托住，唱完再换气", "抖": "长音的时候，肚子轻轻撑住，气匀着出，别使劲挤", "长音往下": "长音唱到后面要想着「往上提」，别让它塌下来", "长音往上": "长音唱到后面放松，别越唱越使劲", "调外": "跑调的地方，先跟伴奏哼一遍，找准了再唱", "慢": "进歌的地方，看着歌词变色就开口，宁可早一点", "快": "别抢，等歌词变色了再唱，跟着伴奏的鼓点走" };
   const topK = Object.keys(ic).filter(k => NEXT[k]).sort((p, q) => ic[q] - ic[p])[0];
+  nextFocus = { song, n: nth, score: a.score, text: topK && ic[topK] >= 2 ? NEXT[topK] : "" };
   if (topK && ic[topK] >= 2) h += `<p class="cmpL" style="margin:12px 0 0;padding:12px 14px;border-radius:14px;background:rgba(216,191,143,.08);border:1px solid rgba(216,191,143,.25)"><b>下一遍只盯一件事：</b>${NEXT[topK]}。</p>`;
   $("cmpBody").innerHTML = h; show("cmpCard");
+  if ($("abPrev")) { cmpBlobs = [pv.blob, curBlob(res)]; $("abPrev").onclick = () => abPlay(0); $("abCur").onclick = () => abPlay(1); }
 }
 async function loadHist(id) {
   const v = await DB.get("h_" + id);
   if (!v || !v.res) { err("这条记录打不开了。"); closeHist(); return; }
   closeHist();
-  R = v.res; R.histId = id; R.histView = true;
+  R = v.res; R.histId = id; R.histView = true; lastBlob = v.blob || null;
   { const m = (await histAll()).find(h => h.id === id); R.histSong = m ? m.song : ""; }
   if (audioURL) URL.revokeObjectURL(audioURL);
   audioURL = URL.createObjectURL(v.blob); $("aud").src = audioURL;
@@ -1544,7 +1704,9 @@ function stageVideo() {
   } });
 }
 let lastStage = -1, ytStall = 0;
+function openStageFB() { show("focusBan", false); }
 function openStage(i) {
+  openStageFB();
   lastStage = i; lastKind = "song"; show("intr", false); recPaused = false;
   $("stageBack").textContent = "‹ 换一首歌";
   stageSong = SONGS[i]; stageMode = stageSong.k ? "k" : "o";
@@ -1736,7 +1898,7 @@ async function runAnalysis(ab, blob, mode) {
     $("aud").src = audioURL;
     if (PR) { renderPractice(); return; }
     render();
-    { const r0 = R; histSave(R, keep).then(() => renderCompare(r0)); }
+    { const r0 = R; lastBlob = keep; histSave(R, keep).then(() => { renderCompare(r0); celebrate(r0); }); }
 }
 function fail(e, fromRec) {
     const m = e.message;
