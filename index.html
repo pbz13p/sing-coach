@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794469357";
+  var V = "1794475494";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -253,6 +253,19 @@
   .acapTx b{display:block;font-size:19px;color:var(--pearl);margin-bottom:4px}
   .acapTx span{display:block;font-size:15px;line-height:1.6;color:var(--mist)}
   .acap input{width:100%;box-sizing:border-box;margin:14px 0 12px;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25);color:var(--pearl);font-size:17px}
+  .acapSong{display:flex;align-items:center;gap:12px;margin:14px 0 0;padding:12px 12px 12px 14px;border-radius:16px;background:rgba(216,191,143,.08);border:1px solid rgba(216,191,143,.28)}
+  .acapSong .ico{flex:none;width:26px;height:26px;fill:none;stroke:var(--champ);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .asTx{flex:1;min-width:0}.asTx b{display:block;font-size:18px;color:var(--pearl);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .asTx span{display:block;font-size:14px;color:var(--mist);margin-top:2px}
+  .asOff{all:unset;flex:none;font-size:15px;color:var(--mist);padding:10px 4px 10px 8px;cursor:pointer}
+  .keyRow{display:flex;align-items:center;gap:8px;margin:12px 0 0}
+  .keyRow .kl{font-size:15px;color:var(--mist);margin-right:2px}
+  .keyRow .kb{all:unset;flex:1;text-align:center;min-height:44px;line-height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.14);font-size:16px;color:var(--pearl);cursor:pointer}
+  .keyRow .kb:disabled{opacity:.35}
+  .keyRow .kv{flex:1.1;text-align:center;font-size:17px;font-weight:600;color:var(--champ);white-space:nowrap}
+  .mpCard .keyRow{grid-column:1/-1;margin-top:14px}.mpCard .keyRow .kv{margin:0;font-size:17px;color:var(--champ)}.mpCard .keyRow .kl{font-size:15px}
+  .acap.own #acapName{display:none}
+  .acap.own #btnAcap{margin-top:14px}
   .acap input::placeholder{color:rgba(244,239,230,.4)}
   .hide{display:none!important}
   .msg{background:rgba(216,191,143,.07);border:1px solid rgba(216,191,143,.25);color:#eadcbf;border-radius:16px;padding:14px 16px;font-size:16px;margin-top:10px;line-height:1.65}
@@ -469,9 +482,16 @@
     <button class="btn gold" id="lastGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>再唱一遍</button>
   </div>
   <div class="card acap">
-    <div class="acapTx"><b>不放音乐，直接清唱</b><span>任何歌都行。对着手机唱，唱完一样打分、点评，能一遍遍练、一遍遍比。</span></div>
+    <div class="acapTx"><b id="acapT">不放音乐，直接清唱</b><span id="acapS">任何歌都行。对着手机唱，唱完一样打分、点评，能一遍遍练、一遍遍比。</span></div>
+    <div class="acapSong hide" id="acapSong">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>
+      <div class="asTx"><b id="acapSongNm"></b><span id="acapSongSt"></span><div class="mpBar" id="acapBarW"><i id="acapProg"></i></div></div>
+      <button class="asOff" id="acapSongOff">不用了</button>
+    </div>
+    <div class="keyRow hide" id="keyAcap"><span class="kl">调子</span><button class="kb" data-d="-1">低一点</button><b class="kv">原调</b><button class="kb" data-d="1">高一点</button></div>
     <input type="text" id="acapName" placeholder="歌名，比如：我的祖国" autocomplete="off">
-    <button class="btn gold" id="btnAcap"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>开始清唱</button>
+    <button class="btn gold" id="btnAcap"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg><span id="acapGoTx">开始清唱</span></button>
+    <button class="linkBtn" id="btnAcapFile">团里的歌存在手机里？选出来跟着唱</button>
   </div>
   <h2 class="pick">或者选一首歌，跟着伴奏唱</h2>
   <div id="songList"></div>
@@ -521,6 +541,7 @@
         <div class="mpIco"><svg viewBox="0 0 24 24"><path d="M3 17V9M7 17V6M11 17v-5M15 17V8M19 17v-3"/></svg></div>
         <div class="mpTx"><b id="mpTitle">手机里有这首歌？</b><span id="mpSub">放进来，唱的时候能看到每个音。</span>
           <div class="mpBar hide" id="mpBarW"><i id="mpProg"></i></div></div>
+        <div class="keyRow hide" id="keyMp"><span class="kl">调子</span><button class="kb" data-d="-1">低一点</button><b class="kv">原调</b><button class="kb" data-d="1">高一点</button></div>
         <button class="btn small gold" id="btnMp3">从手机选</button>
       </div>
     </div>
@@ -1242,7 +1263,54 @@ const SC = (() => {
     return ph.say;
   }
 
-  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, phraseTrack, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+
+  // 变调不变速（WSOLA）：只给自己导入的歌用。chs：每个声道的 Float32Array；semis：升降几个半音（±6 内）
+  // 不另存中间信号：边读边插值，内存只多一份输出。
+  async function pitchShift(chs, sr, semis, onProgress) {
+    const len = chs[0].length, a = Math.pow(2, semis / 12);
+    if (!semis || len < 8192) return chs.map(c => Float32Array.from(c));
+    const N = Math.pow(2, Math.round(Math.log2(sr * 0.046))), Hs = N >> 1, Ha = Hs / a, L = N - Hs;
+    const D = 4, tol = Math.round(sr * 0.006), win = new Float32Array(N);
+    for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    const nc = chs.length;
+    const at = (c, t) => { const i = t | 0, f = t - i; return i + 1 < len ? c[i] + (c[i + 1] - c[i]) * f : 0; };
+    const mono = t => { let s = 0; for (let k = 0; k < nc; k++) s += at(chs[k], t); return s / nc; };
+    const rl = Math.floor((len - 1) / a); // 先“快放/慢放”成 r(i) = x(i·a)，再拉伸回原长
+    const dm = new Float32Array(Math.ceil(rl / D) + 1); for (let j = 0; j < dm.length; j++) dm[j] = mono(j * D * a);
+    const K = Math.ceil(len / Hs), xs = new Int32Array(K).fill(-1), Ld = L / D;
+    let prev = 0; xs[0] = 0;
+    for (let k = 1; k < K; k++) {
+      if (k % 400 === 0) { onProgress && onProgress(0.5 * k / K); await tick(); }
+      const q = prev + Hs, p = Math.round(k * Ha);
+      const lo = Math.max(0, p - tol), hi = Math.min(rl - N - 1, p + tol);
+      if (hi < lo || q + L >= rl) break;
+      let best = lo, bv = -Infinity;
+      const qd = Math.round(q / D);
+      for (let x = Math.floor(lo / D); x * D <= hi; x++) {
+        let s = 0, e = 1e-9; for (let j = 0; j < Ld; j += 2) { const v = dm[x + j]; s += v * dm[qd + j]; e += v * v; }
+        const v = s / Math.sqrt(e); if (v > bv) { bv = v; best = x * D; }
+      }
+      let b2 = best; bv = -Infinity;
+      for (let x = Math.max(lo, best - D); x <= Math.min(hi, best + D); x++) {
+        let s = 0, e = 1e-9; for (let j = 0; j < L; j += 4) { const v = mono((x + j) * a); s += v * mono((q + j) * a); e += v * v; }
+        const v = s / Math.sqrt(e); if (v > bv) { bv = v; b2 = x; }
+      }
+      xs[k] = prev = b2;
+    }
+    const out = [];
+    for (let c = 0; c < nc; c++) {
+      const src = chs[c], o = new Float32Array(len);
+      for (let k = 0; k < K; k++) {
+        if (xs[k] < 0) break;
+        const o0 = k * Hs, x0 = xs[k], n = Math.min(N, len - o0);
+        for (let j = 0; j < n; j++) o[o0 + j] += win[j] * at(src, (x0 + j) * a);
+        if (k % 800 === 0) { onProgress && onProgress(0.5 + 0.5 * (c + k / K) / nc); await tick(); }
+      }
+      out.push(o);
+    }
+    return out;
+  }
+  return { pitchShift, analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, phraseTrack, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
 })();
 
 
@@ -1289,6 +1357,7 @@ async function startRecording(opts) {
   chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null;
   recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; phraseSt = {}; drawLive.lastSing = -9; drawLive.pvAt = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
+  const useOwn = !opts.yt && !opts.practice && REF.own && !!REF.name && $("song").value.trim() === REF.name;
   if (opts.practice) mp3Song = null;
   ytPending = !!opts.yt;
   if (mp3Song) {
@@ -1299,13 +1368,13 @@ async function startRecording(opts) {
   } else if (opts.yt) {
     $("volTxt").textContent = "音乐一开始就自动录音。如果视频没动，点一下视频上的播放键。";
     try { if (YT_.player && YT_.player.getPlayerState() === 1) ytGo(); } catch (e) {}
-  } else { stageSong = null; YT_.stop(); const an = $("song").value.trim(); $("recTitle").textContent = REF.name ? "跟着原唱唱" : an ? "清唱《" + an + "》" : "正在录音（清唱）"; }
+  } else { stageSong = null; YT_.stop(); const an = $("song").value.trim(); $("recTitle").textContent = useOwn ? "《" + REF.name + "》" : an ? "清唱《" + an + "》" : "正在录音（清唱）"; }
   stageUI(opts.yt ? "rec" : "plain"); show("liveNote", false); show("nudge", !!mp3Song);
-  if (!opts.yt && REF.name) {
+  if (useOwn) {
     $("recSub").textContent = "原唱准备中…";
     await REF.ready; refUI();
     if (REF.ab) {
-      refSrc = c.createBufferSource(); refSrc.buffer = REF.kara || REF.ab;
+      refSrc = c.createBufferSource(); refSrc.buffer = refBuf();
       const gn = loudOut(c, REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
       startAt = c.currentTime + 0.4; refSrc.start(startAt); recMode = "sync";
       refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1500); };
@@ -1895,7 +1964,39 @@ function toMono16k(ab, maxSec) {
 }
 
 // ---------- 原唱 ----------
-const REF = { ab: null, melody: null, kara: null, name: "", ready: null };
+const REF = { ab: null, melody: null, melody0: null, kara: null, shifted: null, key: 0, own: false, name: "", ready: null };
+// 自己导入的歌可以变调：伴奏真的升/降，打分的旋律线跟着一起升/降
+function refBuf() { return REF.key && REF.shifted ? REF.shifted : REF.kara || REF.ab; }
+const keyLabel = k => k ? (k < 0 ? "低 " : "高 ") + Math.abs(k) + " 档" : "原调";
+async function applyKey(k) {
+  const ab = REF.ab, M0 = REF.melody0; if (!ab || !M0) return;
+  REF.key = k; keyUI(true);
+  if (!k) { REF.shifted = null; REF.melody = M0; }
+  else {
+    const src = REF.kara || ab, chs = [];
+    for (let c = 0; c < src.numberOfChannels; c++) chs.push(src.getChannelData(c));
+    let out; try { out = await SC.pitchShift(chs, src.sampleRate, k); } catch (e) { out = null; }
+    if (REF.ab !== ab || REF.key !== k) return;
+    if (!out) { REF.key = 0; REF.shifted = null; REF.melody = M0; keyUI(); return; }
+    const b = getCtx().createBuffer(out.length, src.length, src.sampleRate); out.forEach((o, c) => b.copyToChannel(o, c));
+    REF.shifted = b; REF.melody = { hopS: M0.hopS, midi: M0.midi.map(v => v + k), duration: M0.duration };
+  }
+  keyUI();
+}
+function keyUI(busy) {
+  const ready = !!(REF.ab && REF.melody0), st = stageSong;
+  show("keyAcap", ready && REF.own); show("keyMp", ready && !!st && REF.name === st.t && !!mp3Has[st.t]);
+  document.querySelectorAll(".keyRow").forEach(r => {
+    r.querySelector(".kv").textContent = busy ? "正在变调…" : keyLabel(REF.key);
+    r.querySelectorAll(".kb").forEach(b => b.disabled = !!busy || Math.abs(REF.key + +b.dataset.d) > 4);
+  });
+}
+document.querySelectorAll(".keyRow .kb").forEach(b => b.onclick = () => {
+  const k = Math.max(-4, Math.min(4, REF.key + +b.dataset.d)), nm = REF.name; if (k === REF.key || !nm) return;
+  try { localStorage.setItem("key_" + nm, String(k)); } catch (e) {}
+  REF.key = k; keyUI(true);
+  REF.ready = (REF.ready || Promise.resolve(true)).then(ok => ok && REF.name === nm ? applyKey(k).then(() => ok) : ok);
+});
 // 去掉人声做伴奏：人声一般在正中间，左右相减就没了；低音也在中间，单独加回来。
 // 伴奏放大一些（去掉人声后会变轻），后面接一个限幅器，防止破音
 function loudOut(c, g) {
@@ -1917,13 +2018,19 @@ const DB = {
   async del(k) { try { const db = await this.open(); db.transaction("kv", "readwrite").objectStore("kv").delete(k); } catch (e) {} },
 };
 function refUI() {
-  const has = !!REF.name;
+  const has = !!REF.name && REF.own;
+  { const ready = has && !!REF.melody0; $("acapSongNm").textContent = has ? REF.name : "";
+    $("acapSongSt").textContent = ready ? "准备好了，唱完对着它打分" : "正在准备，大约半分钟…";
+    show("acapSong", has); show("acapBarW", has && !ready); show("btnAcapFile", !has);
+    document.querySelector(".acap").classList.toggle("own", has);
+    $("acapT").textContent = has ? "跟着手机里的歌唱" : "不放音乐，直接清唱"; show("acapS", !has);
+    $("acapGoTx").textContent = has ? "跟着这首歌唱" : "开始清唱"; if (has) $("acapName").value = REF.name; }
   show("refNone", !has); show("refHas", has); show("earTip", has);
   $("recSub").textContent = has ? "会放原唱" : "";
   $("refName").innerHTML = has ? NOTE_ICO + "<span></span>" : ""; if (has) $("refName").lastChild.textContent = REF.name;
 }
-async function loadRef(blob, name, save) {
-  REF.name = name.replace(/\.[^.]+$/, ""); REF.melody = null; REF.ab = null; refUI();
+async function loadRef(blob, name, save, own = true) {
+  REF.name = name.replace(/\.[^.]+$/, ""); REF.own = own; REF.melody = REF.melody0 = null; REF.ab = null; REF.shifted = null; REF.key = 0; refUI();
   if (!$("song").value) $("song").value = REF.name;
   $("refState").textContent = "准备中…"; $("refProg").style.width = "3%"; show("refProg", true); $("refProg").parentElement.classList.remove("hide");
   REF.ready = (async () => {
@@ -1934,9 +2041,12 @@ async function loadRef(blob, name, save) {
       const len = Math.min(ab.length, Math.floor(400 * ab.sampleRate));
       const L = resample16k(ab.getChannelData(0), len, ab.sampleRate);
       const Rr = ab.numberOfChannels > 1 ? resample16k(ab.getChannelData(1), len, ab.sampleRate) : null;
-      REF.melody = await SC.extractMelody(L, Rr, 16000, p => { $("refProg").style.width = (5 + p * 95) + "%"; $("mpProg").style.width = (5 + p * 95) + "%"; });
+      REF.melody = await SC.extractMelody(L, Rr, 16000, p => { $("refProg").style.width = (5 + p * 95) + "%"; $("mpProg").style.width = (5 + p * 95) + "%"; $("acapProg").style.width = (5 + p * 95) + "%"; });
+      REF.melody0 = REF.melody;
       REF.kara = ab.numberOfChannels > 1 ? karaoke(ab) : null;
       $("refState").textContent = "✔ 准备好了 · " + SC.fmtT(ab.duration); $("refProg").parentElement.classList.add("hide");
+      { let k = 0; try { k = Math.max(-4, Math.min(4, +localStorage.getItem("key_" + REF.name) || 0)); } catch (e) {} if (k) await applyKey(k); }
+      refUI(); keyUI();
       return true;
     } catch (e) {
       REF.name = ""; refUI(); err("这首歌打不开，换一个试试。"); return false;
@@ -2096,7 +2206,7 @@ function startMp3() {
   cdLast = ""; setTimeout(() => { if (!cdRAF) cdRAF = requestAnimationFrame(cdTick); }, 100); // 视频开始放了 → 同时放 mp3、开始录
   if (!ytPending || !mp3Song || !REF.ab) return;
   const c = getCtx(), o = mp3Off();
-  refSrc = c.createBufferSource(); refSrc.buffer = REF.kara || REF.ab;
+  refSrc = c.createBufferSource(); refSrc.buffer = refBuf();
   const gn = loudOut(c, REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
   startAt = c.currentTime + 0.05; refSrc.start(startAt, Math.max(0, -o)); recRefSkip = Math.max(0, -o); refStartAt = startAt - Math.max(0, -o);
   refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200); };
@@ -2118,13 +2228,13 @@ function mpUI(state) {
   $("mpTitle").textContent = has ? "原唱已放好" : "手机里有这首歌？";
   $("mpSub").textContent = has ? "唱的时候有原唱的音条对着唱。伴奏去掉了人声，视频静音只看歌词。" : "选进来，唱的时候每个音都有音条，对着唱更准。";
   show("seg", !has); show("segNote", !has);
-  $("btnMp3").textContent = has ? "换一个" : "从手机选";
+  $("btnMp3").textContent = has ? "换一个" : "从手机选"; keyUI();
   $("readyNote").textContent = has ? "戴上耳机，点下面的按钮就开始。" : "先戴上耳机，再点下面的按钮。音乐一响就跟着唱，唱完自动打分。"; cdNote();
 }
 async function useMp3(s, blob, save) {
   mpUI("busy"); $("mpProg").style.width = "3%";
   if (save) DB.put("ref_" + s.t, { blob, name: s.t });
-  const ok = await loadRef(blob, s.t, false);
+  const ok = await loadRef(blob, s.t, false, false);
   if (stageSong !== s) return;
   if (ok) { mp3Has[s.t] = true; if (stageMode !== "k" && s.k) { stageMode = "k"; stageVideo(); } } else { delete mp3Has[s.t]; DB.del("ref_" + s.t); }
   mpUI();
@@ -2214,8 +2324,9 @@ $("stageBack").onclick = () => {
   show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0, behavior: "smooth" });
 };
 $("btnRef").onclick = $("btnRefChange").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
-$("refFile").onchange = e => { const f = e.target.files[0]; if (f) loadRef(f, pendingSong || f.name, true); pendingSong = ""; e.target.value = ""; };
-$("btnRefOff").onclick = () => { REF.name = ""; REF.ab = null; REF.melody = null; REF.ready = null; DB.del("ref"); refUI(); };
+$("refFile").onchange = e => { const f = e.target.files[0]; if (f) { loadRef(f, pendingSong || f.name, true); $("acapName").value = REF.name; } pendingSong = ""; e.target.value = ""; };
+$("btnRefOff").onclick = $("acapSongOff").onclick = () => { REF.name = ""; REF.own = false; REF.ab = null; REF.melody = REF.melody0 = null; REF.shifted = null; REF.key = 0; REF.ready = null; DB.del("ref"); refUI(); keyUI(); };
+$("btnAcapFile").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
 DB.get("ref").then(v => { if (v && v.blob) loadRef(v.blob, v.name, false); });
 
 async function handleBlob(blob) {
@@ -2241,7 +2352,7 @@ async function runAnalysis(ab, blob, mode) {
     const x = toMono16k(ab, 360);
     const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; }, PR ? { minVoiced: 1, minNotes: 2 } : null);
     if (res.error) throw new Error(res.error);
-    if (mode !== "yt" && REF.name && REF.ready) {
+    if ((mode === "sync" || (mode === "free" && REF.own)) && REF.name && REF.ready) {
       $("busyTxt").textContent = "正在跟原唱对比…";
       await REF.ready;
       if (REF.melody) { await new Promise(r => setTimeout(r, 30));

@@ -591,6 +591,53 @@ const SC = (() => {
     return ph.say;
   }
 
-  return { analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, phraseTrack, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
+
+  // 变调不变速（WSOLA）：只给自己导入的歌用。chs：每个声道的 Float32Array；semis：升降几个半音（±6 内）
+  // 不另存中间信号：边读边插值，内存只多一份输出。
+  async function pitchShift(chs, sr, semis, onProgress) {
+    const len = chs[0].length, a = Math.pow(2, semis / 12);
+    if (!semis || len < 8192) return chs.map(c => Float32Array.from(c));
+    const N = Math.pow(2, Math.round(Math.log2(sr * 0.046))), Hs = N >> 1, Ha = Hs / a, L = N - Hs;
+    const D = 4, tol = Math.round(sr * 0.006), win = new Float32Array(N);
+    for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    const nc = chs.length;
+    const at = (c, t) => { const i = t | 0, f = t - i; return i + 1 < len ? c[i] + (c[i + 1] - c[i]) * f : 0; };
+    const mono = t => { let s = 0; for (let k = 0; k < nc; k++) s += at(chs[k], t); return s / nc; };
+    const rl = Math.floor((len - 1) / a); // 先“快放/慢放”成 r(i) = x(i·a)，再拉伸回原长
+    const dm = new Float32Array(Math.ceil(rl / D) + 1); for (let j = 0; j < dm.length; j++) dm[j] = mono(j * D * a);
+    const K = Math.ceil(len / Hs), xs = new Int32Array(K).fill(-1), Ld = L / D;
+    let prev = 0; xs[0] = 0;
+    for (let k = 1; k < K; k++) {
+      if (k % 400 === 0) { onProgress && onProgress(0.5 * k / K); await tick(); }
+      const q = prev + Hs, p = Math.round(k * Ha);
+      const lo = Math.max(0, p - tol), hi = Math.min(rl - N - 1, p + tol);
+      if (hi < lo || q + L >= rl) break;
+      let best = lo, bv = -Infinity;
+      const qd = Math.round(q / D);
+      for (let x = Math.floor(lo / D); x * D <= hi; x++) {
+        let s = 0, e = 1e-9; for (let j = 0; j < Ld; j += 2) { const v = dm[x + j]; s += v * dm[qd + j]; e += v * v; }
+        const v = s / Math.sqrt(e); if (v > bv) { bv = v; best = x * D; }
+      }
+      let b2 = best; bv = -Infinity;
+      for (let x = Math.max(lo, best - D); x <= Math.min(hi, best + D); x++) {
+        let s = 0, e = 1e-9; for (let j = 0; j < L; j += 4) { const v = mono((x + j) * a); s += v * mono((q + j) * a); e += v * v; }
+        const v = s / Math.sqrt(e); if (v > bv) { bv = v; b2 = x; }
+      }
+      xs[k] = prev = b2;
+    }
+    const out = [];
+    for (let c = 0; c < nc; c++) {
+      const src = chs[c], o = new Float32Array(len);
+      for (let k = 0; k < K; k++) {
+        if (xs[k] < 0) break;
+        const o0 = k * Hs, x0 = xs[k], n = Math.min(N, len - o0);
+        for (let j = 0; j < n; j++) o[o0 + j] += win[j] * at(src, (x0 + j) * a);
+        if (k % 800 === 0) { onProgress && onProgress(0.5 + 0.5 * (c + k / K) / nc); await tick(); }
+      }
+      out.push(o);
+    }
+    return out;
+  }
+  return { pitchShift, analyze, summarize, yinOne, yinAvg, liveJudge, liveSteady, phraseTrack, extractMelody, compareWithRef, wrap12, jpLabel, fmtT, noteName, PC_NAMES, JP, MAJOR, mod12 };
 })();
 if (typeof module !== "undefined") module.exports = SC;
