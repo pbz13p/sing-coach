@@ -43,6 +43,9 @@ async def main():
     await pg.click('#btnStop'); await pg.wait_for_timeout(500)
     await pg.screenshot(path=f'{OUT}/06_busy.png')
     await pg.wait_for_selector('#result:not(.hide)',timeout=60000); await pg.wait_for_timeout(800)
+    if await pg.is_visible('#cele'):
+      await pg.screenshot(path=f'{OUT}/06c_cele.png'); await pg.click('#cele')
+      await pg.wait_for_selector('#cele.hide',state='attached',timeout=8000); await pg.wait_for_timeout(400)
     await pg.screenshot(path=f'{OUT}/07_result.png')
     await pg.screenshot(path=f'{OUT}/08_result_full.png',full_page=True)
     await pg.locator('#btnShare').locator('..').screenshot(path=f'{OUT}/08b_actions.png'); assert await pg.is_visible('#btnShare'), '结果页缺“发给家人听”'
