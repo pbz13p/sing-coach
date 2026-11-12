@@ -46,6 +46,23 @@ async def main():
       if await pg.is_visible('#result'): break
     ok = await pg.is_visible('#result')
     await pg.wait_for_timeout(800); await pg.screenshot(path=f'{OUT}/o4_result.png')
+    # 用了“低一档”：点“原唱这一句”放出来的那段也要是变过调的（不是整首原调）
+    refOk = None
+    if await pg.locator('#phList [data-phr]').count():
+      await pg.evaluate("document.querySelector('#phList [data-phr]').click()"); await pg.wait_for_timeout(2500)
+      refOk = await pg.evaluate("(() => { const r = window.__sc.refPlay(); return !!(r && r.buffer && r.buffer !== window.__sc.REF.ab && r.buffer.duration < 30) })()")
+      assert refOk, '变调后“原唱这一句”应该放变调的那一段'
+    # 内置歌放了 mp3 再回首页，自己的歌要自动回来（以前要刷新）
+    await pg.click('#btnHome'); await pg.wait_for_timeout(500)
+    await pg.click('#songList button[data-i="0"]'); await pg.wait_for_timeout(1200)
+    await pg.set_input_files('#mpFile', 'tools/sing.wav'); await pg.wait_for_timeout(6000)
+    await pg.click('#stageBack'); await pg.wait_for_timeout(500)
+    back = False
+    for i in range(60):
+      await pg.wait_for_timeout(500)
+      if await pg.is_visible('#keyAcap') and '跟着这首歌唱' in await pg.inner_text('#btnAcap'): back = True; break
+    print('原唱这一句变调', refOk, '| 用过内置歌 mp3 回首页后自己的歌回来', back)
+    assert back, '回首页后自己导入的歌应自动回来'
     await pg.reload(); await pg.wait_for_timeout(1500)
     for i in range(60):
       await pg.wait_for_timeout(500)

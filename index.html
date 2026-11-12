@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794475494";
+  var V = "1794477169";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -607,7 +607,7 @@
     </div>
 
     <div class="actions">
-      <button class="btn gold main hide" id="btnWorst"><span id="worstVerb">听</span>第 <span id="worstNo"></span> 句（最需要练）</button>
+      <button class="btn gold main hide" id="btnWorst"><span><span id="worstVerb">听</span>第 <span id="worstNo"></span> 句（最需要练）</span></button>
       <button class="btn gold main" id="again"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>再唱一遍</button>
       <button class="btn sec" id="btnShare"><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>发给家人听</button>
       <button class="btn sec" id="btnHome">回到歌单</button>
@@ -2029,19 +2029,27 @@ function refUI() {
   $("recSub").textContent = has ? "会放原唱" : "";
   $("refName").innerHTML = has ? NOTE_ICO + "<span></span>" : ""; if (has) $("refName").lastChild.textContent = REF.name;
 }
+// 回到首页时：如果刚才内置歌的 mp3 把自己导入的歌"挤掉"了，悄悄把自己的歌装回来（以前要刷新页面）
+function restoreOwn() {
+  if (REF.own) return;
+  DB.get("ref").then(v => { if (v && v.blob && !REF.own && !stageSong) loadRef(v.blob, v.name, false); });
+}
 async function loadRef(blob, name, save, own = true) {
+  const tok = REF.tok = (REF.tok || 0) + 1; // 后开始的覆盖先开始的，旧的算到一半就作废
   REF.name = name.replace(/\.[^.]+$/, ""); REF.own = own; REF.melody = REF.melody0 = null; REF.ab = null; REF.shifted = null; REF.key = 0; refUI();
   if (!$("song").value) $("song").value = REF.name;
   $("refState").textContent = "准备中…"; $("refProg").style.width = "3%"; show("refProg", true); $("refProg").parentElement.classList.remove("hide");
   REF.ready = (async () => {
     try {
       const ab = await decode(await blob.arrayBuffer());
+      if (tok !== REF.tok) return null;
       REF.ab = ab;
       if (save) DB.put("ref", { blob, name });
       const len = Math.min(ab.length, Math.floor(400 * ab.sampleRate));
       const L = resample16k(ab.getChannelData(0), len, ab.sampleRate);
       const Rr = ab.numberOfChannels > 1 ? resample16k(ab.getChannelData(1), len, ab.sampleRate) : null;
       REF.melody = await SC.extractMelody(L, Rr, 16000, p => { $("refProg").style.width = (5 + p * 95) + "%"; $("mpProg").style.width = (5 + p * 95) + "%"; $("acapProg").style.width = (5 + p * 95) + "%"; });
+      if (tok !== REF.tok) return null;
       REF.melody0 = REF.melody;
       REF.kara = ab.numberOfChannels > 1 ? karaoke(ab) : null;
       $("refState").textContent = "✔ 准备好了 · " + SC.fmtT(ab.duration); $("refProg").parentElement.classList.add("hide");
@@ -2049,6 +2057,7 @@ async function loadRef(blob, name, save, own = true) {
       refUI(); keyUI();
       return true;
     } catch (e) {
+      if (tok !== REF.tok) return null;
       REF.name = ""; refUI(); err("这首歌打不开，换一个试试。"); return false;
     }
   })();
@@ -2218,7 +2227,7 @@ function nudge(d) { // d>0：视频往后跳（歌词慢了）
   try { const mt = getCtx().currentTime - refStartAt; YT_.player.seekTo(Math.max(0, mt + o), true); } catch (e) {}
 }
 $("nudgeE").onclick = () => nudge(0.5);
-window.__sc = { YT_ }; // 只给自动测试用
+window.__sc = { YT_, refPlay: () => refPlay, REF }; // 只给自动测试用
 $("nudgeL").onclick = () => nudge(-0.5);
 function mpUI(state) {
   const s = stageSong; if (!s) return; const c = $("mpCard"), has = !!mp3Has[s.t];
@@ -2236,7 +2245,7 @@ async function useMp3(s, blob, save) {
   if (save) DB.put("ref_" + s.t, { blob, name: s.t });
   const ok = await loadRef(blob, s.t, false, false);
   if (stageSong !== s) return;
-  if (ok) { mp3Has[s.t] = true; if (stageMode !== "k" && s.k) { stageMode = "k"; stageVideo(); } } else { delete mp3Has[s.t]; DB.del("ref_" + s.t); }
+  if (ok) { mp3Has[s.t] = true; if (stageMode !== "k" && s.k) { stageMode = "k"; stageVideo(); } } else if (ok === false) { delete mp3Has[s.t]; DB.del("ref_" + s.t); }
   mpUI();
 }
 $("btnMp3").onclick = () => { getCtx(); $("mpFile").click(); };
@@ -2276,7 +2285,7 @@ function recRestart() { // 从头再唱：回到“开始唱”那一步
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   if (pr) { startPractice(pr); return; }
   if (song && SONGS.indexOf(song) >= 0) { openStage(SONGS.indexOf(song)); return; }
-  stageSong = null; show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0 });
+  stageSong = null; show("stepRec", false); show("stepIn"); restoreOwn(); window.scrollTo({ top: 0 });
 }
 // 伴奏视频打不开（网不好 / 视频被下架）：不让老人点了“开始唱”干等，直接说清楚、给大按钮
 function ytTrouble() {
@@ -2306,7 +2315,7 @@ function micDenied(e, opts) {
   const p = none ? "没找到麦克风。拔掉耳机，或者换一副耳机试试。"
     : busy ? "麦克风正被别的软件用着（比如在打电话）。挂掉电话、关掉别的软件再试。"
     : "唱歌要用麦克风听您唱。<br>请点网址左边的 <b>「大小」</b>，再点 <b>「网站设置」</b>，把 <b>麦克风</b> 改成 <b>「允许」</b>。";
-  cancelRec(); stageUI("ready"); if (!opts.yt) { show("stepRec", false); show("stepIn"); }
+  cancelRec(); stageUI("ready"); if (!opts.yt) { show("stepRec", false); show("stepIn"); restoreOwn(); }
   if (PR) { show("stepRec", false); }
   intrShow(none || busy ? "麦克风用不了" : "麦克风还没打开", p, ["再试一次", () => { if (PR && PR.x) startPractice(PR.x); else if (opts.yt) $("stageGo").click(); else $("btnRec").click(); }],
     ["先不唱了", () => { if (PR) $("prBack").click(); else if (opts.yt) $("stageBack").click(); }]);
@@ -2321,11 +2330,11 @@ $("stageBack").onclick = () => {
   // 离开唱歌页就把麦克风关掉：iPhone 顶上的橙点不会一直亮，下次进来重新拿一个“醒着”的麦克风
   [stream, warmStream].forEach(m => { if (m) m.getTracks().forEach(t => t.stop()); }); stream = null; warmStream = null;
   if (PR) { show("stepRec", false); $("prBack").click(); return; }
-  show("stepRec", false); show("stepIn"); window.scrollTo({ top: 0, behavior: "smooth" });
+  show("stepRec", false); show("stepIn"); restoreOwn(); window.scrollTo({ top: 0, behavior: "smooth" });
 };
 $("btnRef").onclick = $("btnRefChange").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
 $("refFile").onchange = e => { const f = e.target.files[0]; if (f) { loadRef(f, pendingSong || f.name, true); $("acapName").value = REF.name; } pendingSong = ""; e.target.value = ""; };
-$("btnRefOff").onclick = $("acapSongOff").onclick = () => { REF.name = ""; REF.own = false; REF.ab = null; REF.melody = REF.melody0 = null; REF.shifted = null; REF.key = 0; REF.ready = null; DB.del("ref"); refUI(); keyUI(); };
+$("btnRefOff").onclick = $("acapSongOff").onclick = () => { REF.tok = (REF.tok || 0) + 1; REF.name = ""; REF.own = false; REF.ab = null; REF.melody = REF.melody0 = null; REF.shifted = null; REF.key = 0; REF.ready = null; DB.del("ref"); refUI(); keyUI(); };
 $("btnAcapFile").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
 DB.get("ref").then(v => { if (v && v.blob) loadRef(v.blob, v.name, false); });
 
@@ -2373,7 +2382,7 @@ async function runAnalysis(ab, blob, mode) {
 function fail(e, fromRec) {
     const m = e.message;
     if (PR && (m === "short" || m === "few")) { PR.miss = true; renderPractice(); return; }
-    show("stepBusy", false); show("stepIn");
+    show("stepBusy", false); show("stepIn"); restoreOwn();
     if (fromRec && (m === "short" || m === "few")) { // 刚唱完却没听到：用大卡片说清楚，别悄悄回首页
       const i = recSong ? SONGS.findIndex(x => x.t === recSong) : -1; err(""); window.scrollTo(0, 0);
       intrShow("没听清您的歌声", recSong ? "手机可能离得远，<br>或者伴奏声音太大。<br>拿近一点、戴上耳机再唱。" : "手机可能离得远，<br>或者声音小了点。<br>把手机拿到胸前，放开声音唱。",
@@ -2670,9 +2679,16 @@ function playRef(a, b) {
   aud.pause();
   try { refPlay && refPlay.stop(); } catch (e) {}
   const c = getCtx(); c.resume && c.resume();
-  const st = Math.max(0, refTime(Math.max(0, a)));
-  refPlay = c.createBufferSource(); refPlay.buffer = REF.ab; refPlay.connect(c.destination);
-  refPlay.start(0, st, Math.max(1, b - a));
+  const st = Math.max(0, refTime(Math.max(0, a))), dur = Math.max(1, b - a), tok = playRef.tok = (playRef.tok || 0) + 1;
+  const go = (buf, off) => { if (tok !== playRef.tok) return; refPlay = c.createBufferSource(); refPlay.buffer = buf; refPlay.connect(c.destination); refPlay.start(0, off, dur); };
+  if (!REF.key) return go(REF.ab, st);
+  // 用了"低一点/高一点"：这句原唱也按同样的调子放，老人听到的和自己要唱的一样高
+  const ab = REF.ab, sr = ab.sampleRate, i0 = Math.floor(st * sr), n = Math.max(0, Math.min(ab.length - i0, Math.ceil((dur + 0.3) * sr)));
+  if (!n) return;
+  const chs = []; for (let k = 0; k < ab.numberOfChannels; k++) chs.push(ab.getChannelData(k).slice(i0, i0 + n));
+  SC.pitchShift(chs, sr, REF.key).then(out => {
+    const bf = c.createBuffer(out.length, n, sr); out.forEach((o, k) => bf.copyToChannel(o, k)); go(bf, 0);
+  }).catch(() => go(ab, st));
 }
 function playRange(a, b) {
   try { refPlay && refPlay.stop(); } catch (e) {} setView(a - 1); playFrom(a, b); $("cv").scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -2703,7 +2719,7 @@ $("btnShare").onclick = async () => {
     else { const a = document.createElement("a"); a.href = audioURL; a.download = f.name; a.click(); lbl.textContent = "录音已保存到手机"; setTimeout(() => lbl.textContent = old, 2500); }
   } catch (e) { if (e && e.name !== "AbortError") { lbl.textContent = "没发出去，再点一次试试"; setTimeout(() => lbl.textContent = old, 2500); } }
 };
-$("btnHome").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("btnHome").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); restoreOwn(); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
 // ---------- AI 老师 ----------
 let sample = null;
