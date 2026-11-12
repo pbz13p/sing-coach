@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794488129";
+  var V = "1794488172";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -2377,7 +2377,8 @@ function buildSongs(cnt) {
   ["易", "中", "难"].forEach(L => SONGS.forEach((s, i) => { if (s.lv === L) order.push(i); }));
   const sung = order.filter(i => cnt[SONGS[i].t]).sort((a, b) => cnt[SONGS[b].t].n - cnt[SONGS[a].t].n || cnt[SONGS[b].t].at - cnt[SONGS[a].t].at);
   let html = "";
-  sung.concat(order.filter(i => !cnt[SONGS[i].t])).forEach(i => {
+  const fresh = order.filter(i => !cnt[SONGS[i].t] && SONGS[i].rec).reverse(); // 刚从推荐加进来的歌，排在唱过的歌后面，一眼就看到
+  sung.concat(fresh, order.filter(i => !cnt[SONGS[i].t] && !SONGS[i].rec)).forEach(i => {
     const s = SONGS[i], c = cnt[s.t];
     html += `<div class="song"><button data-i="${i}"><div><div class="nm">${s.t}${s.rec && !c ? `<span class="newB">新加</span>` : ""}</div><div class="by">${s.s}${c ? `<span class="sung"> · 唱过 ${c.n} 次</span>` : ""}</div></div><span class="go">唱</span></button></div>`;
   });
