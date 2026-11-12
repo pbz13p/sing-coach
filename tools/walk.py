@@ -46,6 +46,14 @@ async def main():
     await pg.screenshot(path=f'{OUT}/07_result.png')
     await pg.screenshot(path=f'{OUT}/08_result_full.png',full_page=True)
     await pg.locator('#btnShare').locator('..').screenshot(path=f'{OUT}/08b_actions.png'); assert await pg.is_visible('#btnShare'), '结果页缺“发给家人听”'
+    # 回放带混响：点"听我唱的"能放、开关能切
+    await pg.click('#detMore summary'); await pg.wait_for_timeout(300)
+    await pg.click('#btnPlay'); await pg.wait_for_timeout(1200)
+    assert not await pg.evaluate("document.getElementById('aud').paused"), '“听我唱的”放不出来'
+    await pg.click('#btnRev'); assert '关' in await pg.inner_text('#btnRev'), '混响开关不动'
+    await pg.click('#btnRev'); assert '开' in await pg.inner_text('#btnRev')
+    await pg.locator('#btnPlay').locator('..').screenshot(path=f'{OUT}/08c_replay.png')
+    await pg.click('#btnPlay'); await pg.wait_for_timeout(200); await pg.click('#detMore summary')
     if await pg.is_visible('#btnWorst'):  # 只练这一句
       await pg.click('#btnWorst'); await pg.wait_for_timeout(3000)
       await pg.screenshot(path=f'{OUT}/07b_practice_sing.png')

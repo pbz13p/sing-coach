@@ -60,6 +60,12 @@
     color:var(--pearl);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);transition:transform .12s,background .2s,border-color .2s}
   .btn:active{transform:scale(.98)}
   .btn:focus-visible,.orb:focus-visible{outline:2px solid var(--champ);outline-offset:4px}
+  .revchip{display:flex;align-items:center;justify-content:center;gap:10px;margin:12px auto 0;padding:10px 18px;min-height:44px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--mist);font:inherit;font-size:16px;-webkit-tap-highlight-color:transparent}
+  .revchip i{width:30px;height:18px;border-radius:9px;background:rgba(255,255,255,.14);position:relative;transition:background .2s}
+  .revchip i::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--pearl);transition:transform .2s}
+  .revchip[aria-pressed=true]{color:var(--champ);border-color:rgba(216,191,143,.35)}
+  .revchip[aria-pressed=true] i{background:var(--champ2)}
+  .revchip[aria-pressed=true] i::after{transform:translateX(12px)}
   .btn.gold{color:#1d160a;border:0;background:linear-gradient(180deg,#ecdcb6,#c9a86c);box-shadow:0 10px 24px -10px rgba(216,191,143,.55),inset 0 1px 0 rgba(255,255,255,.5)}
   .btn.alt{}
   .btn.ghost{background:transparent}
@@ -598,6 +604,7 @@
         <button class="btn small ghost" id="next" aria-label="往后"><svg class="ico" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
       <button class="btn gold" id="btnPlay"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg><span>听我唱的</span></button>
+      <button class="revchip" id="btnRev" aria-pressed="true"><i></i><span>加点混响：开</span></button>
       <audio id="aud" preload="auto" class="hide"></audio>
     </div>
 
@@ -1910,7 +1917,36 @@ function loop() {
   if (t > viewStart + VIEW * 0.9 || t < viewStart) setView(t - VIEW * 0.15); else draw();
   raf = requestAnimationFrame(loop);
 }
+// 回放加一点混响（声音更饱满）；开关记在手机里，默认开
+let fx = null, revOn = true;
+try { revOn = localStorage.getItem("rev") !== "0"; } catch (e) {}
+function makeIR(c) {
+  const len = Math.floor(c.sampleRate * 1.8), b = c.createBuffer(2, len, c.sampleRate), pre = Math.floor(c.sampleRate * 0.02);
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = pre; i < len; i++) { const x = (i - pre) / (len - pre); d[i] = (Math.random() * 2 - 1) * Math.pow(1 - x, 3.2) * (1 - 0.5 * x); } }
+  return b;
+}
+function setRev(on) {
+  revOn = on; try { localStorage.setItem("rev", on ? "1" : "0"); } catch (e) {}
+  $("btnRev").setAttribute("aria-pressed", on ? "true" : "false");
+  $("btnRev").lastChild.textContent = on ? "加点混响：开" : "加点混响：关";
+  if (fx) fx.wet.gain.value = on ? 0.32 : 0;
+}
+function ensureFx() {
+  if (!revOn && !fx) return; // 没开过混响就不接 Web Audio，保持原样
+  try {
+    const c = getCtx();
+    if (!fx || fx.c !== c) {
+      if (fx) return; // 换了 AudioContext 就不再重接（元素只能接一次），保持原样
+      if (c.state !== "running") return; // 苹果手机音频还没醒就先原声放，免得没声音；下次再接
+      const src = c.createMediaElementSource(aud), wet = c.createGain(), conv = c.createConvolver();
+      conv.buffer = makeIR(c); src.connect(c.destination); src.connect(conv); conv.connect(wet); wet.connect(c.destination);
+      fx = { c, wet };
+    }
+    fx.wet.gain.value = revOn ? 0.32 : 0;
+  } catch (e) {}
+}
 function playFrom(t, end) {
+  ensureFx();
   try { aud.currentTime = Math.max(0, t); } catch (e) {}
   stopAt = end ?? null;
   const p = aud.play(); if (p && p.catch) p.catch(() => err("播放不了，请再点一次。"));
@@ -1933,8 +1969,10 @@ function playRef(a, b) {
 }
 function playRange(a, b) {
   try { refPlay && refPlay.stop(); } catch (e) {} setView(a - 1); playFrom(a, b); $("cv").scrollIntoView({ behavior: "smooth", block: "center" }); }
-aud.onplay = () => $("btnPlay").lastChild.textContent = "暂停";
-aud.onpause = () => $("btnPlay").lastChild.textContent = "听我唱的";
+$("btnRev").onclick = () => setRev(!revOn); setRev(revOn);
+const playIco = on => { $("btnPlay").firstChild.innerHTML = on ? '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" stroke="none"/>' : '<path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/>'; };
+aud.onplay = () => { $("btnPlay").lastChild.textContent = "暂停"; playIco(true); };
+aud.onpause = () => { $("btnPlay").lastChild.textContent = "听我唱的"; playIco(false); };
 $("btnPlay").onclick = () => aud.paused ? playFrom(aud.currentTime > 0 && aud.currentTime < R.duration - 0.5 ? aud.currentTime : viewStart) : aud.pause();
 cv.addEventListener("click", e => { if (!R) return; const r = cv.getBoundingClientRect(); const t = viewStart + (e.clientX - r.left - 44) / (r.width - 50) * VIEW; playFrom(t - 0.3); });
 
