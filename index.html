@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794480146";
+  var V = "1794481043";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -294,11 +294,11 @@
   .cele canvas{position:absolute;inset:0;width:100%;height:100%}
   .celeTx{position:relative;text-align:center;padding:0 28px;max-width:420px}
   .celeIco{font-size:64px;line-height:1;margin-bottom:10px;animation:celePop .7s .15s cubic-bezier(.2,.9,.25,1.3) both}
-  .celeTx b{display:block;font-family:var(--serif,serif);font-size:min(10vw,44px);font-weight:900;line-height:1.25;
+  .celeTx b{display:block;font-family:var(--serif,serif);font-size:min(10vw,44px);font-weight:900;text-wrap:balance;line-height:1.25;
     background:linear-gradient(180deg,#fffaf0,#ffe39a 55%,#d9a94e);-webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 4px 22px rgba(255,214,120,.45));animation:celePop .7s .25s cubic-bezier(.2,.9,.25,1.2) both}
-  .celeTx span{display:block;margin-top:12px;font-size:19px;line-height:1.6;color:#f3ecdc;animation:celeIn .5s .6s both}
-  .celeTx em{display:block;margin-top:26px;font-style:normal;font-size:14px;color:rgba(244,239,230,.5);animation:celeIn .5s 1.4s both}
+  .celeTx span{display:block;margin-top:12px;font-size:19px;line-height:1.6;color:#f3ecdc;text-wrap:balance;animation:celeIn .5s .6s both}
+  .celeTx em{display:block;margin-top:26px;font-style:normal;font-size:16px;color:rgba(244,239,230,.66);animation:celeIn .5s 1.4s both}
   @keyframes celeIn{from{opacity:0}to{opacity:1}}
   @keyframes celePop{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
   @media (prefers-reduced-motion:reduce){.cele,.celeIco,.celeTx b,.celeTx span,.celeTx em{animation:none}}
