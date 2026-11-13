@@ -93,23 +93,30 @@ const SC = (() => {
 
   // ---------- 3. 局部基准（无伴奏时按自己的调判断） ----------
   function localOffset(m, rms, hopS) {
-    const n = m.length, C = new Float64Array(n + 1), S = new Float64Array(n + 1), Wt = new Float64Array(n + 1);
-    for (let i = 0; i < n; i++) {
-      let c = 0, s = 0, w = 0;
-      if (!isNaN(m[i]) && i > 0 && !isNaN(m[i - 1]) && Math.abs(m[i] - m[i - 1]) < 0.12) {
-        const fr = m[i] - Math.round(m[i]);
-        w = rms[i]; c = w * Math.cos(2 * Math.PI * fr); s = w * Math.sin(2 * Math.PI * fr);
+    const n = m.length, half = Math.round(6 / hopS);
+    const fr = new Float64Array(n).fill(NaN), w0 = new Float64Array(n);
+    for (let i = 1; i < n; i++) if (!isNaN(m[i]) && !isNaN(m[i - 1]) && Math.abs(m[i] - m[i - 1]) < 0.12) { fr[i] = m[i] - Math.round(m[i]); w0[i] = rms[i]; }
+    // 在前后 6 秒里求“他自己的调”（圆周平均）。wt 可以压低某些帧的分量
+    const pass = (wt, prev) => {
+      const C = new Float64Array(n + 1), S = new Float64Array(n + 1), Wt = new Float64Array(n + 1);
+      for (let i = 0; i < n; i++) {
+        const w = wt(i); let c = 0, s = 0;
+        if (w > 0) { c = w * Math.cos(2 * Math.PI * fr[i]); s = w * Math.sin(2 * Math.PI * fr[i]); }
+        C[i + 1] = C[i] + c; S[i + 1] = S[i] + s; Wt[i + 1] = Wt[i] + w;
       }
-      C[i + 1] = C[i] + c; S[i + 1] = S[i] + s; Wt[i + 1] = Wt[i] + w;
-    }
-    const gAng = Math.atan2(S[n], C[n]) / (2 * Math.PI);
-    const half = Math.round(6 / hopS);
-    const raw = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const a = Math.max(0, i - half), b = Math.min(n, i + half);
-      const cc = C[b] - C[a], ss = S[b] - S[a], ww = Wt[b] - Wt[a];
-      raw[i] = (ww > 0 && Math.hypot(cc, ss) > 0.15 * ww) ? Math.atan2(ss, cc) / (2 * Math.PI) : gAng;
-    }
+      const g = Math.atan2(S[n], C[n]) / (2 * Math.PI), raw = new Float64Array(n);
+      for (let i = 0; i < n; i++) {
+        const a = Math.max(0, i - half), b = Math.min(n, i + half);
+        const cc = C[b] - C[a], ss = S[b] - S[a], ww = Wt[b] - Wt[a];
+        raw[i] = (ww > 0 && Math.hypot(cc, ss) > 0.15 * ww) ? Math.atan2(ss, cc) / (2 * Math.PI) : (prev ? prev[i] : g);
+      }
+      return { raw, g };
+    };
+    const p1 = pass(i => w0[i]);
+    // 第二遍：明显偏开的音（偏了 18 音分以上）少算一点，免得一整句唱高/唱低把“他的调”也拉过去，结果那句反而看不出来
+    const wrap = v => v - Math.round(v);
+    const p2 = pass(i => w0[i] && Math.abs(wrap(fr[i] - p1.raw[i])) > 0.22 ? w0[i] * 0.2 : w0[i], p1.raw);
+    const raw = p2.raw, gAng = p1.g;
     // 展开（允许越唱越低超过半个半音）
     const off = new Float64Array(n); off[0] = raw[0];
     for (let i = 1; i < n; i++) {
@@ -538,11 +545,13 @@ const SC = (() => {
     }
     return 0;
   }
-  // 手机每 85 毫秒才给一次声音，正好和颤音（每秒 5~6 下）“撞拍”，只看最后一点会总落在颤音同一侧。
-  // 所以在最近约 0.18 秒（一个颤音来回）里等距取 6 个点，去掉跑八度的，取平均。
-  function yinAvg(x, sr) {
-    const step = Math.round(sr * 0.03), ms = [];
-    for (let k = 0; k < 6; k++) { const f = yinOne(x, sr, x.length - k * step); if (f > 0) ms.push(69 + 12 * Math.log2(f / 440)); }
+  // 在最近一小段里等距取 4 个点（相隔 25 毫秒），去掉跑八度的，取平均。
+  // 以前取 6 个点、跨 0.18 秒，球要慢 160 毫秒才跟上；现在手机每 43 毫秒给一次声音，
+  // “准/高/低”又是 liveJudge 在 0.4 秒里综合判断的，颤音不会让判断乱跳，所以这里可以短一点（实测见 tools/latency.js）。
+  function yinAvg(x, sr, np, stepS) {
+    np = np || 4;
+    const step = Math.round(sr * (stepS || 0.025)), ms = [];
+    for (let k = 0; k < np; k++) { const f = yinOne(x, sr, x.length - k * step); if (f > 0) ms.push(69 + 12 * Math.log2(f / 440)); }
     if (ms.length < 3) return 0;
     const b = ms.slice().sort((p, q) => p - q), md = b[b.length >> 1], keep = ms.filter(m => Math.abs(m - md) < 1);
     const m = keep.reduce((p, q) => p + q, 0) / keep.length;

@@ -824,7 +824,7 @@ async function startRecording(opts) {
     }
   }
   srcNode = c.createMediaStreamSource(stream);
-  proc = c.createScriptProcessor(4096, 1, 1);
+  proc = c.createScriptProcessor(2048, 1, 1);
   const mute = c.createGain(); mute.gain.value = 0;
   srcNode.connect(proc); proc.connect(mute); mute.connect(c.destination);
   const ratio = Math.max(1, Math.round(c.sampleRate / 16000));

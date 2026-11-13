@@ -4,7 +4,7 @@
 最重要：极简！老板说"我都看不懂，我爸更看不懂"。界面要高级、有质感（藏青 + 香槟金）。歌词唱的时候要能看到。
 
 代码：page.html（页面）、analysis.js（音高分析核心），改完必须运行 `python3 build.py` 生成 index.html（index.html 是上线文件，不要手改）。
-测试：`node tools/test.js`、`node tools/test2.js`、`node tools/test3.js`（合成歌声自测），必须全部通过。
+测试：`node tools/test.js` ～ `node tools/test6.js`（合成歌声自测）和 `node tools/bench.js --gate`（音准测试集，分数不能比基准低），必须全部通过。开工先读 ROADMAP.md 和 METRICS.md。
 
 注意：merge 到 main 就会通过 GitHub Pages 直接上线，所以每个改动都要稳。
 
