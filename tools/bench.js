@@ -68,6 +68,7 @@ function sing(mel, opt) {
   });
   for (let s = 0; s < N; s++) x[s] += 0.003 * (r() - 0.5);
   if (o.room) room(x, r);
+  if (o.leak) leak(x, mel, o, r);
   return { x, ref, truth, dur: total };
 }
 
@@ -89,6 +90,22 @@ function room(x, r) {
   }
   const g = sig / Math.sqrt(te / N) * Math.pow(10, -15 / 20);
   for (let i = 0; i < N; i++) x[i] = y[i] + g * tv[i];
+}
+
+// 外放：手机喇叭放的伴奏（和弦 + 低音 + 鼓点）漏进麦克风。leak = 伴奏比人声低多少分贝
+function leak(x, mel, o, r) {
+  const N = x.length, acc = new Float32Array(N);
+  let t = 0.8; const chordOf = d => [0, 4, 7].map(k => o.base + o.transpose - 12 + (d % 12 < 5 ? 0 : 5) + k);
+  mel.forEach(notes => { const dur = notes.reduce((a, n) => a + n[1], 0); const ch = chordOf(notes[0][0]);
+    for (let s = Math.floor(t * SR); s < Math.min(N, (t + dur + o.gap) * SR); s++) { const u = s / SR;
+      let v = 0; ch.forEach(m => v += Math.sin(2 * Math.PI * 440 * Math.pow(2, (m - 69) / 12) * u));
+      v += 1.5 * Math.sin(2 * Math.PI * 440 * Math.pow(2, (ch[0] - 12 - 69) / 12) * u);
+      const beat = (u * 2) % 1; v += beat < 0.03 ? (r() - 0.5) * 6 : 0;
+      acc[s] = v; }
+    t += dur + o.gap; });
+  let ex = 0, ea = 0; for (let i = 0; i < N; i++) { ex += x[i] * x[i]; ea += acc[i] * acc[i]; }
+  const g = Math.sqrt(ex / ea) * Math.pow(10, -o.leak / 20);
+  for (let i = 0; i < N; i++) x[i] += g * acc[i];
 }
 
 function refMelody(ref, dur) {
@@ -136,6 +153,9 @@ const VARIANTS = [
   ['整首唱低三度（自己的调）', s => ({ transpose: -4 }), ['self', 'free']],
   ['客厅（混响+电视声）', s => ({ room: true }), ['self', 'free', 'sync']],
   ['客厅+一句偏低50', s => ({ room: true, off: { [s % 4]: -50 } }), ['free', 'sync']],
+  ['外放伴奏漏进来（-10dB）', s => ({ leak: 10 }), ['self', 'sync']],
+  ['外放很响（伴奏和人声一样大）', s => ({ leak: 0 }), ['self', 'sync']],
+  ['外放伴奏+一句偏低50', s => ({ leak: 10, off: { [(s + 2) % 4]: -50 } }), ['sync']],
   ['客厅+一句偏低35（清唱）', s => ({ room: true, off: { [s % 4]: -35 } }), ['self']],
 ];
 

@@ -533,6 +533,12 @@
   </div>
 
   <div id="stepIn">
+  <div class="lastCard hide" id="pendCard" style="border-color:rgba(240,168,96,.5)">
+    <div class="lk"><span>上次唱的那一遍还没看结果</span></div>
+    <div class="lrow"><span class="ln" id="pendName"></span><span class="ls" id="pendLen"></span></div>
+    <button class="btn gold" id="pendGo">看结果</button>
+    <button class="btn sec" id="pendNo" style="margin-top:10px">不要了</button>
+  </div>
   <div class="lastCard hide" id="lastCard">
     <div class="lk"><span>上次唱的</span><span class="streak hide" id="lastStreak"></span></div>
     <div class="lrow"><span class="ln" id="lastName"></span><span class="ls" id="lastScore"></span></div>
@@ -761,6 +767,7 @@ function err(t) { $("err").innerHTML = t; show("err", !!t); }
 $("btnFile").onclick = () => { getCtx(); $("file").click(); };
 $("file").onchange = e => { const f = e.target.files[0]; if (f) handleBlob(f); e.target.value = ""; };
 
+let pendBuf = [], pendN = 0, pendSaved = 0, pendSR = 16000;
 let recSong = "", recMode = "self", refSrc = null, stream = null, proc = null, srcNode = null, chunks = [], recTimer = 0, recStart = 0, live = [], liveBuf = [], lastLive = 0;
 let ytPending = false, stageVid = "", recYt = null, PR = null; // PR：正在“只练这一句”
 let lastKind = "";
@@ -806,7 +813,7 @@ async function startRecording(opts) {
     warmStream = null;
   } catch (e) { try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} micDenied(e, opts); return false; }
   stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
-  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null; pauseReset();
+  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null; pauseReset(); pendBuf = []; pendN = 0; pendSaved = Date.now(); pendClear();
   recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; phraseSt = {}; drawLive.lastSing = -9; drawLive.pvAt = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
   const useOwn = !opts.yt && !opts.practice && REF.own && !!REF.name && $("song").value.trim() === REF.name;
@@ -846,13 +853,14 @@ async function startRecording(opts) {
     let d = ev.inputBuffer.getChannelData(0);
     if (ev.playbackTime < startAt) d = d.subarray(Math.floor((startAt - ev.playbackTime) * c.sampleRate));
     chunks.push(new Float32Array(d));
-    for (let i = 0; i + ratio <= d.length; i += ratio) { let a = 0; for (let k = 0; k < ratio; k++) a += d[i + k]; liveBuf.push(a / ratio); }
+    for (let i = 0; i + ratio <= d.length; i += ratio) { let a = 0; for (let k = 0; k < ratio; k++) a += d[i + k]; liveBuf.push(a / ratio); if (!PR) pendBuf.push(a / ratio); }
+    pendSR = c.sampleRate / ratio;
     if (liveBuf.length > 4000) liveBuf.splice(0, liveBuf.length - 4000);
     livePitch(c.sampleRate / ratio);
   };
   if (!ytPending) recStart = Date.now();
   show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { if (recPaused) return; if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
+  recTimer = setInterval(() => { if (recPaused) return; if (!PR && Date.now() - pendSaved > 15000) pendFlush(); if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
     if (PR && !ytPending) { let vt = 0; try { vt = YT_.player.getCurrentTime(); } catch (e) {} if (vt >= PR.end || s > PR.end - PR.a + 6) $("btnStop").click(); } }, 250);
   window.scrollTo({ top: 0, behavior: "smooth" });
   return true;
@@ -1054,7 +1062,7 @@ function drawLive(now) {
   document.addEventListener("visibilitychange", sync);
 })();
 $("btnStop").onclick = () => {
-  pauseReset();
+  pauseReset(); if (!PR) pendFlush(true);
   cdPhase = ""; show("cd", false); document.body.classList.remove("singing");
   show("stepRec", false); clearInterval(recTimer);
   if (recSong) YT_.stop(); stageSong = null; ytPending = false;
@@ -1065,6 +1073,31 @@ $("btnStop").onclick = () => {
   let o = 0; chunks.forEach(c => { raw.set(c, o); o += c.length; }); chunks = [];
   handlePCM(raw, getCtx().sampleRate, recMode === "sync" ? "sync" : recSong ? "yt" : recMode); mp3Song = null;
 };
+// ===== 录音不丢：唱的时候每 15 秒把录音存一段到手机里；万一中途来电话、网页被关掉，下次打开还能看结果 =====
+function pendFlush(last) {
+  pendSaved = Date.now(); if (!pendBuf.length) return;
+  const seg = new Int16Array(pendBuf.length); for (let i = 0; i < seg.length; i++) seg[i] = Math.max(-1, Math.min(1, pendBuf[i])) * 32767;
+  pendBuf = []; const k = pendN++;
+  DB.put("pend_" + k, seg);
+  DB.put("pend", { n: pendN, sr: pendSR, song: $("song").value.trim() || recSong || "", t: Date.now(), done: !!last });
+}
+async function pendClear() { const m = await DB.get("pend"); if (m) { for (let k = 0; k < m.n; k++) DB.del("pend_" + k); DB.del("pend"); } }
+async function pendCheck() {
+  const m = await DB.get("pend"); if (!m || !m.n || Date.now() - m.t > 3 * 864e5) { if (m) pendClear(); return; }
+  if (!$("stepRec").classList.contains("hide") || !$("result").classList.contains("hide")) return;
+  const segs = []; let len = 0; for (let k = 0; k < m.n; k++) { const s = await DB.get("pend_" + k); if (s) { segs.push(s); len += s.length; } }
+  if (len < m.sr * 5) { pendClear(); return; }
+  $("pendName").textContent = m.song || "清唱"; $("pendLen").textContent = SC.fmtT(len / m.sr); show("pendCard");
+  $("pendNo").onclick = () => { pendClear(); show("pendCard", false); };
+  $("pendGo").onclick = () => {
+    show("pendCard", false); const raw = new Float32Array(len); let o = 0;
+    segs.forEach(s => { for (let i = 0; i < s.length; i++) raw[o + i] = s[i] / 32767; o += s.length; });
+    $("song").value = m.song || ""; recSong = ""; lastKind = "acap"; window.scrollTo(0, 0);
+    handlePCM(raw, m.sr, "self");
+  };
+}
+setTimeout(pendCheck, 600);
+try { if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {}); } catch (e) {}
 function wavBlob(x, sr) {
   const n = x.length, b = new DataView(new ArrayBuffer(44 + n * 2));
   const w = (o, s) => { for (let i = 0; i < s.length; i++) b.setUint8(o + i, s.charCodeAt(i)); };
@@ -1953,6 +1986,7 @@ $("stageGo").onclick = () => {
   startRecording({ yt: stageSong });
 };
 function cancelRec() {
+  pendClear();
   cdPhase = ""; show("cd", false); document.body.classList.remove("singing");
   clearInterval(recTimer); ytPending = false;
   if (refSrc) { try { refSrc.onended = null; refSrc.stop(); } catch (e) {} refSrc = null; }
@@ -2071,9 +2105,10 @@ async function runAnalysis(ab, blob, mode) {
     $("aud").src = audioURL;
     if (PR) { renderPractice(); return; }
     render();
-    { const r0 = R; lastBlob = keep; histSave(R, keep).then(() => { renderCompare(r0); celebrate(r0); }); }
+    { const r0 = R; lastBlob = keep; histSave(R, keep).then(() => { pendClear(); renderCompare(r0); celebrate(r0); }); }
 }
 function fail(e, fromRec) {
+  pendClear();
     const m = e.message;
     if (PR && (m === "short" || m === "few")) { PR.miss = true; renderPractice(); return; }
     show("stepBusy", false); show("stepIn"); restoreOwn();
