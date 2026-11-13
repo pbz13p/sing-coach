@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794583098";
+  var V = "1794583683";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -2421,6 +2421,7 @@ let stageSong = null, stageMode = "k", warmStream = null;
 function stageUI(state) {
   document.body.classList.toggle("singing", state === "rec");
   show("rotHint", state === "rec" && !!stageSong); // ready | rec | plain
+  clearTimeout(stageUI.rh); if (state === "rec") stageUI.rh = setTimeout(() => show("rotHint", false), 8000); // 提示看 8 秒就收起，唱的时候少一样东西干扰
   show("seg", state === "ready" && !!stageSong && !mp3Has[stageSong.t] && stageSong.v !== stageSong.k);
   show("stageReady", state === "ready");
   show("stageRec", state !== "ready");
