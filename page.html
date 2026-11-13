@@ -423,6 +423,15 @@
   .hDel{all:unset;cursor:pointer;font-size:14px;color:var(--mist);padding:10px 4px 10px 12px}
   .hDel[data-sure="1"]{color:var(--bad)}
 
+  .phTop{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px;padding:12px 14px;border-radius:16px;background:rgba(127,209,174,.07);border:1px solid rgba(127,209,174,.25)}
+  .phTopL{font-size:15px;color:var(--champ);grid-column:1 / -1;margin-bottom:2px}
+  .phTop .phTopL{color:#8fdcb8}
+  .phTopT{flex:1;min-width:0;font-size:17px;color:var(--pearl);line-height:1.5}
+  .phTop .btn{flex:none;width:auto;min-height:40px;padding:0 12px}
+  .phAll{margin-top:16px}
+  .phAll>summary{list-style:none;cursor:pointer;text-align:center;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);color:var(--mist);font-size:16px}
+  .phAll>summary::-webkit-details-marker{display:none}
+  .phAll[open]>summary{margin-bottom:12px}
   .phSum{font-size:16px;color:var(--mist);margin:-4px 0 12px}
   .chips{display:flex;gap:8px;margin:0 0 6px}
   .chip{all:unset;cursor:pointer;padding:8px 16px;border-radius:999px;border:1px solid var(--line);font-size:16px;color:var(--mist)}
@@ -660,7 +669,7 @@
     </div>
 
     <div class="card">
-      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>每一句唱得怎么样</h2>
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>这一遍唱得怎么样</h2>
       <div class="phSum" id="phSum"></div>
       <div id="phList"></div>
     </div>
@@ -1230,12 +1239,12 @@ let PH = [], phFilter = "all";
 function renderPhrases() {
   PH = (R.phrases || []).filter(f => f.t1 - f.t0 >= 1 && f.notes.length >= 2).map(phraseInfo);
   const n = { good: 0, ok: 0, bad: 0 }; PH.forEach(x => n[x.level]++);
-  $("phSum").innerHTML = PH.length ? `共 ${PH.length} 句：<b style="color:var(--good)">唱得好 ${n.good}</b> · <b style="color:var(--mid)">还不错 ${n.ok}</b> · <b style="color:var(--bad)">要多练 ${n.bad}</b>` : "";
+  $("phSum").innerHTML = ""; // 不再列“唱得好几句、还不错几句”，只给最好的一句和最要练的一句
   drawPhList();
 }
 function drawPhList() {
   const list = PH.filter(x => phFilter === "all" || (phFilter === "bad" ? x.level !== "good" : x.level === "good"));
-  $("phList").innerHTML = list.length ? list.map(x => {
+  const phCard = x => {
     const near = x.level !== "good" && x.score >= 90; // 分很高但有小地方：别说"还不错 · 99"那种自相矛盾的话
     const [lbl, col] = LV[x.level]; // 标签和上面"共 N 句"的分类保持一致
     const body = x.level === "good"
@@ -1250,7 +1259,18 @@ function drawPhList() {
       <p class="phTip">${near ? "很好！就是" : ""}${x.tip}</p>
       ${miniSvg(x)}${body}
       ${R.yt ? `<button class="btn gold main phPr" data-pr="${x.idx}" style="margin:12px 0 10px"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>只练这一句</button>` : ""}<div class="row2"><button class="btn small phListen" data-ph="${x.idx}"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button>${canRef ? `<button class="btn small" data-phr="${x.idx}">原唱这一句</button>` : ""}</div></div>`;
-  }).join("") : '<p class="note">这一栏没有句子。</p>';
+  };
+  // 唱完只先给三样：总体一句话（在上面分数旁边）、唱得最好的一句、最需要练的一句；其余句子收起来
+  if (!list.length) { $("phList").innerHTML = '<p class="note">这一遍没听清完整的句子。</p>'; }
+  else {
+    const byScore = list.slice().sort((a, b) => b.score - a.score), best = byScore[0], worst = byScore[byScore.length - 1];
+    const bestHtml = `<div class="phTop"><span class="phTopL">唱得最好</span><span class="phTopT">第 ${best.idx + 1} 句${best.praise[0] ? "：" + best.praise[0] : "，很准"}</span>
+      <button class="btn small ghost phPlay" data-ph="${best.idx}" aria-label="听第 ${best.idx + 1} 句"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听</button></div>`;
+    const worstHtml = worst !== best && worst.level !== "good"
+      ? `<div class="phTopL" style="margin:16px 0 8px">最需要练</div>${phCard(worst)}`
+      : `<p class="phTxt good" style="margin:14px 0 4px">每一句都唱得好，没有要专门练的 ✓</p>`;
+    $("phList").innerHTML = bestHtml + worstHtml + (list.length > 2 ? `<details class="phAll"><summary>看每一句（共 ${list.length} 句）</summary>${list.map(phCard).join("")}</details>` : "");
+  }
   $("phList").querySelectorAll("[data-ph]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.ph).f; playRange(f.t0 - 0.3, f.t1 + 0.5); });
   $("phList").querySelectorAll("[data-pr]").forEach(b => b.onclick = () => startPractice(PH.find(x => x.idx === +b.dataset.pr)));
   $("phList").querySelectorAll("[data-phr]").forEach(b => b.onclick = () => { const f = PH.find(x => x.idx === +b.dataset.phr).f; playRef(f.t0 - 0.3, f.t1 + 0.5); });
@@ -2217,7 +2237,7 @@ function render(fromHist) {
   phFilter = "all";
   renderPhrases();
   { const w = PH.filter(x => x.level !== "good").sort((a, b) => a.score - b.score)[0];
-    show("btnWorst", !!w);
+    show("btnWorst", false); // 最需要练的那句已经在上面卡片里，有「只练这一句」，下面不再重复
     if (w) { $("worstNo").textContent = w.idx + 1; $("worstVerb").textContent = R.yt ? "只练" : "听";
       $("btnWorst").onclick = () => R.yt ? startPractice(w) : playRange(w.f.t0 - 0.3, w.f.t1 + 0.5); } }
   $("detMore").open = false;
