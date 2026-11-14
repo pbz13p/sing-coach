@@ -370,6 +370,23 @@
   .how::before{content:"怎么练";display:block;font-size:13px;letter-spacing:.2em;color:var(--good);margin-bottom:4px}
   .how b{color:#bff0dc}
   .ai{white-space:pre-wrap;font-size:18px;color:#e8e3da}
+  .tSum{font-size:18px;line-height:1.7;color:var(--pearl);margin:2px 0 10px}
+  .tGood{font-size:17px;line-height:1.6;color:#bff0dc;margin:0 0 14px}
+  .tGood::before{content:"✓ ";color:var(--good)}
+  .tFix{border-top:1px solid var(--line);padding-top:14px}
+  .tFixL{font-size:14px;letter-spacing:.15em;color:var(--champ);margin-bottom:4px}
+  .tFix>b{display:block;font:600 20px/1.45 var(--serif);color:var(--pearl)}
+  .tFix p{margin:6px 0 12px;color:#d9d4cb;font-size:17px;line-height:1.65}
+  .tFix p b{color:var(--champ);font-weight:600}
+  .tWhere{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-size:16px;color:var(--mist)}
+  .tWhere .btn{flex:none;width:auto;padding:0 16px;min-height:42px}
+  .tMore{font-size:15px;color:var(--mist);margin:12px 0 0}
+  .tk{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+  .tk:first-child{border-top:0}
+  .tk .tkN{flex:1;min-width:0}.tk .tkN b{display:block;font-size:17px;color:var(--pearl)}.tk .tkN span{font-size:14px;color:var(--mist)}
+  .tk .tkS{font:600 22px/1 var(--serif);color:var(--champ);min-width:44px;text-align:right}
+  .tk.cur .tkN b::after{content:"  这一遍";font-size:13px;color:var(--good)}
+  .tk .btn{flex:none;width:auto;padding:0 14px;min-height:44px;font-size:15.5px}
   .note{font-size:15px;color:var(--mist)}
   .foot{font-size:14px;color:#6f7a8f;text-align:center;margin:26px 8px 0;line-height:1.7}
 
@@ -543,6 +560,7 @@
     <div class="lk"><span>上次唱的</span><span class="streak hide" id="lastStreak"></span></div>
     <div class="lrow"><span class="ln" id="lastName"></span><span class="ls" id="lastScore"></span></div>
     <button class="btn gold" id="lastGo"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>再唱一遍</button>
+    <button class="btn sec" id="lastHist" style="margin-top:10px">听我以前唱的</button>
   </div>
   <div class="card acap">
     <div class="acapTx"><b id="acapT">不放音乐，直接清唱</b><span id="acapS">任何歌都行。对着手机唱，唱完一样打分、点评，能一遍遍练、一遍遍比。</span></div>
@@ -668,10 +686,21 @@
       </div>
     </div>
 
+    <div class="card" id="teachCard">
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 19V6a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2"/><path d="M8 8h6M8 12h4"/></svg>老师点评</h2>
+      <div id="teachBody"></div>
+    </div>
+
     <div class="card hide" id="cmpCard">
       <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/></svg><span id="cmpH">跟上一遍比</span></h2>
       <div class="cmpTop" id="cmpTop"></div>
       <div id="cmpBody"></div>
+    </div>
+
+    <div class="card hide" id="takesCard">
+      <h2><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="takesH">唱过的每一遍</span></h2>
+      <div id="takesList"></div>
+      <button class="btn sec" id="takesAll" style="margin-top:10px">看全部练唱记录</button>
     </div>
 
     <div class="card">
@@ -774,7 +803,7 @@ let lastKind = "";
 let nextFocus = null; // {song, n, score, text}
 // 开始录之前：把正在放的录音、对比、庆祝全部停掉（苹果手机上放着声音再开麦克风，常常录不进去）
 function quietAll() {
-  try { aud.pause(); } catch (e) {} try { abAud && abAud.pause(); } catch (e) {} try { refPlay && refPlay.stop(); } catch (e) {}
+  try { aud.pause(); } catch (e) {} try { abAud && abAud.pause(); } catch (e) {} try { refPlay && refPlay.stop(); } catch (e) {} try { takesAud && takesAud.pause(); } catch (e) {}
   try { if (!$("cele").classList.contains("hide")) $("cele").click(); } catch (e) {}
 }
 let recStarting = false;
@@ -1579,7 +1608,7 @@ async function loadHist(id) {
   if (audioURL) URL.revokeObjectURL(audioURL);
   audioURL = URL.createObjectURL(v.blob); $("aud").src = audioURL;
   show("stepIn", false); err("");
-  render(true); renderCompare(R);
+  render(true); renderCompare(R); renderTakes(R);
 }
 $("btnHist").onclick = openHist;
 // 连续练了几天：从今天（今天还没唱就从昨天）往前数，每天至少唱过一次才算
@@ -1601,6 +1630,7 @@ async function renderLast() {
     if (i < 0 && !acap) return;
     { const n = streakDays(l); show("lastStreak", n >= 2); $("lastStreak").textContent = "已连续练 " + n + " 天"; }
     $("lastName").textContent = (h.song || "清唱") + (acap ? "（清唱）" : ""); $("lastScore").textContent = h.score + " 分";
+    $("lastHist").onclick = openHist; show("lastHist", l.length >= 2);
     $("lastGo").onclick = () => { if (i >= 0) openStage(i); else { $("acapName").value = h.song || ""; startAcap(); } };
   } catch (e) {}
 }
@@ -2162,7 +2192,7 @@ async function runAnalysis(ab, blob, mode) {
     { const r0 = R, tid = takeId; lastBlob = keep; histSave(R, keep).then(() => {
       if (takeId === tid) pendClear(); // 已经在唱下一遍了：别把下一遍的录音备份删掉
       if (R !== r0 || isRecording()) return; // 已经在唱下一遍了：不要再弹庆祝、不要改结果页
-      renderCompare(r0); celebrate(r0); }); }
+      renderCompare(r0); renderTakes(r0); celebrate(r0); }); }
 }
 function fail(e, fromRec) {
   pendClear();
@@ -2298,8 +2328,64 @@ function buildTips(s) {
   return T.slice(0, 5);
 }
 
+// ===== 老师点评：像真老师一样——先有根据地说总体水平，再说一个优点，最后只抓最要改的一件事（为什么、怎么练、在哪一句）=====
+function teacherHtml() {
+  const s = R.stats, acc = Math.round(s.accuracy * 100), ok = Math.round(s.okRate * 100), nPh = PH.length;
+  const lvl = acc >= 90 ? "音准已经很扎实，这个水平在合唱团里算稳当的" : acc >= 78 ? "基本功不错，大部分音都唱在点上" : acc >= 60 ? "调子唱得出来，但有不少音还没站稳" : "音准还在打基础，先放慢、一句一句来";
+  const short = s.voicedSec < 25;
+  let sum = `这一遍唱了 ${nPh ? nPh + " 句、" : ""}${s.noteCount} 个音，<b>${acc}%</b> 的音唱得准${ok > acc + 2 ? `，算上"只差一点"的有 ${ok}%` : ""}。${short ? "唱得比较短，先当个参考" : lvl}。`;
+  const good = [];
+  if (acc >= 85) good.push("音准好，大部分音一开口就在点上");
+  if (Math.abs(s.songDrift) < 15 && R.duration > 40) good.push("从头唱到尾，调没有跑");
+  if (s.unstableRate < 0.12) good.push("长音稳，气息均匀");
+  if (s.vibratoRate > 0.2) good.push("长音带着自然的颤音，听着有味道");
+  if (s.scoopRate < 0.08) good.push("开口干脆，不往上勾");
+  if (s.flatEndRate < 0.15 && s.weakEndRate < 0.15) good.push("句尾托得住，不泄气");
+  const tips = buildTips(s).filter(t => !/起的调/.test(t[0])), top = tips[0];
+  // "在哪一句"要跟这件事对得上：先找有这个毛病的句子里最差的那句
+  const key = !top ? "" : /唱错|不一样/.test(top[0]) ? "wrong" : /偏低|唱不上去/.test(top[0]) ? "low" : /偏高/.test(top[0]) ? "high" : /勾/.test(top[0]) ? "scoop" : /句尾/.test(top[0]) ? "tail" : /长音/.test(top[0]) ? "shake" : /拖拍|抢拍/.test(top[0]) ? "late|early" : "";
+  const bad = PH.filter(x => x.level !== "good").sort((a, b) => a.score - b.score);
+  const w = (key && bad.find(x => x.probs.some(q => key.split("|").includes(q[0])))) || bad[0];
+  const fine = top && /音准很好/.test(top[0]);
+  let h = `<p class="tSum">${sum}</p>${good.length ? `<p class="tGood">${good.slice(0, 2).join("；")}。</p>` : ""}`;
+  if (top) h += `<div class="tFix"><div class="tFixL">${fine ? "下一步" : "最要改的一件事"}</div><b>${top[0]}</b><p>${top[1].replace(/（见上面[^）]*）/g, "")}</p><div class="how">${top[2]}</div>
+    ${w && !fine ? `<div class="tWhere"><span>最明显是第 ${w.idx + 1} 句（${SC.fmtT(w.f.t0)}）</span><button class="btn small ghost" id="tListen"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button></div>` : ""}</div>`;
+  if (tips.length > 1) h += `<p class="tMore">还有 ${tips.length - 1} 个小地方，先不急，把这一件改好再说。想看可以点最下面的"更多详情"。</p>`;
+  return { h, w };
+}
+function renderTeacher() {
+  const { h, w } = teacherHtml(); $("teachBody").innerHTML = h;
+  if (w && $("tListen")) $("tListen").onclick = () => playRange(w.f.t0 - 0.3, w.f.t1 + 0.5);
+}
+// ===== 这首歌唱过的每一遍：每一遍都能直接点着听，也能打开看当时的点评 =====
+let takesAud = null, takesUrl = "";
+async function renderTakes(res) {
+  const list = await histAll(); const me = list.find(h => h.id === res.histId);
+  if (!me) { show("takesCard", false); return; }
+  const same = list.filter(h => h.song === me.song), N = same.length;
+  if (N < 2) { show("takesCard", false); return; }
+  $("takesH").textContent = (me.song ? "《" + me.song + "》" : "清唱") + "唱过的每一遍（" + N + " 遍）";
+  $("takesList").innerHTML = same.slice(0, 8).map((h, i) => `<div class="tk${h.id === me.id ? " cur" : ""}" data-id="${h.id}">
+    <span class="tkN"><b>第 ${N - i} 遍</b><span>${fmtDate(h.t)}</span></span><span class="tkS">${h.score}</span>
+    <button class="btn small ghost tkP">▶ 听</button>${h.id === me.id ? "" : `<button class="btn small ghost tkO">看点评</button>`}</div>`).join("");
+  $("takesList").querySelectorAll(".tkP").forEach(b => b.onclick = async () => {
+    const id = +b.parentElement.dataset.id;
+    if (takesAud && !takesAud.paused && takesAud.dataset.id == id) { takesAud.pause(); return; }
+    aud.pause(); try { abAud && abAud.pause(); } catch (e) {}
+    const v = await DB.get("h_" + id); if (!v || !v.blob) { b.textContent = "没存录音"; return; }
+    if (takesUrl) URL.revokeObjectURL(takesUrl); takesUrl = URL.createObjectURL(v.blob);
+    if (!takesAud) takesAud = new Audio(); takesAud.src = takesUrl; takesAud.dataset.id = id; takesAud.play().catch(() => {});
+    $("takesList").querySelectorAll(".tkP").forEach(x => x.textContent = "▶ 听"); b.textContent = "❚❚ 停";
+    takesAud.onended = takesAud.onpause = () => { b.textContent = "▶ 听"; };
+  });
+  $("takesList").querySelectorAll(".tkO").forEach(b => b.onclick = () => { try { takesAud && takesAud.pause(); } catch (e) {} loadHist(+b.parentElement.dataset.id); });
+  show("takesCard");
+}
+$("takesAll").onclick = () => openHist();
+
 // ---------- 渲染结果 ----------
 function render(fromHist) {
+  show("takesCard", false);
   const s = R.stats;
   show("stepBusy", false); show("result");
   $("score").textContent = s.score;
@@ -2336,6 +2422,7 @@ function render(fromHist) {
     show("btnWorst", false); // 最需要练的那句已经在上面卡片里，有「只练这一句」，下面不再重复
     if (w) { $("worstNo").textContent = w.idx + 1; $("worstVerb").textContent = R.yt ? "只练" : "听";
       $("btnWorst").onclick = () => R.yt ? startPractice(w) : playRange(w.f.t0 - 0.3, w.f.t1 + 0.5); } }
+  renderTeacher();
   $("detMore").open = false;
   $("tipsBox").innerHTML = buildTips(s).map(t => `<div class="tip"><b>${t[0]}</b><p>${t[1]}</p><div class="how">${t[2]}</div></div>`).join("");
   $("aiOut").textContent = ""; $("btnAI").disabled = false; $("btnAI").textContent = "请老师点评";
