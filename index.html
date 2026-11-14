@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794674561";
+  var V = "1794675591";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -687,7 +687,7 @@
     </div>
 
     <div class="card" id="teachCard">
-      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 19V6a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2"/><path d="M8 8h6M8 12h4"/></svg>老师点评</h2>
+      <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 19V6a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2"/><path d="M8 8h6M8 12h4"/></svg>小老师说</h2>
       <div id="teachBody"></div>
     </div>
 
@@ -2983,9 +2983,13 @@ function buildTips(s) {
 // ===== 老师点评：像真老师一样——先有根据地说总体水平，再说一个优点，最后只抓最要改的一件事（为什么、怎么练、在哪一句）=====
 function teacherHtml() {
   const s = R.stats, acc = Math.round(s.accuracy * 100), ok = Math.round(s.okRate * 100), nPh = PH.length;
-  const lvl = acc >= 90 ? "音准已经很扎实，这个水平在合唱团里算稳当的" : acc >= 78 ? "基本功不错，大部分音都唱在点上" : acc >= 60 ? "调子唱得出来，但有不少音还没站稳" : "音准还在打基础，先放慢、一句一句来";
-  const short = s.voicedSec < 25;
-  let sum = `这一遍唱了 ${nPh ? nPh + " 句、" : ""}${s.noteCount} 个音，<b>${acc}%</b> 的音唱得准${ok > acc + 2 ? `，算上"只差一点"的有 ${ok}%` : ""}。${short ? "唱得比较短，先当个参考" : lvl}。`;
+  // 娱乐为主：先让人开心，话要有根据（百分之几唱准），但不讲课
+  const pick = a => a[Math.floor(Math.random() * a.length)], short = s.voicedSec < 25;
+  const sum = short ? `热了个身！这遍只唱了 ${Math.round(s.voicedSec)} 秒，<b>${acc}%</b> 的音在点上。下一遍唱完整一段，看看能拿几分 🎵`
+    : acc >= 90 ? pick([`唱得真准！<b>${acc}%</b> 的音都在点上，可以上台了 🎤`, `这遍太稳了，<b>${acc}%</b> 的音一开口就到位，合唱团领唱的水平 👏`])
+    : acc >= 78 ? pick([`唱得不错！<b>${acc}%</b> 的音都在点上，听着很舒服 😊`, `有味道！<b>${acc}%</b> 的音唱准了，再来一遍冲冲高分？`])
+    : acc >= 60 ? pick([`有模有样！<b>${acc}%</b> 的音在点上，再唱两遍会越来越顺 💪`, `调子出来了！<b>${acc}%</b> 的音唱准了，多唱几遍就熟了`])
+    : pick(["敢开口就是好样的！先跟着感觉唱开心，越唱越准 🎶", "唱歌最要紧是高兴！多唱几遍，耳朵和嗓子会自己找到音"]);
   const good = [];
   if (acc >= 85) good.push("音准好，大部分音一开口就在点上");
   if (Math.abs(s.songDrift) < 15 && R.duration > 40) good.push("从头唱到尾，调没有跑");
@@ -2999,10 +3003,9 @@ function teacherHtml() {
   const bad = PH.filter(x => x.level !== "good").sort((a, b) => a.score - b.score);
   const w = (key && bad.find(x => x.probs.some(q => key.split("|").includes(q[0])))) || bad[0];
   const fine = top && /音准很好/.test(top[0]);
-  let h = `<p class="tSum">${sum}</p>${good.length ? `<p class="tGood">${good.slice(0, 2).join("；")}。</p>` : ""}`;
-  if (top) h += `<div class="tFix"><div class="tFixL">${fine ? "下一步" : "最要改的一件事"}</div><b>${top[0]}</b><p>${top[1].replace(/（见上面[^）]*）/g, "")}</p><div class="how">${top[2]}</div>
-    ${w && !fine ? `<div class="tWhere"><span>最明显是第 ${w.idx + 1} 句（${SC.fmtT(w.f.t0)}）</span><button class="btn small ghost" id="tListen"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button></div>` : ""}</div>`;
-  if (tips.length > 1) h += `<p class="tMore">还有 ${tips.length - 1} 个小地方，先不急，把这一件改好再说。想看可以点最下面的"更多详情"。</p>`;
+  let h = `<p class="tSum">${sum.replace(/<b>/g, "<b style=\"color:var(--champ)\">")}</p>${good.length ? `<p class="tGood">${good.slice(0, 2).join("；")}。</p>` : ""}`;
+  if (top) h += `<div class="tFix"><div class="tFixL">${fine ? "想更好听，试试这个" : "下次试试这个小窍门"}</div><b>${top[0]}</b><div class="how">${top[2]}</div>
+    ${w && !fine ? `<div class="tWhere"><span>比如第 ${w.idx + 1} 句（${SC.fmtT(w.f.t0)}）</span><button class="btn small ghost" id="tListen"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg>听这一句</button></div>` : ""}</div>`;
   return { h, w };
 }
 function renderTeacher() {
