@@ -187,7 +187,7 @@ const SC = (() => {
 
     const pSeg = new Float64Array(n); for (let i = 0; i < n; i++) pSeg[i] = mS[i] - off[i];
     const raw = segment(pSeg, hopS);
-    if (raw.length < (opt.minNotes || 5)) return { error: "few" };
+    if (raw.length < (opt.minNotes || 5)) return { error: "few", voicedSec: voicedN * hopS };
     const key = detectKey(raw, hopS);
     const qMed = median(raw.map(r => r.q));
     let refTonic = Math.floor(qMed); while (mod12(refTonic) !== key.majorTonic) refTonic--;

@@ -7,7 +7,7 @@
 <script>
 // 手机（尤其加到主屏幕后）会一直用旧页面。打开时查一下有没有新版本，有就自动换成新的。
 (function () {
-  var V = "1794584190";
+  var V = "1794669206";
   function check() {
     if (location.protocol !== "https:") return;
     fetch("/version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
@@ -936,7 +936,7 @@ const SC = (() => {
 
     const pSeg = new Float64Array(n); for (let i = 0; i < n; i++) pSeg[i] = mS[i] - off[i];
     const raw = segment(pSeg, hopS);
-    if (raw.length < (opt.minNotes || 5)) return { error: "few" };
+    if (raw.length < (opt.minNotes || 5)) return { error: "few", voicedSec: voicedN * hopS };
     const key = detectKey(raw, hopS);
     const qMed = median(raw.map(r => r.q));
     let refTonic = Math.floor(qMed); while (mod12(refTonic) !== key.majorTonic) refTonic--;
@@ -1424,7 +1424,15 @@ let recSong = "", recMode = "self", refSrc = null, stream = null, proc = null, s
 let ytPending = false, stageVid = "", recYt = null, PR = null; // PR：正在“只练这一句”
 let lastKind = "";
 let nextFocus = null; // {song, n, score, text}
+// 开始录之前：把正在放的录音、对比、庆祝全部停掉（苹果手机上放着声音再开麦克风，常常录不进去）
+function quietAll() {
+  try { aud.pause(); } catch (e) {} try { abAud && abAud.pause(); } catch (e) {} try { refPlay && refPlay.stop(); } catch (e) {}
+  try { if (!$("cele").classList.contains("hide")) $("cele").click(); } catch (e) {}
+}
+let recStarting = false;
 function startAcap() {
+  if (recStarting || isRecording()) return false; // 连点两下"再唱一遍"不会开出两个录音
+  quietAll();
   const n = $("acapName").value.trim();
   setTimeout(() => {
     const f = nextFocus, ok = f && f.song === n && n;
@@ -1432,7 +1440,7 @@ function startAcap() {
     if (ok) $("focusBan").innerHTML = `第 <b>${f.n + 1}</b> 遍 · 上一遍 ${f.score} 分${f.text ? `<br>这一遍记住：${f.text}` : "。放松，按自己的感觉唱。"}`;
   }, 0); $("song").value = n; try { localStorage.setItem("acapName", n); } catch (e) {}
   lastKind = "acap"; lastStage = -1; stageSong = null; $("stageBack").textContent = "‹ 返回";
-  return startRecording({});
+  recStarting = true; const p = startRecording({}); p.finally(() => { recStarting = false; }); return p;
 }
 $("btnRec").onclick = startAcap;
 $("btnAcap").onclick = startAcap;
@@ -1456,7 +1464,8 @@ function acapHitUI() {
 $("acapName").addEventListener("input", acapHitUI);
 $("acapHit").onclick = () => { const i = +$("acapHit").dataset.i; if (SONGS[i]) openStage(i); };
 async function startRecording(opts) {
-  err(""); show("micMsg", false);
+  err(""); show("micMsg", false); quietAll();
+  try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch (e) {}
   const c = getCtx();
   try {
     if (c.state !== "running") { try { await Promise.race([c.resume(), new Promise(r => setTimeout(r, 800))]); } catch (e) {} }
@@ -1465,7 +1474,7 @@ async function startRecording(opts) {
     warmStream = null;
   } catch (e) { try { YT_.player && YT_.player.pauseVideo(); } catch (_) {} micDenied(e, opts); return false; }
   stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
-  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null; pauseReset(); pendBuf = []; pendN = 0; pendSaved = Date.now(); pendClear();
+  chunks = []; live = []; liveBuf = []; liveCombo = 0; refNotesFor = null; pauseReset(); pendBuf = []; pendN = 0; pendSaved = Date.now(); pendClear(); takeId = Date.now(); micFix = { lvl: 0, at: 0 }; inPeak = 0;
   recMode = "self"; refSrc = null; startAt = 0; recRefSkip = 0; tune = { x: 0, y: 0, n: 0 }; steady = 0; phraseSt = {}; drawLive.lastSing = -9; drawLive.pvAt = -9; mp3Song = opts.yt && songHasMp3(opts.yt) ? opts.yt : null;
   recSong = opts.yt ? opts.yt.t : ""; recYt = null;
   const useOwn = !opts.yt && !opts.practice && REF.own && !!REF.name && $("song").value.trim() === REF.name;
@@ -1491,12 +1500,23 @@ async function startRecording(opts) {
       refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1500); };
     }
   }
+  wireInput(c);
+  quietSince = 0; reacq = false; refStartAt = startAt; lastProc = Date.now();
+  if (!ytPending) recStart = Date.now();
+  show("stepIn", false); show("stepRec");
+  recTimer = setInterval(() => { if (recPaused) return; if (!PR && Date.now() - pendSaved > 15000) pendFlush(); if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } if (micDead()) micHeal(); const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
+    if (PR && !ytPending) { let vt = 0; try { vt = YT_.player.getCurrentTime(); } catch (e) {} if (vt >= PR.end || s > PR.end - PR.a + 6) $("btnStop").click(); } }, 250);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  return true;
+}
+// 把麦克风接到"听音"上。第二遍、第三遍出问题时会重新接一次，所以单独拿出来
+function wireInput(c) {
+  try { proc && proc.disconnect(); srcNode && srcNode.disconnect(); } catch (e) {}
   srcNode = c.createMediaStreamSource(stream);
   proc = c.createScriptProcessor(2048, 1, 1);
   const mute = c.createGain(); mute.gain.value = 0;
   srcNode.connect(proc); proc.connect(mute); mute.connect(c.destination);
   const ratio = Math.max(1, Math.round(c.sampleRate / 16000));
-  quietSince = 0; reacq = false; refStartAt = startAt; lastProc = Date.now();
   c.onstatechange = () => { if (c.state !== "running" && !$("stepRec").classList.contains("hide")) c.resume().catch(() => {}); };
   proc.onaudioprocess = ev => {
     lastProc = Date.now();
@@ -1505,17 +1525,47 @@ async function startRecording(opts) {
     let d = ev.inputBuffer.getChannelData(0);
     if (ev.playbackTime < startAt) d = d.subarray(Math.floor((startAt - ev.playbackTime) * c.sampleRate));
     chunks.push(new Float32Array(d));
-    for (let i = 0; i + ratio <= d.length; i += ratio) { let a = 0; for (let k = 0; k < ratio; k++) a += d[i + k]; liveBuf.push(a / ratio); if (!PR) pendBuf.push(a / ratio); }
+    for (let i = 0; i + ratio <= d.length; i += ratio) { let a = 0; for (let k = 0; k < ratio; k++) a += d[i + k]; a /= ratio; liveBuf.push(a); if (!PR) pendBuf.push(a); if (a > inPeak) inPeak = a; else if (-a > inPeak) inPeak = -a; }
     pendSR = c.sampleRate / ratio;
     if (liveBuf.length > 4000) liveBuf.splice(0, liveBuf.length - 4000);
     livePitch(c.sampleRate / ratio);
   };
-  if (!ytPending) recStart = Date.now();
-  show("stepIn", false); show("stepRec");
-  recTimer = setInterval(() => { if (recPaused) return; if (!PR && Date.now() - pendSaved > 15000) pendFlush(); if (Date.now() - lastProc > 1500) { const cc = getCtx(); if (cc.state !== "running") cc.resume().catch(() => {}); } const s = ytPending ? 0 : (Date.now() - recStart) / 1000; $("recT").textContent = ytPending ? "音乐马上开始…" : PR ? "正在听您唱这一句" : "正在听您唱 · " + SC.fmtT(s); if (s > 360) $("btnStop").click();
-    if (PR && !ytPending) { let vt = 0; try { vt = YT_.player.getCurrentTime(); } catch (e) {} if (vt >= PR.end || s > PR.end - PR.a + 6) $("btnStop").click(); } }, 250);
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  return true;
+}
+// ===== 麦克风"假装在录、其实没声音"（苹果手机唱第二遍、第三遍时偶尔会这样）=====
+// 真的麦克风哪怕没人唱，也有一点点底噪；一点声音都没有（全是 0）或者根本不送声音过来 = 麦克风掉线了。
+// 先悄悄重接麦克风；不行就把整个声音系统重开一次；还不行才跟他说。
+let takeId = 0, inPeak = 0, micFix = { lvl: 0, at: 0 };
+function micDead() {
+  if (ytPending || recPaused || PR) return false;
+  const sinceStart = (Date.now() - recStart) / 1000;
+  if (Date.now() - micFix.at < 2500 || sinceStart < 2) return false;
+  return Date.now() - lastProc > 1500 || (chunks.length > 10 && inPeak < 1e-6);
+}
+async function micHeal() {
+  const lvl = ++micFix.lvl; micFix.at = Date.now();
+  if (lvl >= 3 || (lvl === 2 && refSrc)) { micGiveUp(); return; }
+  let s2;
+  try { s2 = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+  catch (e) { micGiveUp(); return; }
+  if (!isRecording()) { s2.getTracks().forEach(t => t.stop()); return; }
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = s2; stream.getAudioTracks().forEach(t => t.onended = () => { if (!document.hidden) recInterrupt("mic"); });
+  let c = getCtx();
+  if (lvl === 2) { // 整个声音系统重开：前面录到的全是空的，从现在重新算
+    try { proc.disconnect(); srcNode.disconnect(); } catch (e) {}
+    try { await actx.close(); } catch (e) {} actx = null; c = getCtx();
+    try { await Promise.race([c.resume(), new Promise(r => setTimeout(r, 800))]); } catch (e) {}
+    chunks = []; live = []; liveBuf = []; pendBuf = []; recStart = Date.now(); startAt = 0; refStartAt = 0; pauseReset();
+  }
+  inPeak = 0; lastProc = Date.now(); micFix.at = Date.now();
+  wireInput(c);
+}
+function micGiveUp() {
+  if (!isRecording() || recPaused) return;
+  recPaused = true;
+  intrShow("麦克风没有声音", "手机这会儿没把声音给我，<br>不是您唱得不好。<br>点「重新开始」再试一次。<br>还不行，就把这个网页关掉重新打开。",
+    ["重新开始", () => { recPaused = false; const acap = lastKind === "acap" && !stageSong; recRestart(true); if (acap) setTimeout(startAcap, 300); }],
+    ["先不唱了", () => { recPaused = false; $("stageBack").click(); }]);
 }
 let quietSince = 0, lastProc = 0, refStartAt = 0, reacq = false, startAt = 0, mp3Song = null, recRefSkip = 0, tune = { x: 0, y: 0, n: 0 }, steady = 0;
 function livePitch(sr) {
@@ -2033,6 +2083,7 @@ function abPlay(i) {
 // ===== 唱完了：满屏庆祝，六种效果轮着来，话按这一遍的情况说 =====
 const CELE_FX = ["fireworks", "confetti", "stars", "balloons", "petals", "ribbons"];
 window.__celeRun = (fx) => celeRun(fx); // 只给自动测试用
+window.__t = { hist: () => histAll().then(l => l.length), fix: () => micFix.lvl, ab: () => !!(abAud && !abAud.paused) }; // 只给自动测试用
 async function celebrate(res) {
   if (PR || !res || res.histView) return;
   let list = []; try { list = await histAll(); } catch (e) {}
@@ -2043,7 +2094,8 @@ async function celebrate(res) {
   const d = prev ? sc - prev.score : 0, dur = res.duration || 0;
   const pick = a => a[Math.floor(Math.random() * a.length)];
   let ico, t, sub;
-  if (best && d > 0) { ico = "🏆"; t = "新纪录！"; sub = `这是您唱《${song}》最好的一遍，${sc} 分，比以前都高。`; }
+  if (res.stats.voicedSec < 25) { ico = "🎵"; t = "开了个好头！"; sub = `这遍只唱了 ${Math.round(res.stats.voicedSec)} 秒，唱完整一段，分数才准。`; }
+  else if (best && d > 0) { ico = "🏆"; t = "新纪录！"; sub = `这是您唱《${song}》最好的一遍，${sc} 分，比以前都高。`; }
   else if (d >= 5) { ico = "📈"; t = pick(["进步了！", "越唱越好了！"]); sub = `比上一遍多了 ${d} 分，练习真的有用。`; }
   else if (sc >= 90) { ico = "🌟"; t = pick(["唱得真好听！", "太棒了！"]); sub = `${sc} 分，音准稳稳当当，可以唱给家里人听了。`; }
   else if (n >= 4) { ico = "💪"; t = pick(["这股认真劲儿真棒！", "坚持就是本事！"]); sub = `这首歌已经练了 ${n} 遍，一遍比一遍熟。`; }
@@ -2659,10 +2711,12 @@ function intrShow(t, p, a, b, ico) {
   show("intrB", !!b); if (b) { $("intrB").textContent = b[0]; $("intrB").onclick = () => { show("intr", false); b[1](); }; }
   show("intr"); setTimeout(() => { try { $("intrA").focus(); } catch (e) {} }, 50);
 }
-function recRestart() { // 从头再唱：回到“开始唱”那一步
+function recRestart(hard) { // 从头再唱：回到“开始唱”那一步；hard＝连声音系统一起重开
   recPaused = false; const song = stageSong, pr = PR && PR.x;
   cancelRec(); try { YT_.stop(); } catch (e) {}
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (warmStream) { warmStream.getTracks().forEach(t => t.stop()); warmStream = null; }
+  if (hard === true) { try { actx && actx.close(); } catch (e) {} actx = null; proc = null; }
   if (pr) { startPractice(pr); return; }
   if (song && SONGS.indexOf(song) >= 0) { openStage(SONGS.indexOf(song)); return; }
   stageSong = null; show("stepRec", false); show("stepIn"); restoreOwn(); window.scrollTo({ top: 0 });
@@ -2739,8 +2793,8 @@ async function runAnalysis(ab, blob, mode) {
     $("busyTxt").textContent = tooLong ? "歌比较长，先分析前 6 分钟…" : "正在一个音一个音地听…";
     await new Promise(r => setTimeout(r, 30));
     const x = toMono16k(ab, 360);
-    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; }, PR ? { minVoiced: 1, minNotes: 2 } : null);
-    if (res.error) throw new Error(res.error);
+    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; }, PR ? { minVoiced: 1, minNotes: 2 } : { minVoiced: 10, minNotes: 10 }); // 整首：至少真唱了 10 秒、10 个音才打分，哼两下不给分
+    if (res.error) { const e = new Error(res.error); e.voicedSec = res.voicedSec || 0; throw e; }
     if ((mode === "sync" || (mode === "free" && REF.own)) && REF.name && REF.ready) {
       $("busyTxt").textContent = "正在跟原唱对比…";
       await REF.ready;
@@ -2757,7 +2811,10 @@ async function runAnalysis(ab, blob, mode) {
     $("aud").src = audioURL;
     if (PR) { renderPractice(); return; }
     render();
-    { const r0 = R; lastBlob = keep; histSave(R, keep).then(() => { pendClear(); renderCompare(r0); celebrate(r0); }); }
+    { const r0 = R, tid = takeId; lastBlob = keep; histSave(R, keep).then(() => {
+      if (takeId === tid) pendClear(); // 已经在唱下一遍了：别把下一遍的录音备份删掉
+      if (R !== r0 || isRecording()) return; // 已经在唱下一遍了：不要再弹庆祝、不要改结果页
+      renderCompare(r0); celebrate(r0); }); }
 }
 function fail(e, fromRec) {
   pendClear();
@@ -2766,7 +2823,9 @@ function fail(e, fromRec) {
     show("stepBusy", false); show("stepIn"); restoreOwn();
     if (fromRec && (m === "short" || m === "few")) { // 刚唱完却没听到：用大卡片说清楚，别悄悄回首页
       const i = recSong ? SONGS.findIndex(x => x.t === recSong) : -1; err(""); window.scrollTo(0, 0);
-      intrShow("没听清您的歌声", recSong ? "手机可能离得远，<br>或者伴奏声音太大。<br>拿近一点、戴上耳机再唱。" : "手机可能离得远，<br>或者声音小了点。<br>把手机拿到胸前，放开声音唱。",
+      const vs = e.voicedSec || 0;
+      if (vs >= 1.5 && !recSong) intrShow("唱得太短了", "只听到您唱了 <b>" + Math.round(vs) + " 秒</b>。<br>至少唱一段（半分钟左右），<br>我才能给您打分、点评。", ["再唱一遍", () => startAcap()], ["先不唱了", () => {}]);
+      else intrShow("没听清您的歌声", recSong ? "手机可能离得远，<br>或者伴奏声音太大。<br>拿近一点、戴上耳机再唱。" : "手机可能离得远，<br>或者声音小了点。<br>把手机拿到胸前，放开声音唱。",
         ["再唱一遍", () => { if (i >= 0) openStage(i); else startAcap(); }], ["先不唱了", () => {}]);
       return;
     }
@@ -2899,7 +2958,8 @@ function render(fromHist) {
   const col = "var(--champ)";
   $("ring").style.background = `conic-gradient(${col} ${s.score * 3.6}deg, rgba(255,255,255,.08) 0)`;
   $("ring").firstElementChild.style.cssText = "background:#121e33;width:116px;height:116px;border-radius:50%;display:grid;place-content:center";
-  $("verdict").textContent = s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
+  const shortTake = !PR && s.voicedSec < 25;
+  $("verdict").textContent = shortTake ? "唱得比较短，分数只是参考" : s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
   const selfNm = !withRef && !R.histView && lastKind === "acap" && $("song").value.trim();
   $("keyLine").innerHTML = (withRef ? `跟原唱比 · ` : selfNm ? `<span style="display:block">《${esc(selfNm)}》清唱</span>` : ``) + `唱了 ${SC.fmtT(R.duration)}`;

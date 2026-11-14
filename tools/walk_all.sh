@@ -14,4 +14,6 @@ python3 tools/walk_noyt.py shots | tail -1
 python3 tools/walk_mic.py shots | tail -1
 python3 tools/walk_hit.py shots | tail -1
 python3 tools/walk_ver.py | tail -1
-ACAP=1 TAKES=2 SING=10 W=844 H=390 python3 tools/walk_again.py shots_land | tail -1 | sed "s/^/横屏清唱：/"
+ACAP=1 TAKES=2 SING=16 W=844 H=390 python3 tools/walk_again.py shots_land | tail -1 | sed "s/^/横屏清唱：/"
+python3 tools/walk_retake.py | tail -1 | sed "s/^/清唱连唱4遍（苹果手机坏法）：/"
+python3 tools/walk_short.py | tail -1 | sed "s/^/哼两下不给分：/"
