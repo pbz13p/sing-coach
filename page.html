@@ -540,6 +540,23 @@
   .actions .btn.sec{min-height:54px;color:var(--champ);border-color:rgba(216,191,143,.45);background:none}
   details.det>summary{cursor:pointer;list-style:none;text-align:center;padding:14px;color:var(--mist);font-size:16px;text-decoration:underline;text-underline-offset:4px}
   details.det>summary::-webkit-details-marker{display:none}
+  /* 合唱团声部练习 */
+  .chHd{text-align:center;margin:6px 0 18px}
+  .chHd small{display:block;font-size:15px;letter-spacing:.12em;color:var(--champ);margin-bottom:6px}
+  .chHd h2{font:600 30px/1.3 var(--serif);color:var(--pearl);margin:0;display:block;text-align:center}
+  .chHd p{margin:8px 0 0;color:var(--mist);font-size:16px}
+  .chParts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .chPart{min-height:92px;border-radius:20px;border:1px solid rgba(216,191,143,.35);background:rgba(216,191,143,.06);color:var(--pearl);font:600 26px/1.2 var(--serif);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+  .chPart small{font:400 13px/1 -apple-system,"PingFang SC",sans-serif;color:var(--champ)}
+  .chPart:active{transform:scale(.98)}
+  .chOpt{display:flex;gap:8px;margin:14px 0 4px}
+  .chOpt button{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--mist);font-size:16px}
+  .chOpt button[aria-pressed=true]{border-color:var(--champ);color:var(--pearl);background:rgba(216,191,143,.12)}
+  .chLbl{font-size:15px;color:var(--mist);margin:18px 0 0}
+  .chPh{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chPh button{min-width:64px;min-height:46px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--mist);font-size:16px}
+  .chPh button[aria-pressed=true]{border-color:var(--champ);color:var(--pearl);background:rgba(216,191,143,.12)}
+  .chNow{text-align:center;color:var(--champ);font-size:17px;min-height:24px;margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -547,6 +564,28 @@
   <div class="top">
     <div><h1>唱准了</h1><p class="lead">你的练歌小老师</p></div>
     <button class="histBtn" id="btnHist" aria-label="练唱记录"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="hbL">记录</span></button>
+  </div>
+
+  <div id="stepChoir" class="hide">
+    <div class="chHd"><small>合唱团声部练习</small><h2 id="chTitle"></h2><p id="chSub">点您唱的声部</p></div>
+    <div id="chPick"><div class="chParts" id="chParts"></div></div>
+    <div id="chGo" class="hide">
+      <div class="card">
+        <button class="btn sec" id="chListen"><svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></svg><span>先听一遍我的声部</span></button>
+        <div class="chNow" id="chNow">听熟了再唱，会准很多</div>
+        <button class="btn gold main" id="chSing" style="margin-top:12px"><svg class="ico" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>开始唱</button>
+        <p class="note" style="margin:12px 0 0;text-align:center">先响一小节"嗒嗒嗒嗒"打拍子，然后跟着唱。戴耳机效果最好。</p>
+      </div>
+      <div class="card">
+        <div class="chLbl" style="margin-top:0">唱的时候放什么（"其他声部"小声放，像在团里一起唱）</div>
+        <div class="chOpt"><button id="chOnly" aria-pressed="true">只放我的声部</button><button id="chAll" aria-pressed="false">加上其他声部</button></div>
+        <div class="chLbl">练哪里（哪句难就单练哪句）</div>
+        <div class="chPh" id="chPh"></div>
+      </div>
+      <button class="linkBack" id="chBack" style="display:block;margin:6px auto 0">‹ 换一个声部</button>
+    </div>
+    <p class="note hide" id="chWx" style="text-align:center;margin-top:18px">在微信里唱不了？点右上角「···」，选「在 Safari 中打开」。</p>
+    <button class="linkBack" id="chExit" style="display:block;margin:22px auto 0;opacity:.7">去唱别的歌</button>
   </div>
 
   <div id="stepIn">
@@ -777,6 +816,7 @@
 </div>
 <script>
 /*__ANALYSIS__*/
+/*__CHOIR__*/
 </script>
 <script>
 (() => {
@@ -820,6 +860,86 @@ function startAcap() {
   recStarting = true; const p = startRecording({}); p.finally(() => { recStarting = false; }); return p;
 }
 $("btnRec").onclick = startAcap;
+// ===== 合唱团声部练习：谱子在链接 # 后面，打开 → 点声部 → 先听 → 开始唱 =====
+const CHOIR = { on: false, song: null, id: "", pi: -1, others: 0, range: null, cache: {}, play: null };
+// 合唱里没有"原唱"，结果页上的"原唱"都换成"声部示范"（只改文字，不动按钮）
+function choirWords(el) {
+  if (!CHOIR.on || !el) return;
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+  while ((n = w.nextNode())) if (n.nodeValue.includes("原唱")) n.nodeValue = n.nodeValue.replace(/原唱/g, "声部示范");
+}
+function goHome() { if (CHOIR.on) return choirShow(); show("stepIn"); restoreOwn(); }
+function chStat(ev) { // 只记"哪个链接、哪天、唱完几次"：不存录音、不要登录、不记名字
+  if (!CHOIR.id || location.hostname !== "singokay.com") return;
+  const d = new Date(), day = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const wk = t.getUTCFullYear() + "w" + Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+  const hit = k => { try { fetch("https://countapi.mileshilliard.com/api/v1/hit/singokay_c_" + CHOIR.id + "_" + k, { mode: "no-cors", keepalive: true }).catch(() => {}); } catch (e) {} };
+  const once = k => { const lk = "chs_" + CHOIR.id + "_" + k; try { if (localStorage.getItem(lk)) return false; localStorage.setItem(lk, "1"); } catch (e) {} return true; };
+  if (ev === "open") { hit("open_" + day); if (once(wk)) hit("ppl_" + wk); if (once("all")) hit("ppl_all"); }
+  if (ev === "done") { hit("done_" + day); hit("done_" + wk); if (once("f" + wk)) hit("fin_" + wk); if (once("fall")) hit("fin_all"); }
+}
+async function choirOpen() {
+  const m = location.hash.match(/^#c=([tz][A-Za-z0-9_-]+)/); if (!m) return false;
+  let text; try { text = await CH.decode(m[1]); } catch (e) { err("这个练习链接不完整，请让发链接的人再发一次。"); return false; }
+  const song = CH.parse(text); if (!song.parts.length) { err("这个练习链接里没有声部。"); return false; }
+  CHOIR.on = true; CHOIR.song = song; CHOIR.id = CH.songId(text); CHOIR.cache = {};
+  REF.tok = (REF.tok || 0) + 1; // 别让以前导入的歌把声部旋律顶掉
+  $("chTitle").textContent = song.title || "合唱练习";
+  let lastPart = ""; try { lastPart = localStorage.getItem("chpart_" + CHOIR.id) || ""; } catch (e) {}
+  $("chParts").innerHTML = song.parts.map((p, i) => `<button class="chPart" data-i="${i}">${p.name}${p.name === lastPart ? "<small>上次唱的</small>" : ""}</button>`).join("");
+  $("chParts").querySelectorAll(".chPart").forEach(b => b.onclick = () => choirPick(+b.dataset.i));
+  show("chWx", /MicroMessenger/i.test(navigator.userAgent));
+  chStat("open"); choirShow(); return true;
+}
+function choirShow() {
+  choirStop(); show("stepIn", false); show("result", false); show("stepRec", false); show("stepChoir");
+  $("btnHome").lastChild.textContent = "回到声部";
+  show("chPick", CHOIR.pi < 0); show("chGo", CHOIR.pi >= 0);
+  $("chSub").textContent = CHOIR.pi < 0 ? "点您唱的声部" : "您唱：" + CHOIR.song.parts[CHOIR.pi].name;
+  window.scrollTo({ top: 0 });
+}
+function choirPick(i) {
+  CHOIR.pi = i; CHOIR.range = null; try { localStorage.setItem("chpart_" + CHOIR.id, CHOIR.song.parts[i].name); } catch (e) {}
+  const n = CHOIR.song.parts[i].phrases.length;
+  $("chPh").innerHTML = `<button data-r="" aria-pressed="true">整首</button>` + Array.from({ length: n }, (_, k) => `<button data-r="${k}" aria-pressed="false">第 ${k + 1} 句</button>`).join("");
+  $("chPh").querySelectorAll("button").forEach(b => b.onclick = () => { choirStop(); CHOIR.range = b.dataset.r === "" ? null : +b.dataset.r; $("chPh").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+  getCtx(); choirShow();
+}
+function choirRef() { // 合成这一声部（自己的响、别的小声）+ App 用的参考旋律；算过的存起来
+  const k = CHOIR.pi + "|" + CHOIR.others + "|" + CHOIR.range;
+  if (CHOIR.cache[k]) return CHOIR.cache[k];
+  const rg = CHOIR.range == null ? null : [CHOIR.range, CHOIR.range];
+  const sy = CH.synth(CHOIR.song, CHOIR.pi, CHOIR.others, 22050, rg);
+  const ab = getCtx().createBuffer(1, sy.data.length, sy.sr); ab.copyToChannel(sy.data, 0);
+  return (CHOIR.cache[k] = { ab, mel: CH.toMelody(CHOIR.song, CHOIR.pi, rg) });
+}
+function choirStop() { if (CHOIR.play) { try { CHOIR.play.stop(); } catch (e) {} CHOIR.play = null; } clearInterval(CHOIR.tick); $("chListen").lastChild.textContent = "先听一遍我的声部"; $("chNow").textContent = "听熟了再唱，会准很多"; }
+$("chListen").onclick = async () => {
+  if (CHOIR.play) { choirStop(); return; }
+  const c = getCtx(); try { await c.resume(); } catch (e) {}
+  const { ab, mel } = choirRef(), src = c.createBufferSource(); src.buffer = ab; src.connect(c.destination);
+  const t0 = c.currentTime + 0.1; src.start(t0); CHOIR.play = src; $("chListen").lastChild.textContent = "停";
+  src.onended = () => { if (CHOIR.play === src) choirStop(); };
+  CHOIR.tick = setInterval(() => { const t = c.currentTime - t0, ph = mel.phrases.find(p => t >= p.t0 - 0.3 && t < p.t1 + 0.3);
+    $("chNow").textContent = t < mel.countIn ? "嗒、嗒、嗒、嗒……" : ph ? "现在：第 " + (ph.idx + 1) + " 句" : ""; }, 200);
+};
+$("chSing").onclick = () => {
+  choirStop(); const { ab, mel } = choirRef(), p = CHOIR.song.parts[CHOIR.pi];
+  const nm = (CHOIR.song.title || "合唱") + "·" + p.name + (CHOIR.range != null ? "·第" + (CHOIR.range + 1) + "句" : "");
+  REF.tok = (REF.tok || 0) + 1; REF.name = nm; REF.own = true; REF.ab = ab; REF.kara = null; REF.melody = REF.melody0 = mel; REF.shifted = null; REF.key = 0; REF.ready = Promise.resolve(true);
+  $("acapName").value = nm; show("stepChoir", false); startAcap();
+};
+$("chOnly").onclick = $("chAll").onclick = e => { choirStop(); CHOIR.others = e.currentTarget.id === "chAll" ? 0.35 : 0; $("chOnly").setAttribute("aria-pressed", !CHOIR.others); $("chAll").setAttribute("aria-pressed", !!CHOIR.others); };
+$("chBack").onclick = () => { CHOIR.pi = -1; choirShow(); };
+$("chExit").onclick = () => {
+  choirStop(); CHOIR.on = false; CHOIR.pi = -1; history.replaceState(null, "", location.pathname);
+  REF.tok = (REF.tok || 0) + 1; REF.name = ""; REF.own = false; REF.ab = null; REF.melody = REF.melody0 = null; REF.ready = null; refUI();
+  $("btnHome").lastChild.textContent = "回到歌单"; $("acapName").value = "";
+  show("stepChoir", false); show("stepIn"); DB.get("ref").then(v => { if (v && v.blob && !CHOIR.on) loadRef(v.blob, v.name, false); });
+};
+window.addEventListener("hashchange", () => { if (/^#c=/.test(location.hash)) { CHOIR.pi = -1; choirOpen(); } });
+setTimeout(choirOpen, 0);
 $("btnAcap").onclick = startAcap;
 try { $("acapName").value = localStorage.getItem("acapName") || ""; } catch (e) {}
 // 清唱框里打的歌名，歌单里正好有 → 下面冒出一张小卡，点了直接去唱带伴奏的（不用往下翻 27 首）
@@ -872,7 +992,7 @@ async function startRecording(opts) {
     await REF.ready; refUI();
     if (REF.ab) {
       refSrc = c.createBufferSource(); refSrc.buffer = refBuf();
-      const gn = loudOut(c, REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
+      const gn = loudOut(c, CHOIR.on ? 0.7 : REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
       startAt = c.currentTime + 0.4; refSrc.start(startAt); recMode = "sync";
       refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1500); };
     }
@@ -1121,7 +1241,7 @@ function drawLive(now) {
   if (hitNow) liveCombo++; else if (cur && cur.rms > 0.004) liveCombo = Math.max(0, liveCombo - 2);
   g.textBaseline = "top"; g.font = "600 13px " + sans;
   g.fillStyle = "rgba(244,239,230,.7)"; g.fillText("● 你的声音", 10, 8);
-  g.fillStyle = "rgba(216,191,143,.9)"; g.fillText("▬ 原唱的音", 96, 8);
+  g.fillStyle = "rgba(216,191,143,.9)"; g.fillText(CHOIR.on ? "▬ 我的声部" : "▬ 原唱的音", 96, 8);
   if (liveCombo > 25) { g.textAlign = "right"; g.fillStyle = "#f3d892"; g.font = "700 15px " + sans; g.fillText(liveCombo > 80 ? "太准了！✨" : "唱准了！", W - 10, 6); g.textAlign = "left"; }
   if (!vs.length) { g.fillStyle = "rgba(255,255,255,.5)"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "14px " + sans; g.fillText("小球碰到金色条 = 唱准了", W / 2, H / 2 + 10); g.textAlign = "left"; }
 }
@@ -1349,7 +1469,7 @@ function teachSvg(kind) {
 }
 let PH = [], phFilter = "all";
 function renderPhrases() {
-  PH = (R.phrases || []).filter(f => f.t1 - f.t0 >= 1 && f.notes.length >= 2).map(phraseInfo);
+  PH = (R.phrases || []).filter(f => f.t1 - f.t0 >= 1 && f.notes.length >= 2).map((f, i) => phraseInfo(f, f.no ?? i));
   const n = { good: 0, ok: 0, bad: 0 }; PH.forEach(x => n[x.level]++);
   $("phSum").innerHTML = ""; // 不再列“唱得好几句、还不错几句”，只给最好的一句和最要练的一句
   drawPhList();
@@ -1460,7 +1580,7 @@ function abPlay(i) {
 // ===== 唱完了：满屏庆祝，六种效果轮着来，话按这一遍的情况说 =====
 const CELE_FX = ["fireworks", "confetti", "stars", "balloons", "petals", "ribbons"];
 window.__celeRun = (fx) => celeRun(fx); // 只给自动测试用
-window.__t = { hist: () => histAll().then(l => l.length), fix: () => micFix.lvl, ab: () => !!(abAud && !abAud.paused) }; // 只给自动测试用
+window.__t = { hist: () => histAll().then(l => l.length), fix: () => micFix.lvl, ab: () => !!(abAud && !abAud.paused), ph: () => (R.phrases || []).map(f => f.no).join(","), mode: () => R.mode, refName: () => REF.name }; // 只给自动测试用
 async function celebrate(res) {
   if (PR || !res || res.histView) return;
   let list = []; try { list = await histAll(); } catch (e) {}
@@ -1471,7 +1591,7 @@ async function celebrate(res) {
   const d = prev ? sc - prev.score : 0, dur = res.duration || 0;
   const pick = a => a[Math.floor(Math.random() * a.length)];
   let ico, t, sub;
-  if (res.stats.voicedSec < 25) { ico = "🎵"; t = "开了个好头！"; sub = `这遍只唱了 ${Math.round(res.stats.voicedSec)} 秒，唱完整一段，分数才准。`; }
+  if (res.stats.voicedSec < 25 && !(CHOIR.on && CHOIR.range != null)) { ico = "🎵"; t = "开了个好头！"; sub = `这遍只唱了 ${Math.round(res.stats.voicedSec)} 秒，唱完整一段，分数才准。`; }
   else if (best && d > 0) { ico = "🏆"; t = "新纪录！"; sub = `这是您唱《${song}》最好的一遍，${sc} 分，比以前都高。`; }
   else if (d >= 5) { ico = "📈"; t = pick(["进步了！", "越唱越好了！"]); sub = `比上一遍多了 ${d} 分，练习真的有用。`; }
   else if (sc >= 90) { ico = "🌟"; t = pick(["唱得真好听！", "太棒了！"]); sub = `${sc} 分，音准稳稳当当，可以唱给家里人听了。`; }
@@ -1684,7 +1804,7 @@ async function applyKey(k) {
 }
 function keyUI(busy) {
   const ready = !!(REF.ab && REF.melody0), st = stageSong;
-  show("keyAcap", ready && REF.own); show("keyMp", ready && !!st && REF.name === st.t && !!mp3Has[st.t]);
+  show("keyAcap", ready && REF.own && !CHOIR.on); show("keyMp", ready && !!st && REF.name === st.t && !!mp3Has[st.t]);
   document.querySelectorAll(".keyRow").forEach(r => {
     r.querySelector(".kv").textContent = busy ? "正在变调…" : keyLabel(REF.key);
     r.querySelectorAll(".kb").forEach(b => b.disabled = !!busy || Math.abs(REF.key + +b.dataset.d) > 4);
@@ -1730,7 +1850,7 @@ function refUI() {
 }
 // 回到首页时：如果刚才内置歌的 mp3 把自己导入的歌"挤掉"了，悄悄把自己的歌装回来（以前要刷新页面）
 function restoreOwn() {
-  if (REF.own) return;
+  if (REF.own || CHOIR.on) return;
   DB.get("ref").then(v => { if (v && v.blob && !REF.own && !stageSong) loadRef(v.blob, v.name, false); });
 }
 async function loadRef(blob, name, save, own = true) {
@@ -2025,7 +2145,7 @@ function startMp3() {
   if (!ytPending || !mp3Song || !REF.ab) return;
   const c = getCtx(), o = mp3Off();
   refSrc = c.createBufferSource(); refSrc.buffer = refBuf();
-  const gn = loudOut(c, REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
+  const gn = loudOut(c, CHOIR.on ? 0.7 : REF.kara ? 2.2 : 1.3); refSrc.connect(gn);
   startAt = c.currentTime + 0.05; refSrc.start(startAt, Math.max(0, -o)); recRefSkip = Math.max(0, -o); refStartAt = startAt - Math.max(0, -o);
   refSrc.onended = () => { if (!$("stepRec").classList.contains("hide")) setTimeout(() => $("btnStop").click(), 1200); };
   (getRefNotes() || []).forEach(n => { n.hit = 0; n.seen = 0; });
@@ -2097,7 +2217,7 @@ function recRestart(hard) { // 从头再唱：回到“开始唱”那一步；h
   if (hard === true) { try { actx && actx.close(); } catch (e) {} actx = null; proc = null; }
   if (pr) { startPractice(pr); return; }
   if (song && SONGS.indexOf(song) >= 0) { openStage(SONGS.indexOf(song)); return; }
-  stageSong = null; show("stepRec", false); show("stepIn"); restoreOwn(); window.scrollTo({ top: 0 });
+  stageSong = null; show("stepRec", false); goHome(); window.scrollTo({ top: 0 });
 }
 // 伴奏视频打不开（网不好 / 视频被下架）：不让老人点了“开始唱”干等，直接说清楚、给大按钮
 function ytTrouble() {
@@ -2127,7 +2247,7 @@ function micDenied(e, opts) {
   const p = none ? "没找到麦克风。拔掉耳机，或者换一副耳机试试。"
     : busy ? "麦克风正被别的软件用着（比如在打电话）。挂掉电话、关掉别的软件再试。"
     : "唱歌要用麦克风听您唱。<br>请点网址左边的 <b>「大小」</b>，再点 <b>「网站设置」</b>，把 <b>麦克风</b> 改成 <b>「允许」</b>。";
-  cancelRec(); stageUI("ready"); if (!opts.yt) { show("stepRec", false); show("stepIn"); restoreOwn(); }
+  cancelRec(); stageUI("ready"); if (!opts.yt) { show("stepRec", false); goHome(); }
   if (PR) { show("stepRec", false); }
   intrShow(none || busy ? "麦克风用不了" : "麦克风还没打开", p, ["再试一次", () => { if (PR && PR.x) startPractice(PR.x); else if (opts.yt) $("stageGo").click(); else $("btnRec").click(); }],
     ["先不唱了", () => { if (PR) $("prBack").click(); else if (opts.yt) $("stageBack").click(); }]);
@@ -2142,13 +2262,13 @@ $("stageBack").onclick = () => {
   // 离开唱歌页就把麦克风关掉：iPhone 顶上的橙点不会一直亮，下次进来重新拿一个“醒着”的麦克风
   [stream, warmStream].forEach(m => { if (m) m.getTracks().forEach(t => t.stop()); }); stream = null; warmStream = null;
   if (PR) { show("stepRec", false); $("prBack").click(); return; }
-  show("stepRec", false); show("stepIn"); restoreOwn(); window.scrollTo({ top: 0, behavior: "smooth" });
+  show("stepRec", false); goHome(); window.scrollTo({ top: 0, behavior: "smooth" });
 };
 $("btnRef").onclick = $("btnRefChange").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
 $("refFile").onchange = e => { const f = e.target.files[0]; if (f) { loadRef(f, pendingSong || f.name, true); $("acapName").value = REF.name; } pendingSong = ""; e.target.value = ""; };
 $("btnRefOff").onclick = $("acapSongOff").onclick = () => { REF.tok = (REF.tok || 0) + 1; REF.name = ""; REF.own = false; REF.ab = null; REF.melody = REF.melody0 = null; REF.shifted = null; REF.key = 0; REF.ready = null; DB.del("ref"); refUI(); keyUI(); };
 $("btnAcapFile").onclick = () => { pendingSong = ""; getCtx(); $("refFile").click(); };
-DB.get("ref").then(v => { if (v && v.blob) loadRef(v.blob, v.name, false); });
+DB.get("ref").then(v => { if (v && v.blob && !CHOIR.on) loadRef(v.blob, v.name, false); });
 
 async function handleBlob(blob) {
   err(""); show("stepIn", false); show("result", false); show("stepBusy");
@@ -2171,13 +2291,14 @@ async function runAnalysis(ab, blob, mode) {
     $("busyTxt").textContent = tooLong ? "歌比较长，先分析前 6 分钟…" : "正在一个音一个音地听…";
     await new Promise(r => setTimeout(r, 30));
     const x = toMono16k(ab, 360);
-    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; }, PR ? { minVoiced: 1, minNotes: 2 } : { minVoiced: 10, minNotes: 10 }); // 整首：至少真唱了 10 秒、10 个音才打分，哼两下不给分
+    const res = await SC.analyze(x, 16000, p => { $("prog").style.width = (5 + p * 93) + "%"; }, PR ? { minVoiced: 1, minNotes: 2 } : CHOIR.on && CHOIR.range != null ? { minVoiced: 3, minNotes: 4 } : { minVoiced: 10, minNotes: 10 }); // 整首：至少真唱了 10 秒、10 个音才打分，哼两下不给分
     if (res.error) { const e = new Error(res.error); e.voicedSec = res.voicedSec || 0; throw e; }
     if ((mode === "sync" || (mode === "free" && REF.own)) && REF.name && REF.ready) {
-      $("busyTxt").textContent = "正在跟原唱对比…";
+      $("busyTxt").textContent = CHOIR.on ? "正在跟谱子对比…" : "正在跟原唱对比…";
       await REF.ready;
       if (REF.melody) { await new Promise(r => setTimeout(r, 30));
         const M = REF.melody, k = mode === "sync" ? Math.round(recRefSkip / M.hopS) : 0;
+        if (CHOIR.on && M.phrases && !k) res.refCuts = M.phrases.map(p => p.t0); // 合唱：按谱子分句
         SC.compareWithRef(res, k ? { hopS: M.hopS, midi: M.midi.subarray(k), duration: M.duration - recRefSkip } : M, mode === "sync" ? "sync" : "free"); }
     }
     R = res; R.yt = mode === "yt" && recYt && !PR ? recYt : null;
@@ -2189,20 +2310,22 @@ async function runAnalysis(ab, blob, mode) {
     $("aud").src = audioURL;
     if (PR) { renderPractice(); return; }
     render();
+    if (CHOIR.on) chStat("done");
     { const r0 = R, tid = takeId; lastBlob = keep; histSave(R, keep).then(() => {
       if (takeId === tid) pendClear(); // 已经在唱下一遍了：别把下一遍的录音备份删掉
       if (R !== r0 || isRecording()) return; // 已经在唱下一遍了：不要再弹庆祝、不要改结果页
-      renderCompare(r0); renderTakes(r0); celebrate(r0); }); }
+      renderCompare(r0).then(() => choirWords($("result"))); renderTakes(r0); celebrate(r0); }); }
 }
 function fail(e, fromRec) {
   pendClear();
     const m = e.message;
     if (PR && (m === "short" || m === "few")) { PR.miss = true; renderPractice(); return; }
-    show("stepBusy", false); show("stepIn"); restoreOwn();
+    show("stepBusy", false); goHome();
     if (fromRec && (m === "short" || m === "few")) { // 刚唱完却没听到：用大卡片说清楚，别悄悄回首页
       const i = recSong ? SONGS.findIndex(x => x.t === recSong) : -1; err(""); window.scrollTo(0, 0);
       const vs = e.voicedSec || 0;
-      if (vs >= 1.5 && !recSong) intrShow("唱得太短了", "只听到您唱了 <b>" + Math.round(vs) + " 秒</b>。<br>至少唱一段（半分钟左右），<br>我才能给您打分、点评。", ["再唱一遍", () => startAcap()], ["先不唱了", () => {}]);
+      if (CHOIR.on) intrShow("没听清您的歌声", vs >= 1.5 ? "只听到您唱了 <b>" + Math.round(vs) + " 秒</b>。<br>跟着拍子把这一段唱完，<br>我才能告诉您哪句准、哪句偏。" : "可能是手机放的声音太大，<br>把您的声音盖住了。<br>戴上耳机，或者把手机声音调小一点再唱。", ["再唱一遍", () => startAcap()], ["先不唱了", () => choirShow()]);
+      else if (vs >= 1.5 && !recSong) intrShow("唱得太短了", "只听到您唱了 <b>" + Math.round(vs) + " 秒</b>。<br>至少唱一段（半分钟左右），<br>我才能给您打分、点评。", ["再唱一遍", () => startAcap()], ["先不唱了", () => {}]);
       else intrShow("没听清您的歌声", recSong ? "手机可能离得远，<br>或者伴奏声音太大。<br>拿近一点、戴上耳机再唱。" : "手机可能离得远，<br>或者声音小了点。<br>把手机拿到胸前，放开声音唱。",
         ["再唱一遍", () => { if (i >= 0) openStage(i); else startAcap(); }], ["先不唱了", () => {}]);
       return;
@@ -2332,7 +2455,7 @@ function buildTips(s) {
 function teacherHtml() {
   const s = R.stats, acc = Math.round(s.accuracy * 100), ok = Math.round(s.okRate * 100), nPh = PH.length;
   // 娱乐为主：先让人开心，话要有根据（百分之几唱准），但不讲课
-  const pick = a => a[Math.floor(Math.random() * a.length)], short = s.voicedSec < 25;
+  const pick = a => a[Math.floor(Math.random() * a.length)], short = s.voicedSec < 25 && !(CHOIR.on && CHOIR.range != null);
   const sum = short ? `热了个身！这遍只唱了 ${Math.round(s.voicedSec)} 秒，<b>${acc}%</b> 的音在点上。下一遍唱完整一段，看看能拿几分 🎵`
     : acc >= 90 ? pick([`唱得真准！<b>${acc}%</b> 的音都在点上，可以上台了 🎤`, `这遍太稳了，<b>${acc}%</b> 的音一开口就到位，合唱团领唱的水平 👏`])
     : acc >= 78 ? pick([`唱得不错！<b>${acc}%</b> 的音都在点上，听着很舒服 😊`, `有味道！<b>${acc}%</b> 的音唱准了，再来一遍冲冲高分？`])
@@ -2395,7 +2518,7 @@ function render(fromHist) {
   const col = "var(--champ)";
   $("ring").style.background = `conic-gradient(${col} ${s.score * 3.6}deg, rgba(255,255,255,.08) 0)`;
   $("ring").firstElementChild.style.cssText = "background:#121e33;width:116px;height:116px;border-radius:50%;display:grid;place-content:center";
-  const shortTake = !PR && s.voicedSec < 25;
+  const shortTake = !PR && s.voicedSec < 25 && !(CHOIR.on && CHOIR.range != null);
   $("verdict").textContent = shortTake ? "唱得比较短，分数只是参考" : s.score >= 85 ? "唱得很不错" : s.score >= 70 ? "整体不错，有几处可以更好" : s.score >= 55 ? "有一些音不太准，照下面练" : "音准问题比较多，先慢下来练";
   const withRef = R.mode !== "self";
   const selfNm = !withRef && !R.histView && lastKind === "acap" && $("song").value.trim();
@@ -2433,6 +2556,7 @@ function render(fromHist) {
   $("pos").max = Math.max(0, R.duration - VIEW);
   setView(Math.max(0, (R.notes[0] ? R.notes[0].t0 : 0) - 0.5));
   window.scrollTo({ top: $("result").offsetTop - 10, behavior: "smooth" });
+  choirWords($("result"));
 }
 
 // ---------- 音高图 ----------
@@ -2598,7 +2722,7 @@ $("btnShare").onclick = async () => {
     else { const a = document.createElement("a"); a.href = audioURL; a.download = f.name; a.click(); lbl.textContent = "录音已保存到手机"; setTimeout(() => lbl.textContent = old, 2500); }
   } catch (e) { if (e && e.name !== "AbortError") { lbl.textContent = "没发出去，再点一次试试"; setTimeout(() => lbl.textContent = old, 2500); } }
 };
-$("btnHome").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); show("stepIn"); restoreOwn(); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("btnHome").onclick = () => { aud.pause(); try { refPlay && refPlay.stop(); } catch (e) {} show("result", false); goHome(); err(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
 // ---------- AI 老师 ----------
 let sample = null;

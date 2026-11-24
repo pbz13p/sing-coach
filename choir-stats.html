@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>声部练习统计</title>
+<style>
+  body{font:16px/1.6 -apple-system,"PingFang SC",sans-serif;background:#0f1a2c;color:#eae4d8;margin:0;padding:24px}
+  h1{font-size:22px;margin:0 0 4px}p{color:#9aa6b8;margin:0 0 18px}
+  table{border-collapse:collapse;width:100%;max-width:560px}
+  td,th{padding:8px 10px;border-bottom:1px solid #26344d;text-align:left;vertical-align:middle}
+  th{color:#d8bf8f;font-weight:600}
+  img{height:20px;vertical-align:middle}
+</style>
+</head>
+<body>
+<h1>声部练习统计</h1>
+<p>只有"哪个链接、哪天、唱完几次"，没有名字、没有录音。网址后面加 ?id=统计编号。</p>
+<table id="t"></table>
+<script>
+// 计数放在 countapi.mileshilliard.com（不用注册）。用它的"数字徽章"图片显示，不受跨网站读取的限制
+const id = new URLSearchParams(location.search).get("id") || "";
+const B = "https://countapi.mileshilliard.com/api/v1/get/singokay_c_" + id + "_";
+const img = k => `<img src="${B + k}/shield?text=%20&bgcolor=1a2740" alt="0" onerror="this.replaceWith('0')">`;
+const wk = d => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); return t.getUTCFullYear() + "w" + Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
+const day = d => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+let h = `<tr><th>一共</th><th></th></tr><tr><td>打开过链接的人</td><td>${img("ppl_all")}</td></tr><tr><td>唱完过至少一遍的人</td><td>${img("fin_all")}</td></tr>`;
+const now = new Date();
+h += `<tr><th>按周</th><th>打开的人 / 唱完的人 / 唱完次数</th></tr>`;
+for (let i = 0; i < 4; i++) { const d = new Date(now - i * 7 * 864e5), w = wk(d); h += `<tr><td>${w}${i ? "" : "（本周）"}</td><td>${img("ppl_" + w)} / ${img("fin_" + w)} / ${img("done_" + w)}</td></tr>`; }
+h += `<tr><th>按天</th><th>打开次数 / 唱完次数</th></tr>`;
+for (let i = 0; i < 14; i++) { const d = new Date(now - i * 864e5), k = day(d); h += `<tr><td>${k}</td><td>${img("open_" + k)} / ${img("done_" + k)}</td></tr>`; }
+document.getElementById("t").innerHTML = id ? h : "<tr><td>网址后面要加 ?id=统计编号</td></tr>";
+</script>
+</body>
+</html>

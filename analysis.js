@@ -247,6 +247,15 @@ const SC = (() => {
     // 乐句
     const phrases = [];
     let ph = null;
+    if (res.refCuts && res.refMap) {
+      // 有谱子（合唱声部）：按谱子分句——每个音对到谱子上的位置，落在第几句就算第几句
+      const cuts = res.refCuts, H = res.refHop, mp = res.refMap;
+      const refT = z => { const j = Math.round((z.t0 + z.t1) / 2 / H); const i = j >= 0 && j < mp.length ? mp[j] : -1; return i >= 0 ? i * H : (z.t0 + z.t1) / 2 - (res.latency || 0); };
+      const byNo = new Map();
+      notes.forEach(nt => { let no = 0; const t = refT(nt); while (no + 1 < cuts.length && t >= cuts[no + 1] - 0.15) no++;
+        let f = byNo.get(no); if (!f) { f = { t0: nt.t0, t1: nt.t1, notes: [], no }; byNo.set(no, f); } f.t1 = Math.max(f.t1, nt.t1); f.notes.push(nt); });
+      [...byNo.values()].sort((x, y) => x.no - y.no).forEach(f => phrases.push(f));
+    } else
     notes.forEach(nt => {
       if (!ph || nt.t0 - ph.t1 > 0.35) { ph = { t0: nt.t0, t1: nt.t1, notes: [nt] }; phrases.push(ph); }
       else { ph.t1 = nt.t1; ph.notes.push(nt); }

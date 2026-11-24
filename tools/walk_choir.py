@@ -1,0 +1,65 @@
+# 合唱声部走查（手机 390 宽）：打开链接 → 点声部 → 先听 → 开始唱（假麦克风唱女高）→ 结果按谱子分句 → 回到声部 → 只练第 2 句
+import asyncio, sys, os, subprocess
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from walk import YT_STUB, async_playwright
+OUT = sys.argv[1] if len(sys.argv) > 1 else 'shots'
+async def main():
+  os.makedirs(OUT, exist_ok=True)
+  url = subprocess.run(['node','tools/choir/link.js','tools/choir/huanle.txt'],capture_output=True,text=True).stdout.split('链接')[1].split('\n')[1].strip()
+  url = url.replace('https://singokay.com/','http://localhost:8765/index.html')
+  subprocess.run(['node','tools/choir/mkwav.js','tools/choir/huanle.txt','0','/tmp/choir_sing.wav'],capture_output=True)
+  async with async_playwright() as p:
+    b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream','--use-file-for-fake-audio-capture=/tmp/choir_sing.wav','--autoplay-policy=no-user-gesture-required'])
+    ctx=await b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,permissions=['microphone'])
+    pg=await ctx.new_page(); bad=[]; net=[]
+    pg.on('pageerror',lambda e: bad.append('PAGEERROR '+str(e)))
+    async def route(r):
+      u=r.request.url
+      if 'youtube.com/iframe_api' in u: await r.fulfill(body=YT_STUB,content_type='text/javascript')
+      elif 'localhost' in u: await r.continue_()
+      else: net.append(u); await r.abort()
+    await pg.route('**/*',route)
+    await pg.goto(url); await pg.wait_for_timeout(1500)
+    if not await pg.is_visible('#stepChoir'): bad.append('打开链接没进声部页')
+    if await pg.is_visible('#stepIn'): bad.append('首页还露着')
+    print('歌名：', await pg.inner_text('#chTitle'), '｜声部：', (await pg.inner_text('#chParts')).replace('\n',' '))
+    await pg.screenshot(path=f'{OUT}/c1_parts.png')
+    await pg.click('.chPart >> nth=0'); await pg.wait_for_timeout(500)
+    await pg.screenshot(path=f'{OUT}/c2_part.png', full_page=True)
+    await pg.click('#chListen'); await pg.wait_for_timeout(1500)
+    now1 = await pg.inner_text('#chNow'); await pg.wait_for_timeout(3000); now2 = await pg.inner_text('#chNow')
+    print('先听一遍：', now1, '→', now2, '｜按钮：', await pg.inner_text('#chListen'))
+    if '第 1 句' not in now2: bad.append('试听时没显示第几句')
+    await pg.click('#chListen'); await pg.wait_for_timeout(300)
+    await pg.click('#chSing'); await pg.wait_for_timeout(5000)
+    if not await pg.is_visible('#stepRec'): bad.append('点开始唱没进录音')
+    await pg.screenshot(path=f'{OUT}/c3_sing.png')
+    print('唱的时候标题：', await pg.inner_text('#recTitle'))
+    await pg.wait_for_selector('#result:not(.hide)',timeout=120000)   # 声部放完自己停
+    await pg.wait_for_timeout(2500)
+    print('结果：', await pg.inner_text('#score'), await pg.inner_text('#verdict'))
+    print('分句：', await pg.evaluate('__t.ph()'), '｜对比方式：', await pg.evaluate('__t.mode()'))
+    await pg.screenshot(path=f'{OUT}/c4_result.png', full_page=True)
+    if await pg.evaluate('__t.mode()') != 'sync': bad.append('没有跟声部旋律比')
+    if await pg.inner_text('#btnHome') != '回到声部': bad.append('结果页按钮没改成回到声部')
+    await pg.click('#btnHome'); await pg.wait_for_timeout(600)
+    if not await pg.is_visible('#chGo'): bad.append('回到声部没回到声部页')
+    await pg.click('#chPh button >> nth=2'); await pg.click('#chAll'); await pg.wait_for_timeout(200)
+    await pg.click('#chSing'); await pg.wait_for_timeout(3000)
+    print('只练第2句标题：', await pg.inner_text('#recTitle'))
+    try: await pg.wait_for_selector('#result:not(.hide), #intr:not(.hide)', timeout=60000)
+    except Exception: pass
+    await pg.wait_for_timeout(1500)
+    vis = 'result' if await pg.is_visible('#result') else 'card' if await pg.is_visible('#intr') else 'rec' if await pg.is_visible('#stepRec') else '?'
+    print('只练一句结束后：', vis)
+    if vis == 'rec': bad.append('只练一句放完没自己停')
+    await pg.screenshot(path=f'{OUT}/c5_phrase.png', full_page=True)
+    if vis == 'card': await pg.click('#intrB')
+    elif vis == 'result': await pg.click('#btnHome')
+    await pg.wait_for_timeout(500)
+    await pg.click('#chExit'); await pg.wait_for_timeout(800)
+    if not await pg.is_visible('#stepIn'): bad.append('去唱别的歌没回首页')
+    if 'c=' in pg.url: bad.append('离开后网址还带着谱子')
+    if any('countapi' in u for u in net): bad.append('本机测试也发了统计')
+    print('\n'.join(bad) or '全部通过'); await b.close()
+asyncio.run(main())
